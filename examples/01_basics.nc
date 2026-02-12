@@ -36,13 +36,14 @@ fn main() -> i32 {
     // Const must always be initialized
     const result: i32 = add(x, y);
 
-    var sum: i32 = x + y;              // 30
-    var diff: i32 = y - x;             // 10
-    var product: i32 = x * y;          // 200
-    var quotient: i32 = y / x;         // 2
-    var remainder: i32 = y % x;        // 0
+    // Woah we can do math
+    var sum: i32 = x + y;
+    var diff: i32 = y - x;
+    var product: i32 = x * y;
+    var quotient: i32 = y / x;
+    var remainder: i32 = y % x;
 
-    var negative: i32 = -x;            // -10
+    var negative: i32 = -x;
 
     if (x < y) {
         sum = sum + 1;
