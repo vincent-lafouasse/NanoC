@@ -306,3 +306,112 @@ pub enum Token {
 
     Eof,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn lex_all(source: &str) -> Result<Vec<Token>, LexError> {
+        let mut tokens = Vec::new();
+        let mut lexer = Lexer::new(source.as_bytes());
+
+        loop {
+            let (token, new_lexer) = lexer.next_token()?;
+            let is_eof = token == Token::Eof;
+            tokens.push(token);
+            lexer = new_lexer;
+            if is_eof {
+                break;
+            }
+        }
+
+        Ok(tokens)
+    }
+
+    #[test]
+    fn test_keywords() {
+        let tokens = lex_all("fn var const return if else while break").unwrap();
+        assert_eq!(tokens[0], Token::Fn);
+        assert_eq!(tokens[1], Token::Var);
+        assert_eq!(tokens[2], Token::Const);
+        assert_eq!(tokens[3], Token::Return);
+        assert_eq!(tokens[4], Token::If);
+        assert_eq!(tokens[5], Token::Else);
+        assert_eq!(tokens[6], Token::While);
+        assert_eq!(tokens[7], Token::Break);
+    }
+
+    #[test]
+    fn test_identifiers() {
+        let tokens = lex_all("foo bar_baz x123 _private").unwrap();
+        assert_eq!(tokens[0], Token::Identifier("foo".to_string()));
+        assert_eq!(tokens[1], Token::Identifier("bar_baz".to_string()));
+        assert_eq!(tokens[2], Token::Identifier("x123".to_string()));
+        assert_eq!(tokens[3], Token::Identifier("_private".to_string()));
+    }
+
+    #[test]
+    fn test_decimal_numbers() {
+        let tokens = lex_all("0 123 456u").unwrap();
+        assert_eq!(tokens[0], Token::Number(0));
+        assert_eq!(tokens[1], Token::Number(123));
+        assert_eq!(tokens[2], Token::Number(456));
+    }
+
+    #[test]
+    fn test_hex_numbers() {
+        let tokens = lex_all("0xFF 0x1A3B 0xDEADBEEFu").unwrap();
+        assert_eq!(tokens[0], Token::Number(0xFF));
+        assert_eq!(tokens[1], Token::Number(0x1A3B));
+        assert_eq!(tokens[2], Token::Number(0xDEADBEEF));
+    }
+
+    #[test]
+    fn test_binary_numbers() {
+        let tokens = lex_all("0b1010 0b11110000 0b1u").unwrap();
+        assert_eq!(tokens[0], Token::Number(0b1010));
+        assert_eq!(tokens[1], Token::Number(0b11110000));
+        assert_eq!(tokens[2], Token::Number(0b1));
+    }
+
+    #[test]
+    fn test_line_comments() {
+        let tokens = lex_all("fn // this is a comment\nvar").unwrap();
+        assert_eq!(tokens[0], Token::Fn);
+        assert_eq!(tokens[1], Token::Var);
+        assert_eq!(tokens.len(), 3); // fn, var, eof
+    }
+
+    #[test]
+    fn test_block_comments() {
+        let tokens = lex_all("fn /* comment */ var /* multi\nline */return").unwrap();
+        assert_eq!(tokens[0], Token::Fn);
+        assert_eq!(tokens[1], Token::Var);
+        assert_eq!(tokens[2], Token::Return);
+    }
+
+    #[test]
+    fn test_operators() {
+        let tokens = lex_all("* ==").unwrap();
+        assert_eq!(tokens[0], Token::Star);
+        assert_eq!(tokens[1], Token::Eq);
+    }
+
+    #[test]
+    fn test_invalid_hex() {
+        let result = lex_all("0x");
+        assert!(matches!(result, Err(LexError::InvalidNumber { .. })));
+    }
+
+    #[test]
+    fn test_invalid_binary() {
+        let result = lex_all("0b");
+        assert!(matches!(result, Err(LexError::InvalidNumber { .. })));
+    }
+
+    #[test]
+    fn test_unexpected_char() {
+        let result = lex_all("@");
+        assert!(matches!(result, Err(LexError::UnexpectedChar { .. })));
+    }
+}
