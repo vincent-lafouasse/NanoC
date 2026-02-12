@@ -3,4 +3,12 @@ name = "nanoc"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "nanoc"
+path = "src/main.rs"
+
+[[bin]]
+name = "grammar-check"
+path = "src/bin/grammar-check.rs"
+
 [dependencies]
