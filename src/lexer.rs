@@ -47,7 +47,8 @@ impl<'a> Lexer<'a> {
 
     pub fn next_token(self) -> Result<(Token, Self), LexError> {
         let lexer = self.skip_whitespace();
-        let (token, new_pos) = lexer.scan_token()?;
+        let (token, token_len) = lexer.scan_token()?;
+        let new_pos = lexer.position() + token_len;
         Ok((token, lexer.advance_to(new_pos)))
     }
 
