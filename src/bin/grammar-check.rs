@@ -43,7 +43,57 @@ enum Assoc {
     Nonassoc,
 }
 
+fn strip_comments(content: &str) -> String {
+    let bytes = content.as_bytes();
+    let mut result = String::new();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        match bytes.get(i) {
+            Some(b'/') => match bytes.get(i + 1) {
+                Some(b'/') => {
+                    // line comment: skip until newline
+                    i += 2;
+                    while i < bytes.len() && bytes[i] != b'\n' {
+                        i += 1;
+                    }
+                    // keep the newline
+                    if i < bytes.len() {
+                        result.push('\n');
+                        i += 1;
+                    }
+                }
+                Some(b'*') => {
+                    // block comment: skip until */
+                    i += 2;
+                    while i < bytes.len() {
+                        if bytes.get(i) == Some(&b'*') && bytes.get(i + 1) == Some(&b'/') {
+                            i += 2;
+                            break;
+                        }
+                        i += 1;
+                    }
+                }
+                _ => {
+                    result.push(bytes[i] as char);
+                    i += 1;
+                }
+            },
+            Some(ch) => {
+                result.push(*ch as char);
+                i += 1;
+            }
+            None => break,
+        }
+    }
+
+    result
+}
+
 fn parse_grammar(content: &str) -> Grammar {
+    // strip all comments first
+    let content = strip_comments(content);
+
     let mut terminals = Vec::new();
     let mut precedence = Vec::new();
     let mut productions = Vec::new();
@@ -54,8 +104,8 @@ fn parse_grammar(content: &str) -> Grammar {
     for line in lines.by_ref() {
         let trimmed = line.trim();
 
-        // skip empty lines and comments
-        if trimmed.is_empty() || trimmed.starts_with("//") {
+        // skip empty lines
+        if trimmed.is_empty() {
             continue;
         }
 
