@@ -58,8 +58,8 @@ impl<'a> Lexer<'a> {
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
         match self.current {
             Some(b'*') => Ok((Token::Star, 1)),
+            // scan identifier or keyword
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
-                // scan identifier or keyword
                 let mut len = 0;
                 while let Some(c) = self.source.get(self.position + len) {
                     if c.is_ascii_alphanumeric() || *c == b'_' {
