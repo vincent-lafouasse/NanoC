@@ -53,7 +53,16 @@ impl<'a> Lexer<'a> {
     }
 
     fn skip_whitespace(self) -> Self {
-        todo!("skip whitespace and comments")
+        let mut i = 0;
+        while let Some(c) = self.source.get(self.position + i) {
+            if c.is_ascii_whitespace() {
+                i += 1;
+                continue;
+            }
+        }
+
+        let new_pos = self.position() + i;
+        self.advance_to(new_pos)
     }
 
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
