@@ -55,17 +55,17 @@ impl<'a> Lexer<'a> {
     fn skip_whitespace(self) -> Self {
         let mut i = 0;
         loop {
-            match self.source.get(self.position + i) {
+            match self.peek_next(i) {
                 Some(c) if c.is_ascii_whitespace() => {
                     i += 1;
                 }
                 Some(b'/') => {
                     // check for comments
-                    match self.source.get(self.position + i + 1) {
+                    match self.peek_next(i + 1) {
                         Some(b'/') => {
                             // line comment: skip until newline or EOF
                             i += 2;
-                            while let Some(c) = self.source.get(self.position + i) {
+                            while let Some(c) = self.peek_next(i) {
                                 if *c == b'\n' {
                                     i += 1; // skip the newline too
                                     break;
@@ -76,10 +76,8 @@ impl<'a> Lexer<'a> {
                         Some(b'*') => {
                             // block comment: skip until */ or EOF
                             i += 2;
-                            while let Some(c) = self.source.get(self.position + i) {
-                                if *c == b'*'
-                                    && self.source.get(self.position + i + 1) == Some(&b'/')
-                                {
+                            while let Some(c) = self.peek_next(i) {
+                                if *c == b'*' && self.peek_next(i + 1) == Some(&b'/') {
                                     i += 2; // skip */
                                     break;
                                 }
@@ -100,7 +98,7 @@ impl<'a> Lexer<'a> {
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
         match self.current {
             Some(b'*') => Ok((Token::Star, 1)),
-            Some(b'=') => match self.source.get(self.position + 1) {
+            Some(b'=') => match self.peek_next(1) {
                 Some(b'=') => Ok((Token::Eq, 2)),
                 _ => Ok((Token::Assign, 2)),
             },
@@ -116,9 +114,13 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn peek_next(&self, offset: usize) -> Option<&u8> {
+        self.source.get(self.position + offset)
+    }
+
     fn scan_identifier_or_keyword(&self) -> (Token, usize) {
         let mut len = 0;
-        while let Some(c) = self.source.get(self.position + len) {
+        while let Some(c) = self.peek_next(len) {
             if c.is_ascii_alphanumeric() || *c == b'_' {
                 len += 1;
             } else {
@@ -143,11 +145,11 @@ impl<'a> Lexer<'a> {
 
         // check for 0x or 0b prefix
         if self.source.get(self.position) == Some(&b'0') {
-            match self.source.get(self.position + 1) {
+            match self.peek_next(1) {
                 Some(b'x') | Some(b'X') => {
                     // hexadecimal
                     len = 2;
-                    while let Some(c) = self.source.get(self.position + len) {
+                    while let Some(c) = self.peek_next(len) {
                         if c.is_ascii_hexdigit() {
                             len += 1;
                         } else {
@@ -163,7 +165,7 @@ impl<'a> Lexer<'a> {
                 Some(b'b') | Some(b'B') => {
                     // binary
                     len = 2;
-                    while let Some(c) = self.source.get(self.position + len) {
+                    while let Some(c) = self.peek_next(len) {
                         if *c == b'0' || *c == b'1' {
                             len += 1;
                         } else {
@@ -178,7 +180,7 @@ impl<'a> Lexer<'a> {
                 }
                 _ => {
                     // regular decimal starting with 0
-                    while let Some(c) = self.source.get(self.position + len) {
+                    while let Some(c) = self.peek_next(len) {
                         if c.is_ascii_digit() {
                             len += 1;
                         } else {
@@ -189,7 +191,7 @@ impl<'a> Lexer<'a> {
             }
         } else {
             // regular decimal
-            while let Some(c) = self.source.get(self.position + len) {
+            while let Some(c) = self.peek_next(len) {
                 if c.is_ascii_digit() {
                     len += 1;
                 } else {
@@ -199,7 +201,7 @@ impl<'a> Lexer<'a> {
         }
 
         // check for 'u' suffix
-        if self.source.get(self.position + len) == Some(&b'u') {
+        if self.peek_next(len) == Some(&b'u') {
             len += 1;
         }
 
