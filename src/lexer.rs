@@ -14,7 +14,11 @@ pub enum LexError {
 impl<'a> Lexer<'a> {
     pub fn new(source: &'a [u8]) -> Self {
         let current = source.get(0).copied();
-        Self { source, position: 0, current }
+        Self {
+            source,
+            position: 0,
+            current,
+        }
     }
 
     pub fn next_token(self) -> Result<(Token, Self), LexError> {
@@ -33,7 +37,11 @@ impl<'a> Lexer<'a> {
 
     fn advance_to(self, new_position: usize) -> Self {
         let current = self.source.get(new_position).copied();
-        Self { source: self.source, position: new_position, current }
+        Self {
+            source: self.source,
+            position: new_position,
+            current,
+        }
     }
 }
 
