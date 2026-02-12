@@ -3,16 +3,19 @@
 %token IDENTIFIER NUMBER
 %token ARROW /* -> */
 %token PLUS MINUS STAR SLASH EQUALS
+%token AMPERSAND /* & for address-of */
 %token LPAREN RPAREN LBRACE RBRACE COLON COMMA SEMICOLON
 
-/* precedence */
-%left PLUS MINUS
+/* precedence - highest to lowest */
+%right UNARY /* unary *, & operators */
 %left STAR SLASH
+%left PLUS MINUS
 
 %%
 
 program:
-    something ?????????
+    /* empty */
+    | program function
     ;
 
 function:
@@ -63,8 +66,13 @@ var_decl:
     VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
     ;
 
+lvalue:
+    IDENTIFIER
+    | STAR lvalue %prec UNARY  /* *ptr dereference */
+    ;
+
 assignment:
-    IDENTIFIER EQUALS expression SEMICOLON
+    lvalue EQUALS expression SEMICOLON
     ;
 
 return_stmt:
@@ -82,6 +90,8 @@ expression:
     | expression MINUS expression
     | expression STAR expression
     | expression SLASH expression
+    | STAR expression %prec UNARY       /* pointer dereference */
+    | AMPERSAND IDENTIFIER %prec UNARY  /* address-of */
     | LPAREN expression RPAREN
     | func_call
     | IDENTIFIER
