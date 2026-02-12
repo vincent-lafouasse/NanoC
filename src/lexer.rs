@@ -50,6 +50,7 @@ pub enum Token {
     // keywords
     Fn,
     Var,
+    Const,
     Return,
     If,
     Else,

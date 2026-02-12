@@ -1,4 +1,4 @@
-%token FN VAR RETURN IF ELSE STRUCT WHILE BREAK CONTINUE GOTO
+%token FN VAR CONST RETURN IF ELSE STRUCT WHILE BREAK CONTINUE GOTO
 %token U8 I32 U32 PTR
 %token IDENTIFIER NUMBER
 %token ARROW /* -> */
@@ -49,6 +49,7 @@ field:
 global_var_decl:
     VAR IDENTIFIER COLON type SEMICOLON
     | VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
+    | CONST IDENTIFIER COLON type EQUALS expression SEMICOLON
     ;
 
 function:
@@ -108,6 +109,7 @@ statement:
 
 var_decl:
     VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
+    | CONST IDENTIFIER COLON type EQUALS expression SEMICOLON
     ;
 
 lvalue:
