@@ -47,9 +47,9 @@ field:
     ;
 
 global_var_decl:
-    VAR IDENTIFIER COLON type SEMICOLON
+    VAR IDENTIFIER COLON type SEMICOLON                     /* zero-init */
     | VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
-    | CONST IDENTIFIER COLON type EQUALS expression SEMICOLON
+    | CONST IDENTIFIER COLON type EQUALS expression SEMICOLON /* must init */
     ;
 
 function:
@@ -108,8 +108,9 @@ statement:
     ;
 
 var_decl:
-    VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
-    | CONST IDENTIFIER COLON type EQUALS expression SEMICOLON
+    VAR IDENTIFIER COLON type SEMICOLON                      /* undefined */
+    | VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
+    | CONST IDENTIFIER COLON type EQUALS expression SEMICOLON /* must init */
     ;
 
 lvalue:
