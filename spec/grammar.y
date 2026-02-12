@@ -29,6 +29,7 @@
 program:
     /* empty */
     | program struct_def
+    | program global_var_decl
     | program function
     ;
 
@@ -43,6 +44,11 @@ field_list:
 
 field:
     IDENTIFIER COLON type SEMICOLON
+    ;
+
+global_var_decl:
+    VAR IDENTIFIER COLON type SEMICOLON
+    | VAR IDENTIFIER COLON type EQUALS expression SEMICOLON
     ;
 
 function:
