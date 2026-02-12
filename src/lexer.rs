@@ -123,7 +123,10 @@ impl<'a> Lexer<'a> {
                 Ok((token, len))
             }
             None => Ok((Token::Eof, 0)),
-            _ => todo!(),
+            _ => Err(LexError::UnexpectedChar {
+                ch: self.current.unwrap(),
+                position: self.position(),
+            }),
         }
     }
 
