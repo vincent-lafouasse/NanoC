@@ -23,9 +23,22 @@ fn main() {
         println!("  Level {}: {:?} -> {:?}", level, assoc, tokens);
     }
 
-    println!("\n=== PRODUCTIONS ===");
-    for prod in &grammar.productions {
-        println!("  {}", prod);
+    println!("\n=== RULES ===");
+    for rule in &grammar.rules {
+        println!("  {} ->", rule.lhs);
+        for (i, prod) in rule.productions.iter().enumerate() {
+            print!("    ");
+            if i > 0 {
+                print!("| ");
+            }
+            for symbol in &prod.symbols {
+                match symbol {
+                    Symbol::Terminal(t) => print!("{} ", t),
+                    Symbol::NonTerminal(nt) => print!("{} ", nt),
+                }
+            }
+            println!();
+        }
     }
 }
 
@@ -33,7 +46,7 @@ fn main() {
 struct Grammar {
     terminals: Vec<String>,
     precedence: Vec<(Assoc, Vec<String>)>,
-    productions: Vec<String>,
+    rules: Vec<Rule>,
 }
 
 #[derive(Debug)]
@@ -41,6 +54,23 @@ enum Assoc {
     Left,
     Right,
     Nonassoc,
+}
+
+#[derive(Debug, Clone)]
+enum Symbol {
+    Terminal(String),
+    NonTerminal(String),
+}
+
+#[derive(Debug)]
+struct Production {
+    symbols: Vec<Symbol>,
+}
+
+#[derive(Debug)]
+struct Rule {
+    lhs: String,
+    productions: Vec<Production>,
 }
 
 fn strip_comments(content: &str) -> String {
@@ -96,7 +126,6 @@ fn parse_grammar(content: &str) -> Grammar {
 
     let mut terminals = Vec::new();
     let mut precedence = Vec::new();
-    let mut productions = Vec::new();
 
     let mut lines = content.lines();
     let mut in_rules = false;
@@ -139,24 +168,59 @@ fn parse_grammar(content: &str) -> Grammar {
         }
     }
 
-    // parse productions after %%
-    if in_rules {
+    // parse rules after %%
+    let rules = if in_rules {
         let rules_text: String = lines.collect::<Vec<_>>().join("\n");
-
-        // split by semicolons to get productions
-        for production in rules_text.split(';') {
-            let trimmed = production.trim();
-            if !trimmed.is_empty() {
-                // collapse whitespace for cleaner output
-                let collapsed = trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
-                productions.push(collapsed);
-            }
-        }
-    }
+        parse_rules(&rules_text, &terminals)
+    } else {
+        Vec::new()
+    };
 
     Grammar {
         terminals,
         precedence,
-        productions,
+        rules,
     }
+}
+
+fn parse_rules(rules_text: &str, terminals: &[String]) -> Vec<Rule> {
+    let mut rules = Vec::new();
+
+    // split by semicolons to get individual rules
+    for rule_text in rules_text.split(';') {
+        let trimmed = rule_text.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        // split by : to get lhs and rhs
+        let parts: Vec<&str> = trimmed.splitn(2, ':').collect();
+        if parts.len() != 2 {
+            continue; // malformed rule
+        }
+
+        let lhs = parts[0].trim().to_string();
+        let rhs = parts[1].trim();
+
+        // split by | to get productions
+        let mut productions = Vec::new();
+        for prod_text in rhs.split('|') {
+            let symbols: Vec<Symbol> = prod_text
+                .split_whitespace()
+                .map(|s| {
+                    if terminals.contains(&s.to_string()) {
+                        Symbol::Terminal(s.to_string())
+                    } else {
+                        Symbol::NonTerminal(s.to_string())
+                    }
+                })
+                .collect();
+
+            productions.push(Production { symbols });
+        }
+
+        rules.push(Rule { lhs, productions });
+    }
+
+    rules
 }
