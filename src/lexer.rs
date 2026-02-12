@@ -103,6 +103,7 @@ impl<'a> Lexer<'a> {
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
                 Ok(self.scan_identifier_or_keyword())
             }
+            Some(ch) if ch.is_ascii_digit() => self.scan_number(),
             None => Ok((Token::Eof, 0)),
             _ => Err(LexError::UnexpectedChar {
                 ch: self.current.unwrap(),
@@ -131,6 +132,92 @@ impl<'a> Lexer<'a> {
         };
 
         (token, len)
+    }
+
+    fn scan_number(&self) -> Result<(Token, usize), LexError> {
+        let mut len = 0;
+
+        // check for 0x or 0b prefix
+        if self.source.get(self.position) == Some(&b'0') {
+            match self.source.get(self.position + 1) {
+                Some(b'x') | Some(b'X') => {
+                    // hexadecimal
+                    len = 2;
+                    while let Some(c) = self.source.get(self.position + len) {
+                        if c.is_ascii_hexdigit() {
+                            len += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    if len == 2 {
+                        return Err(LexError::InvalidNumber {
+                            position: self.position(),
+                        });
+                    }
+                }
+                Some(b'b') | Some(b'B') => {
+                    // binary
+                    len = 2;
+                    while let Some(c) = self.source.get(self.position + len) {
+                        if *c == b'0' || *c == b'1' {
+                            len += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    if len == 2 {
+                        return Err(LexError::InvalidNumber {
+                            position: self.position(),
+                        });
+                    }
+                }
+                _ => {
+                    // regular decimal starting with 0
+                    while let Some(c) = self.source.get(self.position + len) {
+                        if c.is_ascii_digit() {
+                            len += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            // regular decimal
+            while let Some(c) = self.source.get(self.position + len) {
+                if c.is_ascii_digit() {
+                    len += 1;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // check for 'u' suffix
+        if self.source.get(self.position + len) == Some(&b'u') {
+            len += 1;
+        }
+
+        let text = std::str::from_utf8(&self.source[self.position..self.position + len])
+            .expect("numbers are ascii");
+
+        // parse the number
+        let text_without_suffix = text.trim_end_matches('u');
+        let value = if text_without_suffix.starts_with("0x") || text_without_suffix.starts_with("0X") {
+            i64::from_str_radix(&text_without_suffix[2..], 16)
+        } else if text_without_suffix.starts_with("0b") || text_without_suffix.starts_with("0B") {
+            i64::from_str_radix(&text_without_suffix[2..], 2)
+        } else {
+            text_without_suffix.parse()
+        };
+
+        match value {
+            Ok(n) => Ok((Token::Number(n), len)),
+            Err(_) => Err(LexError::InvalidNumber {
+                position: self.position(),
+            }),
+        }
     }
 
     fn advance_to(self, new_position: usize) -> Self {
@@ -191,8 +278,7 @@ pub enum Token {
     Lshift,
     Rshift,
 
-    // Assignment
-    Equals,
+    Assign, // = as in x = 3
 
     Lparen,
     Rparen,
