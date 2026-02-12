@@ -414,4 +414,54 @@ mod tests {
         let result = lex_all("@");
         assert!(matches!(result, Err(LexError::UnexpectedChar { .. })));
     }
+
+    #[test]
+    fn test_variable_declaration() {
+        let tokens = lex_all("var x: u32 = 0xFF;").unwrap();
+        assert_eq!(tokens[0], Token::Var);
+        assert_eq!(tokens[1], Token::Identifier("x".to_string()));
+        assert_eq!(tokens[2], Token::Colon);
+        assert_eq!(tokens[3], Token::U32);
+        assert_eq!(tokens[4], Token::Assign);
+        assert_eq!(tokens[5], Token::Number(0xFF));
+        assert_eq!(tokens[6], Token::Semicolon);
+    }
+
+    #[test]
+    fn test_function_declaration() {
+        let tokens = lex_all("fn add(a: i32, b: i32) -> i32 { return a + b; }").unwrap();
+        assert_eq!(tokens[0], Token::Fn);
+        assert_eq!(tokens[1], Token::Identifier("add".to_string()));
+        assert_eq!(tokens[2], Token::Lparen);
+        assert_eq!(tokens[3], Token::Identifier("a".to_string()));
+        assert_eq!(tokens[4], Token::Colon);
+        assert_eq!(tokens[5], Token::I32);
+        assert_eq!(tokens[6], Token::Comma);
+        assert_eq!(tokens[7], Token::Identifier("b".to_string()));
+        assert_eq!(tokens[8], Token::Colon);
+        assert_eq!(tokens[9], Token::I32);
+        assert_eq!(tokens[10], Token::Rparen);
+        assert_eq!(tokens[11], Token::Arrow);
+        assert_eq!(tokens[12], Token::I32);
+        assert_eq!(tokens[13], Token::Lbrace);
+        assert_eq!(tokens[14], Token::Return);
+        assert_eq!(tokens[15], Token::Identifier("a".to_string()));
+        assert_eq!(tokens[16], Token::Plus);
+        assert_eq!(tokens[17], Token::Identifier("b".to_string()));
+        assert_eq!(tokens[18], Token::Semicolon);
+        assert_eq!(tokens[19], Token::Rbrace);
+    }
+
+    #[test]
+    fn test_syscall_with_hex() {
+        let tokens = lex_all("syscall(0x3D, buffer, 0b1010u)").unwrap();
+        assert_eq!(tokens[0], Token::Syscall);
+        assert_eq!(tokens[1], Token::Lparen);
+        assert_eq!(tokens[2], Token::Number(0x3D));
+        assert_eq!(tokens[3], Token::Comma);
+        assert_eq!(tokens[4], Token::Identifier("buffer".to_string()));
+        assert_eq!(tokens[5], Token::Comma);
+        assert_eq!(tokens[6], Token::Number(0b1010));
+        assert_eq!(tokens[7], Token::Rparen);
+    }
 }
