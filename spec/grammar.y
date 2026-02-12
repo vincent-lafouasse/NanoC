@@ -1,5 +1,5 @@
 %token FN VAR RETURN IF ELSE STRUCT WHILE BREAK CONTINUE GOTO
-%token U8 I32 U32
+%token U8 I32 U32 PTR
 %token IDENTIFIER NUMBER
 %token ARROW /* -> */
 %token PLUS MINUS STAR SLASH MOD EQUALS
@@ -69,7 +69,7 @@ param:
     ;
 
 primitive_type:
-    U8 | I32 | U32
+    U8 | I32 | U32 | PTR
     ;
 
 type:

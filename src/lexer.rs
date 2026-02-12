@@ -63,6 +63,7 @@ pub enum Token {
     U8,
     I32,
     U32,
+    Ptr,
 
     // arithmetic
     Plus,
