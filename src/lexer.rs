@@ -33,7 +33,7 @@ pub enum LexError {
 
 impl<'a> Lexer<'a> {
     pub fn new(source: &'a [u8]) -> Self {
-        let current = source.get(0).copied();
+        let current = source.first().copied();
         Self {
             source,
             position: 0,
