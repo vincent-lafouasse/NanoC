@@ -77,6 +77,7 @@ param:
 
 primitive_type:
     U8 | I32 | U32 | PTR
+    | IDENTIFIER STAR    /* typed pointers: Point*, Buffer*, etc. */
     ;
 
 type:
