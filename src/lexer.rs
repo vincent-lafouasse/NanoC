@@ -59,6 +59,7 @@ pub enum Token {
     Break,
     Continue,
     Goto,
+    Syscall,
 
     // type keywords
     U8,

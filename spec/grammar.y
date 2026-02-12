@@ -1,4 +1,4 @@
-%token FN VAR CONST RETURN IF ELSE STRUCT WHILE BREAK CONTINUE GOTO
+%token FN VAR CONST RETURN IF ELSE STRUCT WHILE BREAK CONTINUE GOTO SYSCALL
 %token U8 I32 U32 PTR
 %token IDENTIFIER NUMBER
 %token ARROW /* -> */
@@ -191,6 +191,7 @@ expression:
     /* Primaries */
     | LPAREN expression RPAREN
     | func_call
+    | SYSCALL LPAREN arg_list RPAREN       /* syscall(num, args...) */
     | IDENTIFIER
     | NUMBER
     ;
