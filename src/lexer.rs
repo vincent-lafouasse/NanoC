@@ -204,7 +204,9 @@ impl<'a> Lexer<'a> {
 
         // parse the number
         let text_without_suffix = text.trim_end_matches('u');
-        let value = if text_without_suffix.starts_with("0x") || text_without_suffix.starts_with("0X") {
+        let value = if text_without_suffix.starts_with("0x")
+            || text_without_suffix.starts_with("0X")
+        {
             i64::from_str_radix(&text_without_suffix[2..], 16)
         } else if text_without_suffix.starts_with("0b") || text_without_suffix.starts_with("0B") {
             i64::from_str_radix(&text_without_suffix[2..], 2)
