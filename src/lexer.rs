@@ -54,10 +54,42 @@ impl<'a> Lexer<'a> {
 
     fn skip_whitespace(self) -> Self {
         let mut i = 0;
-        while let Some(c) = self.source.get(self.position + i) {
-            if c.is_ascii_whitespace() {
-                i += 1;
-                continue;
+        loop {
+            match self.source.get(self.position + i) {
+                Some(c) if c.is_ascii_whitespace() => {
+                    i += 1;
+                }
+                Some(b'/') => {
+                    // check for comments
+                    match self.source.get(self.position + i + 1) {
+                        Some(b'/') => {
+                            // line comment: skip until newline or EOF
+                            i += 2;
+                            while let Some(c) = self.source.get(self.position + i) {
+                                if *c == b'\n' {
+                                    i += 1; // skip the newline too
+                                    break;
+                                }
+                                i += 1;
+                            }
+                        }
+                        Some(b'*') => {
+                            // block comment: skip until */ or EOF
+                            i += 2;
+                            while let Some(c) = self.source.get(self.position + i) {
+                                if *c == b'*'
+                                    && self.source.get(self.position + i + 1) == Some(&b'/')
+                                {
+                                    i += 2; // skip */
+                                    break;
+                                }
+                                i += 1;
+                            }
+                        }
+                        _ => break, // just a slash, not a comment
+                    }
+                }
+                _ => break,
             }
         }
 
