@@ -6,9 +6,9 @@ pub struct Lexer<'a> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexError {
-    UnexpectedEof,
-    UnexpectedChar(u8),
-    InvalidNumber,
+    UnexpectedEof { position: usize },
+    UnexpectedChar { ch: u8, position: usize },
+    InvalidNumber { position: usize },
 }
 
 impl<'a> Lexer<'a> {
@@ -19,6 +19,10 @@ impl<'a> Lexer<'a> {
             position: 0,
             current,
         }
+    }
+
+    pub fn position(&self) -> usize {
+        self.position
     }
 
     pub fn next_token(self) -> Result<(Token, Self), LexError> {
