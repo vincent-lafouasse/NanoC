@@ -1,10 +1,10 @@
-%token FN VAR RETURN IF ELSE
+%token FN VAR RETURN IF ELSE STRUCT
 %token U8 I32 U32
 %token IDENTIFIER NUMBER
 %token ARROW /* -> */
 %token PLUS MINUS STAR SLASH EQUALS
 %token AMPERSAND /* & for address-of */
-%token LPAREN RPAREN LBRACE RBRACE COLON COMMA SEMICOLON
+%token LPAREN RPAREN LBRACE RBRACE COLON COMMA SEMICOLON DOT
 
 /* precedence - highest to lowest */
 %right UNARY /* unary *, & operators */
@@ -15,7 +15,21 @@
 
 program:
     /* empty */
+    | program struct_def
     | program function
+    ;
+
+struct_def:
+    STRUCT IDENTIFIER LBRACE field_list RBRACE
+    ;
+
+field_list:
+    /* empty */
+    | field_list field
+    ;
+
+field:
+    IDENTIFIER COLON type SEMICOLON
     ;
 
 function:
@@ -24,7 +38,7 @@ function:
 
 opt_ret_type:
     /* empty */
-    | ARROW type
+    | ARROW primitive_type
     ;
 
 params:
@@ -38,11 +52,16 @@ param_list:
     ;
 
 param:
-    IDENTIFIER COLON type
+    IDENTIFIER COLON primitive_type
+    ;
+
+primitive_type:
+    U8 | I32 | U32
     ;
 
 type:
-    U8 | I32 | U32
+    primitive_type
+    | IDENTIFIER  /* struct type */
     ;
 
 block:
@@ -68,7 +87,8 @@ var_decl:
 
 lvalue:
     IDENTIFIER
-    | STAR lvalue %prec UNARY  /* *ptr dereference */
+    | STAR lvalue %prec UNARY     /* *ptr dereference */
+    | lvalue DOT IDENTIFIER       /* struct field access */
     ;
 
 assignment:
@@ -92,6 +112,7 @@ expression:
     | expression SLASH expression
     | STAR expression %prec UNARY       /* pointer dereference */
     | AMPERSAND IDENTIFIER %prec UNARY  /* address-of */
+    | expression DOT IDENTIFIER         /* struct field access */
     | LPAREN expression RPAREN
     | func_call
     | IDENTIFIER
