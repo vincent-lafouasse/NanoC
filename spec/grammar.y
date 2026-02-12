@@ -4,7 +4,7 @@
 %token ARROW /* -> */
 %token PLUS MINUS STAR SLASH EQUALS
 %token AMPERSAND /* & for address-of */
-%token LPAREN RPAREN LBRACE RBRACE COLON COMMA SEMICOLON DOT
+%token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COLON COMMA SEMICOLON DOT
 
 /* precedence - highest to lowest */
 %right UNARY /* unary *, & operators */
@@ -62,6 +62,7 @@ primitive_type:
 type:
     primitive_type
     | IDENTIFIER  /* struct type */
+    | type LBRACKET NUMBER RBRACKET  /* array type */
     ;
 
 block:
@@ -87,8 +88,9 @@ var_decl:
 
 lvalue:
     IDENTIFIER
-    | STAR lvalue %prec UNARY     /* *ptr dereference */
-    | lvalue DOT IDENTIFIER       /* struct field access */
+    | STAR lvalue %prec UNARY           /* *ptr dereference */
+    | lvalue DOT IDENTIFIER             /* struct field access */
+    | lvalue LBRACKET expression RBRACKET  /* array indexing */
     ;
 
 assignment:
@@ -110,9 +112,10 @@ expression:
     | expression MINUS expression
     | expression STAR expression
     | expression SLASH expression
-    | STAR expression %prec UNARY       /* pointer dereference */
-    | AMPERSAND IDENTIFIER %prec UNARY  /* address-of */
-    | expression DOT IDENTIFIER         /* struct field access */
+    | STAR expression %prec UNARY              /* pointer dereference */
+    | AMPERSAND IDENTIFIER %prec UNARY         /* address-of */
+    | expression DOT IDENTIFIER                /* struct field access */
+    | expression LBRACKET expression RBRACKET  /* array indexing */
     | LPAREN expression RPAREN
     | func_call
     | IDENTIFIER
