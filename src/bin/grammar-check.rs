@@ -25,11 +25,12 @@ fn main() {
 
     println!("\n=== RULES ===");
     for rule in &grammar.rules {
-        println!("  {} ->", rule.lhs);
+        println!("  {}", rule.lhs);
         for (i, prod) in rule.productions.iter().enumerate() {
-            print!("    ");
-            if i > 0 {
-                print!("| ");
+            if i == 0 {
+                print!("    -> ");
+            } else {
+                print!("    |  ");
             }
             for symbol in &prod.symbols {
                 match symbol {
@@ -40,6 +41,9 @@ fn main() {
             println!();
         }
     }
+
+    println!("\n=== VALIDATION ===");
+    validate_grammar(&grammar);
 }
 
 #[derive(Debug)]
@@ -183,6 +187,98 @@ fn parse_grammar(content: &str) -> Grammar {
     }
 }
 
+fn validate_grammar(grammar: &Grammar) {
+    use std::collections::HashSet;
+
+    // collect all defined non-terminals (LHS of rules)
+    let defined_nonterminals: HashSet<String> =
+        grammar.rules.iter().map(|r| r.lhs.clone()).collect();
+
+    // collect all symbols used in productions (RHS)
+    let mut used_terminals: HashSet<String> = HashSet::new();
+    let mut used_nonterminals: HashSet<String> = HashSet::new();
+    let mut undefined_symbols: Vec<String> = Vec::new();
+
+    for rule in &grammar.rules {
+        for prod in &rule.productions {
+            for symbol in &prod.symbols {
+                match symbol {
+                    Symbol::Terminal(t) => {
+                        used_terminals.insert(t.clone());
+                        if !grammar.terminals.contains(t) {
+                            undefined_symbols
+                                .push(format!("Terminal '{}' used but not declared", t));
+                        }
+                    }
+                    Symbol::NonTerminal(nt) => {
+                        used_nonterminals.insert(nt.clone());
+                        if !defined_nonterminals.contains(nt) {
+                            undefined_symbols
+                                .push(format!("Non-terminal '{}' used but not defined", nt));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // check for unused non-terminals (defined but never used in RHS)
+    // the start symbol (first rule) is exempt
+    let start_symbol = grammar.rules.first().map(|r| r.lhs.as_str());
+    let mut unused_nonterminals: Vec<String> = defined_nonterminals
+        .iter()
+        .filter(|nt| !used_nonterminals.contains(*nt) && Some(nt.as_str()) != start_symbol)
+        .cloned()
+        .collect();
+    unused_nonterminals.sort();
+
+    // check for unused terminals
+    let mut unused_terminals: Vec<String> = grammar
+        .terminals
+        .iter()
+        .filter(|t| !used_terminals.contains(*t))
+        .cloned()
+        .collect();
+    unused_terminals.sort();
+
+    // report results
+    let mut has_errors = false;
+
+    const RED: &str = "\x1b[91m";
+    const YELLOW: &str = "\x1b[93m";
+    const GREEN: &str = "\x1b[92m";
+    const RESET: &str = "\x1b[0m";
+
+    if !undefined_symbols.is_empty() {
+        println!("  {}UNDEFINED SYMBOLS:{}", RED, RESET);
+        for msg in &undefined_symbols {
+            println!("     {}", msg);
+        }
+        has_errors = true;
+    }
+
+    if !unused_nonterminals.is_empty() {
+        println!("  {}UNUSED NON-TERMINALS:{}", YELLOW, RESET);
+        for nt in &unused_nonterminals {
+            println!("     {}", nt);
+        }
+    }
+
+    if !unused_terminals.is_empty() {
+        println!("  {}UNUSED TERMINALS:{}", YELLOW, RESET);
+        for t in &unused_terminals {
+            println!("     {}", t);
+        }
+    }
+
+    if !has_errors && unused_nonterminals.is_empty() && unused_terminals.is_empty() {
+        println!(
+            "  {}Grammar is valid - all symbols defined and used{}",
+            GREEN, RESET
+        );
+    }
+}
+
 fn parse_rules(rules_text: &str, terminals: &[String]) -> Vec<Rule> {
     let mut rules = Vec::new();
 
@@ -205,16 +301,25 @@ fn parse_rules(rules_text: &str, terminals: &[String]) -> Vec<Rule> {
         // split by | to get productions
         let mut productions = Vec::new();
         for prod_text in rhs.split('|') {
-            let symbols: Vec<Symbol> = prod_text
-                .split_whitespace()
-                .map(|s| {
-                    if terminals.contains(&s.to_string()) {
-                        Symbol::Terminal(s.to_string())
-                    } else {
-                        Symbol::NonTerminal(s.to_string())
-                    }
-                })
-                .collect();
+            let tokens: Vec<&str> = prod_text.split_whitespace().collect();
+            let mut symbols = Vec::new();
+
+            let mut i = 0;
+            while i < tokens.len() {
+                // skip %prec directives
+                if tokens[i] == "%prec" {
+                    i += 2; // skip %prec and the following token
+                    continue;
+                }
+
+                let s = tokens[i];
+                if terminals.contains(&s.to_string()) {
+                    symbols.push(Symbol::Terminal(s.to_string()));
+                } else {
+                    symbols.push(Symbol::NonTerminal(s.to_string()));
+                }
+                i += 1;
+            }
 
             productions.push(Production { symbols });
         }
