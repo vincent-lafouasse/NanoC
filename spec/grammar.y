@@ -115,8 +115,9 @@ var_decl:
 
 lvalue:
     IDENTIFIER
-    | STAR lvalue %prec UNARY           /* *ptr dereference */
-    | lvalue DOT IDENTIFIER             /* struct field access */
+    | STAR lvalue %prec UNARY              /* *ptr dereference */
+    | lvalue DOT IDENTIFIER                /* struct field access */
+    | lvalue ARROW IDENTIFIER              /* pointer member access */
     | lvalue LBRACKET expression RBRACKET  /* array indexing */
     ;
 
@@ -185,6 +186,7 @@ expression:
     | AMPERSAND IDENTIFIER %prec UNARY         /* address-of */
     /* Member access and indexing */
     | expression DOT IDENTIFIER                /* struct field access */
+    | expression ARROW IDENTIFIER              /* pointer member access: p->x = (*p).x */
     | expression LBRACKET expression RBRACKET  /* array indexing */
     /* Primaries */
     | LPAREN expression RPAREN
