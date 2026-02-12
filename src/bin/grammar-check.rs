@@ -23,8 +23,27 @@ fn main() {
         println!("  Level {}: {:?} -> {:?}", level, assoc, tokens);
     }
 
+    println!("\n=== START SYMBOL ===");
+    if let Some(start_rule) = grammar.rules.first() {
+        println!("  {}", start_rule.lhs);
+        for (i, prod) in start_rule.productions.iter().enumerate() {
+            if i == 0 {
+                print!("    -> ");
+            } else {
+                print!("    |  ");
+            }
+            for symbol in &prod.symbols {
+                match symbol {
+                    Symbol::Terminal(t) => print!("{} ", t),
+                    Symbol::NonTerminal(nt) => print!("{} ", nt),
+                }
+            }
+            println!();
+        }
+    }
+
     println!("\n=== RULES ===");
-    for rule in &grammar.rules {
+    for rule in grammar.rules.iter().skip(1) {
         println!("  {}", rule.lhs);
         for (i, prod) in rule.productions.iter().enumerate() {
             if i == 0 {
