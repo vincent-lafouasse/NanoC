@@ -100,27 +100,8 @@ impl<'a> Lexer<'a> {
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
         match self.current {
             Some(b'*') => Ok((Token::Star, 1)),
-            // scan identifier or keyword
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
-                let mut len = 0;
-                while let Some(c) = self.source.get(self.position + len) {
-                    if c.is_ascii_alphanumeric() || *c == b'_' {
-                        len += 1;
-                    } else {
-                        break;
-                    }
-                }
-
-                let text = std::str::from_utf8(&self.source[self.position..self.position + len])
-                    .expect("identifiers are ascii");
-
-                // binary search in KEYWORDS
-                let token = match KEYWORDS.binary_search_by_key(&text, |&(s, _)| s) {
-                    Ok(idx) => KEYWORDS[idx].1.clone(),
-                    Err(_) => Token::Identifier(text.to_string()),
-                };
-
-                Ok((token, len))
+                Ok(self.scan_identifier_or_keyword())
             }
             None => Ok((Token::Eof, 0)),
             _ => Err(LexError::UnexpectedChar {
@@ -128,6 +109,28 @@ impl<'a> Lexer<'a> {
                 position: self.position(),
             }),
         }
+    }
+
+    fn scan_identifier_or_keyword(&self) -> (Token, usize) {
+        let mut len = 0;
+        while let Some(c) = self.source.get(self.position + len) {
+            if c.is_ascii_alphanumeric() || *c == b'_' {
+                len += 1;
+            } else {
+                break;
+            }
+        }
+
+        let text = std::str::from_utf8(&self.source[self.position..self.position + len])
+            .expect("identifiers are ascii");
+
+        // binary search in KEYWORDS
+        let token = match KEYWORDS.binary_search_by_key(&text, |&(s, _)| s) {
+            Ok(idx) => KEYWORDS[idx].1.clone(),
+            Err(_) => Token::Identifier(text.to_string()),
+        };
+
+        (token, len)
     }
 
     fn advance_to(self, new_position: usize) -> Self {
