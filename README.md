@@ -58,39 +58,3 @@ Lex a code string:
 ```bash
 cargo run -- -c "fn main() -> i32 { return 0; }"
 ```
-
-## Project Structure
-
-```
-spec/grammar.y          # Yacc grammar definition
-src/lexer.rs           # Lexer implementation
-examples/              # Language examples
-  01_basics.nc         # Variables, arithmetic, functions
-  02_loops.nc          # Control flow
-  03_pointers.nc       # Pointer operations
-  04_structs.nc        # Struct definitions
-  05_bitwise.nc        # Bit manipulation
-  06_arrays.nc         # Array operations
-  07_syscalls.nc       # System calls
-  08_typed_pointers.nc # Type-safe pointers
-syntax/nanoc.vim       # Vim syntax highlighting
-```
-
-## Documentation
-
-- `docs/TYPE_SYSTEM.md` - Type rules and pointer semantics
-- `CLI_USAGE.md` - Command-line interface guide
-
-## Current Status
-
-- [x] Grammar defined
-- [x] Token definitions
-- [x] CLI driver
-- [ ] Lexer implementation
-- [ ] Parser
-- [ ] Type checker
-- [ ] RISC-V codegen
-
-## License
-
-MIT
