@@ -100,6 +100,10 @@ impl<'a> Lexer<'a> {
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
         match self.current {
             Some(b'*') => Ok((Token::Star, 1)),
+            Some(b'=') => match self.source.get(self.position + 1) {
+                Some(b'=') => Ok((Token::Eq, 2)),
+                _ => Ok((Token::Assign, 2)),
+            },
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
                 Ok(self.scan_identifier_or_keyword())
             }
