@@ -36,7 +36,10 @@ impl<'a> Lexer<'a> {
     }
 
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
-        todo!("match current byte, return (token, new_position) or error")
+        match self.current {
+            Some(b'*') => Ok((Token::Star, 1)),
+            _ => todo!(),
+        }
     }
 
     fn advance_to(self, new_position: usize) -> Self {
