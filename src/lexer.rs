@@ -398,6 +398,24 @@ impl<'a> Lexer<'a> {
             Some(b'"') => Ok((b'"', 1)),
             Some(b'\'') => Ok((b'\'', 1)),
             Some(b'0') => Ok((b'\0', 1)),
+            Some(b'x') => {
+                // hex escape: \xHH (exactly 2 hex digits)
+                let hex1 = self.peek(offset + 1);
+                let hex2 = self.peek(offset + 2);
+
+                match (hex1, hex2) {
+                    (Some(&h1), Some(&h2)) if h1.is_ascii_hexdigit() && h2.is_ascii_hexdigit() => {
+                        let hex_bytes = [h1, h2];
+                        let hex_str = std::str::from_utf8(&hex_bytes).unwrap();
+                        let byte = u8::from_str_radix(hex_str, 16).unwrap();
+                        Ok((byte, 3)) // advance by 3: 'x' + 2 hex digits
+                    }
+                    _ => Err(LexError::InvalidEscape {
+                        ch: b'x',
+                        loc: self.location(),
+                    }),
+                }
+            }
             Some(&ch) => Err(LexError::InvalidEscape {
                 ch,
                 loc: self.location(),
@@ -868,5 +886,55 @@ mod tests {
         );
         assert_eq!(tokens[10].kind, TokenType::U8);
         assert_eq!(tokens[12].kind, TokenType::CharLiteral(b'x'));
+    }
+
+    #[test]
+    fn test_hex_escapes_in_strings() {
+        let tokens = lex_all(r#""\x48\x65\x6c\x6c\x6f""#).unwrap();
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral("Hello".to_string())
+        );
+    }
+
+    #[test]
+    fn test_hex_escapes_mixed() {
+        let tokens = lex_all(r#""Hello\x20World\x21""#).unwrap();
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral("Hello World!".to_string())
+        );
+    }
+
+    #[test]
+    fn test_hex_escape_in_char() {
+        let tokens = lex_all(r"'\x41' '\xFF' '\x00'").unwrap();
+        assert_eq!(tokens[0].kind, TokenType::CharLiteral(b'A'));
+        assert_eq!(tokens[1].kind, TokenType::CharLiteral(0xFF));
+        assert_eq!(tokens[2].kind, TokenType::CharLiteral(0x00));
+    }
+
+    #[test]
+    fn test_invalid_hex_escape() {
+        // Only one hex digit
+        let result = lex_all(r#""\x4""#);
+        assert!(matches!(result, Err(LexError::InvalidEscape { .. })));
+
+        // No hex digits
+        let result = lex_all(r#""\x""#);
+        assert!(matches!(result, Err(LexError::InvalidEscape { .. })));
+
+        // Invalid hex character
+        let result = lex_all(r#""\xGG""#);
+        assert!(matches!(result, Err(LexError::InvalidEscape { .. })));
+    }
+
+    #[test]
+    fn test_byte_array_pattern() {
+        let tokens = lex_all(r#""\xDE\xAD\xBE\xEF""#).unwrap();
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral("\u{de}\u{ad}\u{be}\u{ef}".to_string())
+        );
     }
 }
