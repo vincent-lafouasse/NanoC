@@ -21,14 +21,57 @@ const KEYWORDS: &[(&str, Token)] = &[
 pub struct Lexer<'a> {
     source: &'a [u8],
     position: usize,
+    line: usize,
+    column: usize,
     current: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Location {
+    pub position: usize,
+    pub line: usize,
+    pub column: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexError {
-    UnexpectedEof { position: usize },
-    UnexpectedChar { ch: u8, position: usize },
-    InvalidNumber { position: usize },
+    UnexpectedEof { loc: Location },
+    UnexpectedChar { ch: u8, loc: Location },
+    InvalidNumber { loc: Location },
+}
+
+impl LexError {
+    pub fn format(&self, source: &str) -> String {
+        match self {
+            LexError::UnexpectedEof { loc } => format_error(source, loc, "unexpected end of file"),
+            LexError::UnexpectedChar { ch, loc } => format_error(
+                source,
+                loc,
+                &format!("unexpected character '{}'", *ch as char),
+            ),
+            LexError::InvalidNumber { loc } => format_error(source, loc, "invalid number literal"),
+        }
+    }
+}
+
+fn format_error(source: &str, loc: &Location, message: &str) -> String {
+    let lines: Vec<&str> = source.lines().collect();
+    let line_text = lines.get(loc.line - 1).unwrap_or(&"");
+
+    let line_num_width = loc.line.to_string().len();
+    let line_num = format!("{:>width$}", loc.line, width = line_num_width);
+
+    format!(
+        "{}:{}:{}: error: {}\n{} | {}\n{} | {}^",
+        "source",
+        loc.line,
+        loc.column,
+        message,
+        line_num,
+        line_text,
+        " ".repeat(line_num_width),
+        " ".repeat(loc.column - 1)
+    )
 }
 
 impl<'a> Lexer<'a> {
@@ -37,12 +80,22 @@ impl<'a> Lexer<'a> {
         Self {
             source,
             position: 0,
+            line: 1,
+            column: 1,
             current,
         }
     }
 
     pub fn position(&self) -> usize {
         self.position
+    }
+
+    pub fn location(&self) -> Location {
+        Location {
+            position: self.position,
+            line: self.line,
+            column: self.column,
+        }
     }
 
     pub fn next_token(self) -> Result<(Token, Self), LexError> {
@@ -150,7 +203,7 @@ impl<'a> Lexer<'a> {
             None => Ok((Token::Eof, 0)),
             _ => Err(LexError::UnexpectedChar {
                 ch: self.current.unwrap(),
-                position: self.position(),
+                loc: self.location(),
             }),
         }
     }
@@ -199,7 +252,7 @@ impl<'a> Lexer<'a> {
                     }
                     if len == 2 {
                         return Err(LexError::InvalidNumber {
-                            position: self.position(),
+                            loc: self.location(),
                         });
                     }
                 }
@@ -215,7 +268,7 @@ impl<'a> Lexer<'a> {
                     }
                     if len == 2 {
                         return Err(LexError::InvalidNumber {
-                            position: self.position(),
+                            loc: self.location(),
                         });
                     }
                 }
@@ -264,16 +317,34 @@ impl<'a> Lexer<'a> {
         match value {
             Ok(n) => Ok((Token::Number(n), len)),
             Err(_) => Err(LexError::InvalidNumber {
-                position: self.position(),
+                loc: self.location(),
             }),
         }
     }
 
     fn advance_to(self, new_position: usize) -> Self {
         let current = self.source.get(new_position).copied();
+
+        // track line and column changes
+        let mut line = self.line;
+        let mut column = self.column;
+
+        for i in self.position..new_position {
+            if let Some(&ch) = self.source.get(i) {
+                if ch == b'\n' {
+                    line += 1;
+                    column = 1;
+                } else {
+                    column += 1;
+                }
+            }
+        }
+
         Self {
             source: self.source,
             position: new_position,
+            line,
+            column,
             current,
         }
     }
@@ -454,6 +525,36 @@ mod tests {
     fn test_unexpected_char() {
         let result = lex_all("@");
         assert!(matches!(result, Err(LexError::UnexpectedChar { .. })));
+    }
+
+    #[test]
+    fn test_error_formatting() {
+        let source = "var x: u32 = @;";
+        let result = lex_all(source);
+        match result {
+            Err(err) => {
+                let formatted = err.format(source);
+                assert!(formatted.contains("1:14")); // line 1, column 14
+                assert!(formatted.contains("unexpected character"));
+                println!("{}", formatted);
+            }
+            Ok(_) => panic!("expected error"),
+        }
+    }
+
+    #[test]
+    fn test_multiline_error() {
+        let source = "fn main() {\n  var x: u32 = 0x;\n}";
+        let result = lex_all(source);
+        match result {
+            Err(err) => {
+                let formatted = err.format(source);
+                assert!(formatted.contains("2:")); // line 2
+                assert!(formatted.contains("invalid number"));
+                println!("{}", formatted);
+            }
+            Ok(_) => panic!("expected error"),
+        }
     }
 
     #[test]

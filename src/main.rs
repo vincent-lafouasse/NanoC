@@ -50,7 +50,7 @@ fn main() {
                 }
             }
             Err(err) => {
-                eprintln!("Lexer error: {:?}", err);
+                eprintln!("{}", err.format(&source));
                 exit(1);
             }
         }
