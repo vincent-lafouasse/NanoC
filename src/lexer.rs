@@ -265,6 +265,8 @@ impl<'a> Lexer<'a> {
                 Ok(self.scan_identifier_or_keyword())
             }
             Some(ch) if ch.is_ascii_digit() => self.scan_number(),
+            Some(b'"') => self.scan_string_literal(),
+            Some(b'\'') => self.scan_char_literal(),
             None => Ok((TokenType::Eof, 0)),
             _ => Err(LexError::UnexpectedChar {
                 ch: self.current.unwrap(),
@@ -387,6 +389,99 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn parse_escape(&self, offset: usize, is_char: bool) -> Result<(u8, usize), LexError> {
+        match self.peek(offset) {
+            Some(b'n') => Ok((b'\n', 1)),
+            Some(b't') => Ok((b'\t', 1)),
+            Some(b'r') => Ok((b'\r', 1)),
+            Some(b'\\') => Ok((b'\\', 1)),
+            Some(b'"') => Ok((b'"', 1)),
+            Some(b'\'') => Ok((b'\'', 1)),
+            Some(b'0') => Ok((b'\0', 1)),
+            Some(&ch) => Err(LexError::InvalidEscape {
+                ch,
+                loc: self.location(),
+            }),
+            None => {
+                if is_char {
+                    Err(LexError::UnterminatedChar {
+                        loc: self.location(),
+                    })
+                } else {
+                    Err(LexError::UnterminatedString {
+                        loc: self.location(),
+                    })
+                }
+            }
+        }
+    }
+
+    fn scan_string_literal(&self) -> Result<(TokenType, usize), LexError> {
+        let mut len = 1; // skip opening "
+        let mut string = String::new();
+
+        loop {
+            match self.peek(len) {
+                None | Some(b'\n') => {
+                    return Err(LexError::UnterminatedString {
+                        loc: self.location(),
+                    });
+                }
+                Some(b'"') => {
+                    len += 1; // skip closing "
+                    break;
+                }
+                Some(b'\\') => {
+                    // escape sequence
+                    len += 1;
+                    let (ch, advance) = self.parse_escape(len, false)?;
+                    string.push(ch as char);
+                    len += advance;
+                }
+                Some(&ch) => {
+                    string.push(ch as char);
+                    len += 1;
+                }
+            }
+        }
+
+        Ok((TokenType::StringLiteral(string), len))
+    }
+
+    fn scan_char_literal(&self) -> Result<(TokenType, usize), LexError> {
+        let mut len = 1; // skip opening '
+
+        let ch = match self.peek(len) {
+            None | Some(b'\n') | Some(b'\'') => {
+                return Err(LexError::UnterminatedChar {
+                    loc: self.location(),
+                });
+            }
+            Some(b'\\') => {
+                // escape sequence
+                len += 1;
+                let (escaped_ch, advance) = self.parse_escape(len, true)?;
+                len += advance;
+                escaped_ch
+            }
+            Some(&ch) => {
+                len += 1;
+                ch
+            }
+        };
+
+        // expect closing '
+        match self.peek(len) {
+            Some(b'\'') => {
+                len += 1;
+                Ok((TokenType::CharLiteral(ch), len))
+            }
+            _ => Err(LexError::UnterminatedChar {
+                loc: self.location(),
+            }),
+        }
+    }
+
     fn advance_to(self, new_position: usize) -> Self {
         let current = self.source.get(new_position).copied();
 
@@ -480,6 +575,8 @@ pub enum TokenType {
 
     Identifier(String),
     Number(i64),
+    StringLiteral(String),
+    CharLiteral(u8),
 
     Eof,
 }
@@ -686,5 +783,90 @@ mod tests {
         assert_eq!(tokens[3].lexeme(source.as_bytes()), "x");
         assert_eq!(tokens[5].lexeme(source.as_bytes()), "i32");
         assert_eq!(tokens[7].lexeme(source.as_bytes()), "->");
+    }
+
+    #[test]
+    fn test_string_literals() {
+        let tokens = lex_all(r#""hello" "world\n" "tab\there""#).unwrap();
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral("hello".to_string())
+        );
+        assert_eq!(
+            tokens[1].kind,
+            TokenType::StringLiteral("world\n".to_string())
+        );
+        assert_eq!(
+            tokens[2].kind,
+            TokenType::StringLiteral("tab\there".to_string())
+        );
+    }
+
+    #[test]
+    fn test_string_escapes() {
+        let tokens = lex_all(r#""quote\"test" "backslash\\" "null\0end""#).unwrap();
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral("quote\"test".to_string())
+        );
+        assert_eq!(
+            tokens[1].kind,
+            TokenType::StringLiteral("backslash\\".to_string())
+        );
+        assert_eq!(
+            tokens[2].kind,
+            TokenType::StringLiteral("null\0end".to_string())
+        );
+    }
+
+    #[test]
+    fn test_char_literals() {
+        let tokens = lex_all(r"'a' 'Z' '0'").unwrap();
+        assert_eq!(tokens[0].kind, TokenType::CharLiteral(b'a'));
+        assert_eq!(tokens[1].kind, TokenType::CharLiteral(b'Z'));
+        assert_eq!(tokens[2].kind, TokenType::CharLiteral(b'0'));
+    }
+
+    #[test]
+    fn test_char_escapes() {
+        let tokens = lex_all(r"'\n' '\t' '\'' '\\' '\0'").unwrap();
+        assert_eq!(tokens[0].kind, TokenType::CharLiteral(b'\n'));
+        assert_eq!(tokens[1].kind, TokenType::CharLiteral(b'\t'));
+        assert_eq!(tokens[2].kind, TokenType::CharLiteral(b'\''));
+        assert_eq!(tokens[3].kind, TokenType::CharLiteral(b'\\'));
+        assert_eq!(tokens[4].kind, TokenType::CharLiteral(b'\0'));
+    }
+
+    #[test]
+    fn test_unterminated_string() {
+        let result = lex_all(r#""unterminated"#);
+        assert!(matches!(result, Err(LexError::UnterminatedString { .. })));
+    }
+
+    #[test]
+    fn test_unterminated_char() {
+        let result = lex_all("'a");
+        assert!(matches!(result, Err(LexError::UnterminatedChar { .. })));
+    }
+
+    #[test]
+    fn test_invalid_escape() {
+        let result = lex_all(r#""\x""#);
+        assert!(matches!(result, Err(LexError::InvalidEscape { .. })));
+    }
+
+    #[test]
+    fn test_mixed_literals() {
+        let tokens = lex_all(r#"var msg: ptr = "Hello\n"; var c: u8 = 'x';"#).unwrap();
+        assert_eq!(tokens[0].kind, TokenType::Var);
+        assert_eq!(tokens[1].kind, TokenType::Identifier("msg".to_string()));
+        assert_eq!(tokens[3].kind, TokenType::Ptr);
+        assert_eq!(tokens[4].kind, TokenType::Assign);
+        assert_eq!(
+            tokens[5].kind,
+            TokenType::StringLiteral("Hello\n".to_string())
+        );
+        assert_eq!(tokens[10].kind, TokenType::U8);
+        assert_eq!(tokens[12].kind, TokenType::CharLiteral(b'x'));
     }
 }
