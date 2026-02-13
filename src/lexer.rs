@@ -84,6 +84,9 @@ pub enum LexError {
     UnexpectedEof { loc: Location },
     UnexpectedChar { ch: u8, loc: Location },
     InvalidNumber { loc: Location },
+    UnterminatedString { loc: Location },
+    UnterminatedChar { loc: Location },
+    InvalidEscape { ch: u8, loc: Location },
 }
 
 impl LexError {
@@ -95,7 +98,18 @@ impl LexError {
                 loc,
                 &format!("unexpected character '{}'", *ch as char),
             ),
-            LexError::InvalidNumber { loc } => format_error(source, loc, "invalid number lexeme"),
+            LexError::InvalidNumber { loc } => format_error(source, loc, "invalid number literal"),
+            LexError::UnterminatedString { loc } => {
+                format_error(source, loc, "unterminated string literal")
+            }
+            LexError::UnterminatedChar { loc } => {
+                format_error(source, loc, "unterminated character literal")
+            }
+            LexError::InvalidEscape { ch, loc } => format_error(
+                source,
+                loc,
+                &format!("invalid escape sequence '\\{}'", *ch as char),
+            ),
         }
     }
 }
