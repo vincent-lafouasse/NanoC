@@ -100,7 +100,7 @@ impl<'a> Lexer<'a> {
             Some(b'*') => Ok((Token::Star, 1)),
             Some(b'=') => match self.peek(1) {
                 Some(b'=') => Ok((Token::Eq, 2)),
-                _ => Ok((Token::Assign, 2)),
+                _ => Ok((Token::Assign, 1)),
             },
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
                 Ok(self.scan_identifier_or_keyword())
