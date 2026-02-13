@@ -73,6 +73,12 @@ pub struct Token {
     pub span: Span,
 }
 
+impl Token {
+    pub fn literal<'a>(&self, source: &'a [u8]) -> &'a str {
+        self.span.text(source)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexError {
     UnexpectedEof { loc: Location },
@@ -504,7 +510,10 @@ mod tests {
         assert_eq!(tokens[0].kind, TokenType::Identifier("foo".to_string()));
         assert_eq!(tokens[1].kind, TokenType::Identifier("bar_baz".to_string()));
         assert_eq!(tokens[2].kind, TokenType::Identifier("x123".to_string()));
-        assert_eq!(tokens[3].kind, TokenType::Identifier("_private".to_string()));
+        assert_eq!(
+            tokens[3].kind,
+            TokenType::Identifier("_private".to_string())
+        );
     }
 
     #[test]
@@ -650,5 +659,18 @@ mod tests {
         assert_eq!(tokens[5].kind, TokenType::Comma);
         assert_eq!(tokens[6].kind, TokenType::Number(0b1010));
         assert_eq!(tokens[7].kind, TokenType::Rparen);
+    }
+
+    #[test]
+    fn test_token_literal() {
+        let source = "fn add(x: i32) -> i32 { return x + 1; }";
+        let tokens = lex_all(source).unwrap();
+
+        assert_eq!(tokens[0].literal(source.as_bytes()), "fn");
+        assert_eq!(tokens[1].literal(source.as_bytes()), "add");
+        assert_eq!(tokens[2].literal(source.as_bytes()), "(");
+        assert_eq!(tokens[3].literal(source.as_bytes()), "x");
+        assert_eq!(tokens[5].literal(source.as_bytes()), "i32");
+        assert_eq!(tokens[7].literal(source.as_bytes()), "->");
     }
 }
