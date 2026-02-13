@@ -74,7 +74,7 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn literal<'a>(&self, source: &'a [u8]) -> &'a str {
+    pub fn lexeme<'a>(&self, source: &'a [u8]) -> &'a str {
         self.span.text(source)
     }
 }
@@ -95,7 +95,7 @@ impl LexError {
                 loc,
                 &format!("unexpected character '{}'", *ch as char),
             ),
-            LexError::InvalidNumber { loc } => format_error(source, loc, "invalid number literal"),
+            LexError::InvalidNumber { loc } => format_error(source, loc, "invalid number lexeme"),
         }
     }
 }
@@ -662,15 +662,15 @@ mod tests {
     }
 
     #[test]
-    fn test_token_literal() {
+    fn test_token_lexeme() {
         let source = "fn add(x: i32) -> i32 { return x + 1; }";
         let tokens = lex_all(source).unwrap();
 
-        assert_eq!(tokens[0].literal(source.as_bytes()), "fn");
-        assert_eq!(tokens[1].literal(source.as_bytes()), "add");
-        assert_eq!(tokens[2].literal(source.as_bytes()), "(");
-        assert_eq!(tokens[3].literal(source.as_bytes()), "x");
-        assert_eq!(tokens[5].literal(source.as_bytes()), "i32");
-        assert_eq!(tokens[7].literal(source.as_bytes()), "->");
+        assert_eq!(tokens[0].lexeme(source.as_bytes()), "fn");
+        assert_eq!(tokens[1].lexeme(source.as_bytes()), "add");
+        assert_eq!(tokens[2].lexeme(source.as_bytes()), "(");
+        assert_eq!(tokens[3].lexeme(source.as_bytes()), "x");
+        assert_eq!(tokens[5].lexeme(source.as_bytes()), "i32");
+        assert_eq!(tokens[7].lexeme(source.as_bytes()), "->");
     }
 }
