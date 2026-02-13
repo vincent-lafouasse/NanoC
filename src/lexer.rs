@@ -119,6 +119,30 @@ impl<'a> Lexer<'a> {
                 Some(b'=') => Ok((Token::Eq, 2)),
                 _ => Ok((Token::Assign, 1)),
             },
+            Some(b'<') => match self.peek(1) {
+                Some(b'=') => Ok((Token::Le, 2)),
+                Some(b'<') => Ok((Token::Lshift, 2)),
+                _ => Ok((Token::Lt, 1)),
+            },
+            Some(b'>') => match self.peek(1) {
+                Some(b'=') => Ok((Token::Ge, 2)),
+                Some(b'>') => Ok((Token::Rshift, 2)),
+                _ => Ok((Token::Gt, 1)),
+            },
+            Some(b'!') => match self.peek(1) {
+                Some(b'=') => Ok((Token::Neq, 2)),
+                _ => Ok((Token::Not, 1)),
+            },
+            Some(b'&') => match self.peek(1) {
+                Some(b'&') => Ok((Token::And, 2)),
+                _ => Ok((Token::Ampersand, 1)),
+            },
+            Some(b'|') => match self.peek(1) {
+                Some(b'|') => Ok((Token::Or, 2)),
+                _ => Ok((Token::Pipe, 1)),
+            },
+            Some(b'^') => Ok((Token::Xor, 1)),
+            Some(b'~') => Ok((Token::Bnot, 1)),
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
                 Ok(self.scan_identifier_or_keyword())
             }
