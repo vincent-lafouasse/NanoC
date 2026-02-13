@@ -97,7 +97,24 @@ impl<'a> Lexer<'a> {
 
     fn scan_token(&self) -> Result<(Token, usize), LexError> {
         match self.current {
+            Some(b'(') => Ok((Token::Lparen, 1)),
+            Some(b')') => Ok((Token::Rparen, 1)),
+            Some(b'{') => Ok((Token::Lbrace, 1)),
+            Some(b'}') => Ok((Token::Rbrace, 1)),
+            Some(b'[') => Ok((Token::Lbracket, 1)),
+            Some(b']') => Ok((Token::Rbracket, 1)),
+            Some(b':') => Ok((Token::Colon, 1)),
+            Some(b',') => Ok((Token::Comma, 1)),
+            Some(b';') => Ok((Token::Semicolon, 1)),
+            Some(b'.') => Ok((Token::Dot, 1)),
+            Some(b'+') => Ok((Token::Plus, 1)),
+            Some(b'-') => match self.peek(1) {
+                Some(b'>') => Ok((Token::Arrow, 2)),
+                _ => Ok((Token::Minus, 1)),
+            },
             Some(b'*') => Ok((Token::Star, 1)),
+            Some(b'/') => Ok((Token::Slash, 1)),
+            Some(b'%') => Ok((Token::Mod, 1)),
             Some(b'=') => match self.peek(1) {
                 Some(b'=') => Ok((Token::Eq, 2)),
                 _ => Ok((Token::Assign, 1)),
