@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use nanoc::lexer::{Lexer, Token};
+use nanoc::lexer::{Lexer, TokenType};
 
 use std::process::exit;
 
@@ -45,7 +45,7 @@ fn main() {
                 token_count += 1;
                 lexer = new_lexer;
 
-                if token == Token::Eof {
+                if matches!(token.kind, TokenType::Eof) {
                     break;
                 }
             }

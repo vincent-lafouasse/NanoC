@@ -1,21 +1,21 @@
 // sorted for binary search
-const KEYWORDS: &[(&str, Token)] = &[
-    ("break", Token::Break),
-    ("const", Token::Const),
-    ("continue", Token::Continue),
-    ("else", Token::Else),
-    ("fn", Token::Fn),
-    ("goto", Token::Goto),
-    ("i32", Token::I32),
-    ("if", Token::If),
-    ("ptr", Token::Ptr),
-    ("return", Token::Return),
-    ("struct", Token::Struct),
-    ("syscall", Token::Syscall),
-    ("u32", Token::U32),
-    ("u8", Token::U8),
-    ("var", Token::Var),
-    ("while", Token::While),
+const KEYWORDS: &[(&str, TokenType)] = &[
+    ("break", TokenType::Break),
+    ("const", TokenType::Const),
+    ("continue", TokenType::Continue),
+    ("else", TokenType::Else),
+    ("fn", TokenType::Fn),
+    ("goto", TokenType::Goto),
+    ("i32", TokenType::I32),
+    ("if", TokenType::If),
+    ("ptr", TokenType::Ptr),
+    ("return", TokenType::Return),
+    ("struct", TokenType::Struct),
+    ("syscall", TokenType::Syscall),
+    ("u32", TokenType::U32),
+    ("u8", TokenType::U8),
+    ("var", TokenType::Var),
+    ("while", TokenType::While),
 ];
 
 pub struct Lexer<'a> {
@@ -31,6 +31,46 @@ pub struct Location {
     pub position: usize,
     pub line: usize,
     pub column: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Span {
+    pub fn location_start(&self, source: &[u8]) -> Location {
+        let mut line = 1;
+        let mut column = 1;
+
+        for i in 0..self.start {
+            if let Some(&ch) = source.get(i) {
+                if ch == b'\n' {
+                    line += 1;
+                    column = 1;
+                } else {
+                    column += 1;
+                }
+            }
+        }
+
+        Location {
+            position: self.start,
+            line,
+            column,
+        }
+    }
+
+    pub fn text<'a>(&self, source: &'a [u8]) -> &'a str {
+        std::str::from_utf8(&source[self.start..self.end]).unwrap_or("")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Token {
+    pub kind: TokenType,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,9 +140,14 @@ impl<'a> Lexer<'a> {
 
     pub fn next_token(self) -> Result<(Token, Self), LexError> {
         let lexer = self.skip_whitespace();
-        let (token, token_len) = lexer.scan_token()?;
-        let new_pos = lexer.position() + token_len;
-        Ok((token, lexer.advance_to(new_pos)))
+        let start = lexer.position();
+        let (token_type, token_len) = lexer.scan_token()?;
+        let end = start + token_len;
+        let token = Token {
+            kind: token_type,
+            span: Span { start, end },
+        };
+        Ok((token, lexer.advance_to(end)))
     }
 
     fn skip_whitespace(self) -> Self {
@@ -148,59 +193,59 @@ impl<'a> Lexer<'a> {
         self.advance_to(new_pos)
     }
 
-    fn scan_token(&self) -> Result<(Token, usize), LexError> {
+    fn scan_token(&self) -> Result<(TokenType, usize), LexError> {
         match self.current {
-            Some(b'(') => Ok((Token::Lparen, 1)),
-            Some(b')') => Ok((Token::Rparen, 1)),
-            Some(b'{') => Ok((Token::Lbrace, 1)),
-            Some(b'}') => Ok((Token::Rbrace, 1)),
-            Some(b'[') => Ok((Token::Lbracket, 1)),
-            Some(b']') => Ok((Token::Rbracket, 1)),
-            Some(b':') => Ok((Token::Colon, 1)),
-            Some(b',') => Ok((Token::Comma, 1)),
-            Some(b';') => Ok((Token::Semicolon, 1)),
-            Some(b'.') => Ok((Token::Dot, 1)),
-            Some(b'+') => Ok((Token::Plus, 1)),
+            Some(b'(') => Ok((TokenType::Lparen, 1)),
+            Some(b')') => Ok((TokenType::Rparen, 1)),
+            Some(b'{') => Ok((TokenType::Lbrace, 1)),
+            Some(b'}') => Ok((TokenType::Rbrace, 1)),
+            Some(b'[') => Ok((TokenType::Lbracket, 1)),
+            Some(b']') => Ok((TokenType::Rbracket, 1)),
+            Some(b':') => Ok((TokenType::Colon, 1)),
+            Some(b',') => Ok((TokenType::Comma, 1)),
+            Some(b';') => Ok((TokenType::Semicolon, 1)),
+            Some(b'.') => Ok((TokenType::Dot, 1)),
+            Some(b'+') => Ok((TokenType::Plus, 1)),
             Some(b'-') => match self.peek(1) {
-                Some(b'>') => Ok((Token::Arrow, 2)),
-                _ => Ok((Token::Minus, 1)),
+                Some(b'>') => Ok((TokenType::Arrow, 2)),
+                _ => Ok((TokenType::Minus, 1)),
             },
-            Some(b'*') => Ok((Token::Star, 1)),
-            Some(b'/') => Ok((Token::Slash, 1)),
-            Some(b'%') => Ok((Token::Mod, 1)),
+            Some(b'*') => Ok((TokenType::Star, 1)),
+            Some(b'/') => Ok((TokenType::Slash, 1)),
+            Some(b'%') => Ok((TokenType::Mod, 1)),
             Some(b'=') => match self.peek(1) {
-                Some(b'=') => Ok((Token::Eq, 2)),
-                _ => Ok((Token::Assign, 1)),
+                Some(b'=') => Ok((TokenType::Eq, 2)),
+                _ => Ok((TokenType::Assign, 1)),
             },
             Some(b'<') => match self.peek(1) {
-                Some(b'=') => Ok((Token::Le, 2)),
-                Some(b'<') => Ok((Token::Lshift, 2)),
-                _ => Ok((Token::Lt, 1)),
+                Some(b'=') => Ok((TokenType::Le, 2)),
+                Some(b'<') => Ok((TokenType::Lshift, 2)),
+                _ => Ok((TokenType::Lt, 1)),
             },
             Some(b'>') => match self.peek(1) {
-                Some(b'=') => Ok((Token::Ge, 2)),
-                Some(b'>') => Ok((Token::Rshift, 2)),
-                _ => Ok((Token::Gt, 1)),
+                Some(b'=') => Ok((TokenType::Ge, 2)),
+                Some(b'>') => Ok((TokenType::Rshift, 2)),
+                _ => Ok((TokenType::Gt, 1)),
             },
             Some(b'!') => match self.peek(1) {
-                Some(b'=') => Ok((Token::Neq, 2)),
-                _ => Ok((Token::Not, 1)),
+                Some(b'=') => Ok((TokenType::Neq, 2)),
+                _ => Ok((TokenType::Not, 1)),
             },
             Some(b'&') => match self.peek(1) {
-                Some(b'&') => Ok((Token::And, 2)),
-                _ => Ok((Token::Ampersand, 1)),
+                Some(b'&') => Ok((TokenType::And, 2)),
+                _ => Ok((TokenType::Ampersand, 1)),
             },
             Some(b'|') => match self.peek(1) {
-                Some(b'|') => Ok((Token::Or, 2)),
-                _ => Ok((Token::Pipe, 1)),
+                Some(b'|') => Ok((TokenType::Or, 2)),
+                _ => Ok((TokenType::Pipe, 1)),
             },
-            Some(b'^') => Ok((Token::Xor, 1)),
-            Some(b'~') => Ok((Token::Bnot, 1)),
+            Some(b'^') => Ok((TokenType::Xor, 1)),
+            Some(b'~') => Ok((TokenType::Bnot, 1)),
             Some(ch) if ch.is_ascii_alphabetic() || ch == b'_' => {
                 Ok(self.scan_identifier_or_keyword())
             }
             Some(ch) if ch.is_ascii_digit() => self.scan_number(),
-            None => Ok((Token::Eof, 0)),
+            None => Ok((TokenType::Eof, 0)),
             _ => Err(LexError::UnexpectedChar {
                 ch: self.current.unwrap(),
                 loc: self.location(),
@@ -212,7 +257,7 @@ impl<'a> Lexer<'a> {
         self.source.get(self.position + offset)
     }
 
-    fn scan_identifier_or_keyword(&self) -> (Token, usize) {
+    fn scan_identifier_or_keyword(&self) -> (TokenType, usize) {
         let mut len = 0;
         while let Some(c) = self.peek(len) {
             if c.is_ascii_alphanumeric() || *c == b'_' {
@@ -226,15 +271,15 @@ impl<'a> Lexer<'a> {
             .expect("identifiers are ascii");
 
         // binary search in KEYWORDS
-        let token = match KEYWORDS.binary_search_by_key(&text, |&(s, _)| s) {
+        let token_type = match KEYWORDS.binary_search_by_key(&text, |&(s, _)| s) {
             Ok(idx) => KEYWORDS[idx].1.clone(),
-            Err(_) => Token::Identifier(text.to_string()),
+            Err(_) => TokenType::Identifier(text.to_string()),
         };
 
-        (token, len)
+        (token_type, len)
     }
 
-    fn scan_number(&self) -> Result<(Token, usize), LexError> {
+    fn scan_number(&self) -> Result<(TokenType, usize), LexError> {
         let mut len = 0;
 
         // check for 0x or 0b prefix
@@ -315,7 +360,7 @@ impl<'a> Lexer<'a> {
         };
 
         match value {
-            Ok(n) => Ok((Token::Number(n), len)),
+            Ok(n) => Ok((TokenType::Number(n), len)),
             Err(_) => Err(LexError::InvalidNumber {
                 loc: self.location(),
             }),
@@ -351,7 +396,7 @@ impl<'a> Lexer<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Token {
+pub enum TokenType {
     // keywords
     Fn,
     Var,
@@ -429,7 +474,7 @@ mod tests {
 
         loop {
             let (token, new_lexer) = lexer.next_token()?;
-            let is_eof = token == Token::Eof;
+            let is_eof = matches!(token.kind, TokenType::Eof);
             tokens.push(token);
             lexer = new_lexer;
             if is_eof {
@@ -443,70 +488,70 @@ mod tests {
     #[test]
     fn test_keywords() {
         let tokens = lex_all("fn var const return if else while break").unwrap();
-        assert_eq!(tokens[0], Token::Fn);
-        assert_eq!(tokens[1], Token::Var);
-        assert_eq!(tokens[2], Token::Const);
-        assert_eq!(tokens[3], Token::Return);
-        assert_eq!(tokens[4], Token::If);
-        assert_eq!(tokens[5], Token::Else);
-        assert_eq!(tokens[6], Token::While);
-        assert_eq!(tokens[7], Token::Break);
+        assert_eq!(tokens[0].kind, TokenType::Fn);
+        assert_eq!(tokens[1].kind, TokenType::Var);
+        assert_eq!(tokens[2].kind, TokenType::Const);
+        assert_eq!(tokens[3].kind, TokenType::Return);
+        assert_eq!(tokens[4].kind, TokenType::If);
+        assert_eq!(tokens[5].kind, TokenType::Else);
+        assert_eq!(tokens[6].kind, TokenType::While);
+        assert_eq!(tokens[7].kind, TokenType::Break);
     }
 
     #[test]
     fn test_identifiers() {
         let tokens = lex_all("foo bar_baz x123 _private").unwrap();
-        assert_eq!(tokens[0], Token::Identifier("foo".to_string()));
-        assert_eq!(tokens[1], Token::Identifier("bar_baz".to_string()));
-        assert_eq!(tokens[2], Token::Identifier("x123".to_string()));
-        assert_eq!(tokens[3], Token::Identifier("_private".to_string()));
+        assert_eq!(tokens[0].kind, TokenType::Identifier("foo".to_string()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier("bar_baz".to_string()));
+        assert_eq!(tokens[2].kind, TokenType::Identifier("x123".to_string()));
+        assert_eq!(tokens[3].kind, TokenType::Identifier("_private".to_string()));
     }
 
     #[test]
     fn test_decimal_numbers() {
         let tokens = lex_all("0 123 456u").unwrap();
-        assert_eq!(tokens[0], Token::Number(0));
-        assert_eq!(tokens[1], Token::Number(123));
-        assert_eq!(tokens[2], Token::Number(456));
+        assert_eq!(tokens[0].kind, TokenType::Number(0));
+        assert_eq!(tokens[1].kind, TokenType::Number(123));
+        assert_eq!(tokens[2].kind, TokenType::Number(456));
     }
 
     #[test]
     fn test_hex_numbers() {
         let tokens = lex_all("0xFF 0x1A3B 0xDEADBEEFu").unwrap();
-        assert_eq!(tokens[0], Token::Number(0xFF));
-        assert_eq!(tokens[1], Token::Number(0x1A3B));
-        assert_eq!(tokens[2], Token::Number(0xDEADBEEF));
+        assert_eq!(tokens[0].kind, TokenType::Number(0xFF));
+        assert_eq!(tokens[1].kind, TokenType::Number(0x1A3B));
+        assert_eq!(tokens[2].kind, TokenType::Number(0xDEADBEEF));
     }
 
     #[test]
     fn test_binary_numbers() {
         let tokens = lex_all("0b1010 0b11110000 0b1u").unwrap();
-        assert_eq!(tokens[0], Token::Number(0b1010));
-        assert_eq!(tokens[1], Token::Number(0b11110000));
-        assert_eq!(tokens[2], Token::Number(0b1));
+        assert_eq!(tokens[0].kind, TokenType::Number(0b1010));
+        assert_eq!(tokens[1].kind, TokenType::Number(0b11110000));
+        assert_eq!(tokens[2].kind, TokenType::Number(0b1));
     }
 
     #[test]
     fn test_line_comments() {
         let tokens = lex_all("fn // this is a comment\nvar").unwrap();
-        assert_eq!(tokens[0], Token::Fn);
-        assert_eq!(tokens[1], Token::Var);
+        assert_eq!(tokens[0].kind, TokenType::Fn);
+        assert_eq!(tokens[1].kind, TokenType::Var);
         assert_eq!(tokens.len(), 3); // fn, var, eof
     }
 
     #[test]
     fn test_block_comments() {
         let tokens = lex_all("fn /* comment */ var /* multi\nline */return").unwrap();
-        assert_eq!(tokens[0], Token::Fn);
-        assert_eq!(tokens[1], Token::Var);
-        assert_eq!(tokens[2], Token::Return);
+        assert_eq!(tokens[0].kind, TokenType::Fn);
+        assert_eq!(tokens[1].kind, TokenType::Var);
+        assert_eq!(tokens[2].kind, TokenType::Return);
     }
 
     #[test]
     fn test_operators() {
         let tokens = lex_all("* ==").unwrap();
-        assert_eq!(tokens[0], Token::Star);
-        assert_eq!(tokens[1], Token::Eq);
+        assert_eq!(tokens[0].kind, TokenType::Star);
+        assert_eq!(tokens[1].kind, TokenType::Eq);
     }
 
     #[test]
@@ -560,50 +605,50 @@ mod tests {
     #[test]
     fn test_variable_declaration() {
         let tokens = lex_all("var x: u32 = 0xFF;").unwrap();
-        assert_eq!(tokens[0], Token::Var);
-        assert_eq!(tokens[1], Token::Identifier("x".to_string()));
-        assert_eq!(tokens[2], Token::Colon);
-        assert_eq!(tokens[3], Token::U32);
-        assert_eq!(tokens[4], Token::Assign);
-        assert_eq!(tokens[5], Token::Number(0xFF));
-        assert_eq!(tokens[6], Token::Semicolon);
+        assert_eq!(tokens[0].kind, TokenType::Var);
+        assert_eq!(tokens[1].kind, TokenType::Identifier("x".to_string()));
+        assert_eq!(tokens[2].kind, TokenType::Colon);
+        assert_eq!(tokens[3].kind, TokenType::U32);
+        assert_eq!(tokens[4].kind, TokenType::Assign);
+        assert_eq!(tokens[5].kind, TokenType::Number(0xFF));
+        assert_eq!(tokens[6].kind, TokenType::Semicolon);
     }
 
     #[test]
     fn test_function_declaration() {
         let tokens = lex_all("fn add(a: i32, b: i32) -> i32 { return a + b; }").unwrap();
-        assert_eq!(tokens[0], Token::Fn);
-        assert_eq!(tokens[1], Token::Identifier("add".to_string()));
-        assert_eq!(tokens[2], Token::Lparen);
-        assert_eq!(tokens[3], Token::Identifier("a".to_string()));
-        assert_eq!(tokens[4], Token::Colon);
-        assert_eq!(tokens[5], Token::I32);
-        assert_eq!(tokens[6], Token::Comma);
-        assert_eq!(tokens[7], Token::Identifier("b".to_string()));
-        assert_eq!(tokens[8], Token::Colon);
-        assert_eq!(tokens[9], Token::I32);
-        assert_eq!(tokens[10], Token::Rparen);
-        assert_eq!(tokens[11], Token::Arrow);
-        assert_eq!(tokens[12], Token::I32);
-        assert_eq!(tokens[13], Token::Lbrace);
-        assert_eq!(tokens[14], Token::Return);
-        assert_eq!(tokens[15], Token::Identifier("a".to_string()));
-        assert_eq!(tokens[16], Token::Plus);
-        assert_eq!(tokens[17], Token::Identifier("b".to_string()));
-        assert_eq!(tokens[18], Token::Semicolon);
-        assert_eq!(tokens[19], Token::Rbrace);
+        assert_eq!(tokens[0].kind, TokenType::Fn);
+        assert_eq!(tokens[1].kind, TokenType::Identifier("add".to_string()));
+        assert_eq!(tokens[2].kind, TokenType::Lparen);
+        assert_eq!(tokens[3].kind, TokenType::Identifier("a".to_string()));
+        assert_eq!(tokens[4].kind, TokenType::Colon);
+        assert_eq!(tokens[5].kind, TokenType::I32);
+        assert_eq!(tokens[6].kind, TokenType::Comma);
+        assert_eq!(tokens[7].kind, TokenType::Identifier("b".to_string()));
+        assert_eq!(tokens[8].kind, TokenType::Colon);
+        assert_eq!(tokens[9].kind, TokenType::I32);
+        assert_eq!(tokens[10].kind, TokenType::Rparen);
+        assert_eq!(tokens[11].kind, TokenType::Arrow);
+        assert_eq!(tokens[12].kind, TokenType::I32);
+        assert_eq!(tokens[13].kind, TokenType::Lbrace);
+        assert_eq!(tokens[14].kind, TokenType::Return);
+        assert_eq!(tokens[15].kind, TokenType::Identifier("a".to_string()));
+        assert_eq!(tokens[16].kind, TokenType::Plus);
+        assert_eq!(tokens[17].kind, TokenType::Identifier("b".to_string()));
+        assert_eq!(tokens[18].kind, TokenType::Semicolon);
+        assert_eq!(tokens[19].kind, TokenType::Rbrace);
     }
 
     #[test]
     fn test_syscall_with_hex() {
         let tokens = lex_all("syscall(0x3D, buffer, 0b1010u)").unwrap();
-        assert_eq!(tokens[0], Token::Syscall);
-        assert_eq!(tokens[1], Token::Lparen);
-        assert_eq!(tokens[2], Token::Number(0x3D));
-        assert_eq!(tokens[3], Token::Comma);
-        assert_eq!(tokens[4], Token::Identifier("buffer".to_string()));
-        assert_eq!(tokens[5], Token::Comma);
-        assert_eq!(tokens[6], Token::Number(0b1010));
-        assert_eq!(tokens[7], Token::Rparen);
+        assert_eq!(tokens[0].kind, TokenType::Syscall);
+        assert_eq!(tokens[1].kind, TokenType::Lparen);
+        assert_eq!(tokens[2].kind, TokenType::Number(0x3D));
+        assert_eq!(tokens[3].kind, TokenType::Comma);
+        assert_eq!(tokens[4].kind, TokenType::Identifier("buffer".to_string()));
+        assert_eq!(tokens[5].kind, TokenType::Comma);
+        assert_eq!(tokens[6].kind, TokenType::Number(0b1010));
+        assert_eq!(tokens[7].kind, TokenType::Rparen);
     }
 }
