@@ -1,21 +1,21 @@
 // sorted for binary search
-const KEYWORDS: &[(&str, TokenType)] = &[
-    ("break", TokenType::Break),
-    ("const", TokenType::Const),
-    ("continue", TokenType::Continue),
-    ("else", TokenType::Else),
-    ("fn", TokenType::Fn),
-    ("goto", TokenType::Goto),
-    ("i32", TokenType::I32),
-    ("if", TokenType::If),
-    ("ptr", TokenType::Ptr),
-    ("return", TokenType::Return),
-    ("struct", TokenType::Struct),
-    ("syscall", TokenType::Syscall),
-    ("u32", TokenType::U32),
-    ("u8", TokenType::U8),
-    ("var", TokenType::Var),
-    ("while", TokenType::While),
+const KEYWORDS: &[(&[u8], TokenType)] = &[
+    (b"break", TokenType::Break),
+    (b"const", TokenType::Const),
+    (b"continue", TokenType::Continue),
+    (b"else", TokenType::Else),
+    (b"fn", TokenType::Fn),
+    (b"goto", TokenType::Goto),
+    (b"i32", TokenType::I32),
+    (b"if", TokenType::If),
+    (b"ptr", TokenType::Ptr),
+    (b"return", TokenType::Return),
+    (b"struct", TokenType::Struct),
+    (b"syscall", TokenType::Syscall),
+    (b"u32", TokenType::U32),
+    (b"u8", TokenType::U8),
+    (b"var", TokenType::Var),
+    (b"while", TokenType::While),
 ];
 
 pub struct Lexer<'a> {
@@ -289,13 +289,12 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let text = std::str::from_utf8(&self.source[self.position..self.position + len])
-            .expect("identifiers are ascii");
+        let bytes = &self.source[self.position..self.position + len];
 
         // binary search in KEYWORDS
-        let token_type = match KEYWORDS.binary_search_by_key(&text, |&(s, _)| s) {
+        let token_type = match KEYWORDS.binary_search_by_key(&bytes, |&(s, _)| s) {
             Ok(idx) => KEYWORDS[idx].1.clone(),
-            Err(_) => TokenType::Identifier(text.to_string()),
+            Err(_) => TokenType::Identifier(bytes.to_vec()),
         };
 
         (token_type, len)
@@ -362,23 +361,26 @@ impl<'a> Lexer<'a> {
         }
 
         // check for 'u' suffix
-        if self.peek(len) == Some(&b'u') {
+        let has_suffix = self.peek(len) == Some(&b'u');
+        if has_suffix {
             len += 1;
         }
 
-        let text = std::str::from_utf8(&self.source[self.position..self.position + len])
-            .expect("numbers are ascii");
-
-        // parse the number
-        let text_without_suffix = text.trim_end_matches('u');
-        let value = if text_without_suffix.starts_with("0x")
-            || text_without_suffix.starts_with("0X")
-        {
-            i64::from_str_radix(&text_without_suffix[2..], 16)
-        } else if text_without_suffix.starts_with("0b") || text_without_suffix.starts_with("0B") {
-            i64::from_str_radix(&text_without_suffix[2..], 2)
+        let bytes = &self.source[self.position..self.position + len];
+        let bytes_without_suffix = if has_suffix {
+            &bytes[..bytes.len() - 1]
         } else {
-            text_without_suffix.parse()
+            bytes
+        };
+
+        // parse the number (need &str for standard library parsing functions)
+        let text = unsafe { std::str::from_utf8_unchecked(bytes_without_suffix) };
+        let value = if text.starts_with("0x") || text.starts_with("0X") {
+            i64::from_str_radix(&text[2..], 16)
+        } else if text.starts_with("0b") || text.starts_with("0B") {
+            i64::from_str_radix(&text[2..], 2)
+        } else {
+            text.parse()
         };
 
         match value {
@@ -405,9 +407,9 @@ impl<'a> Lexer<'a> {
 
                 match (hex1, hex2) {
                     (Some(&h1), Some(&h2)) if h1.is_ascii_hexdigit() && h2.is_ascii_hexdigit() => {
-                        let hex_bytes = [h1, h2];
-                        let hex_str = std::str::from_utf8(&hex_bytes).unwrap();
-                        let byte = u8::from_str_radix(hex_str, 16).unwrap();
+                        let digit1 = (h1 as char).to_digit(16).unwrap();
+                        let digit2 = (h2 as char).to_digit(16).unwrap();
+                        let byte = (digit1 * 16 + digit2) as u8;
                         Ok((byte, 3)) // advance by 3: 'x' + 2 hex digits
                     }
                     _ => Err(LexError::InvalidEscape {
@@ -436,7 +438,7 @@ impl<'a> Lexer<'a> {
 
     fn scan_string_literal(&self) -> Result<(TokenType, usize), LexError> {
         let mut len = 1; // skip opening "
-        let mut string = String::new();
+        let mut bytes = Vec::new();
 
         loop {
             match self.peek(len) {
@@ -453,17 +455,17 @@ impl<'a> Lexer<'a> {
                     // escape sequence
                     len += 1;
                     let (ch, advance) = self.parse_escape(len, false)?;
-                    string.push(ch as char);
+                    bytes.push(ch);
                     len += advance;
                 }
                 Some(&ch) => {
-                    string.push(ch as char);
+                    bytes.push(ch);
                     len += 1;
                 }
             }
         }
 
-        Ok((TokenType::StringLiteral(string), len))
+        Ok((TokenType::StringLiteral(bytes), len))
     }
 
     fn scan_char_literal(&self) -> Result<(TokenType, usize), LexError> {
@@ -591,9 +593,9 @@ pub enum TokenType {
     Dot,
     Arrow,
 
-    Identifier(String),
+    Identifier(Vec<u8>),
     Number(i64),
-    StringLiteral(String),
+    StringLiteral(Vec<u8>),
     CharLiteral(u8),
 
     Eof,
@@ -636,13 +638,10 @@ mod tests {
     #[test]
     fn test_identifiers() {
         let tokens = lex_all("foo bar_baz x123 _private").unwrap();
-        assert_eq!(tokens[0].kind, TokenType::Identifier("foo".to_string()));
-        assert_eq!(tokens[1].kind, TokenType::Identifier("bar_baz".to_string()));
-        assert_eq!(tokens[2].kind, TokenType::Identifier("x123".to_string()));
-        assert_eq!(
-            tokens[3].kind,
-            TokenType::Identifier("_private".to_string())
-        );
+        assert_eq!(tokens[0].kind, TokenType::Identifier(b"foo".to_vec()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(b"bar_baz".to_vec()));
+        assert_eq!(tokens[2].kind, TokenType::Identifier(b"x123".to_vec()));
+        assert_eq!(tokens[3].kind, TokenType::Identifier(b"_private".to_vec()));
     }
 
     #[test]
@@ -744,7 +743,7 @@ mod tests {
     fn test_variable_declaration() {
         let tokens = lex_all("var x: u32 = 0xFF;").unwrap();
         assert_eq!(tokens[0].kind, TokenType::Var);
-        assert_eq!(tokens[1].kind, TokenType::Identifier("x".to_string()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(b"x".to_vec()));
         assert_eq!(tokens[2].kind, TokenType::Colon);
         assert_eq!(tokens[3].kind, TokenType::U32);
         assert_eq!(tokens[4].kind, TokenType::Assign);
@@ -756,13 +755,13 @@ mod tests {
     fn test_function_declaration() {
         let tokens = lex_all("fn add(a: i32, b: i32) -> i32 { return a + b; }").unwrap();
         assert_eq!(tokens[0].kind, TokenType::Fn);
-        assert_eq!(tokens[1].kind, TokenType::Identifier("add".to_string()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(b"add".to_vec()));
         assert_eq!(tokens[2].kind, TokenType::Lparen);
-        assert_eq!(tokens[3].kind, TokenType::Identifier("a".to_string()));
+        assert_eq!(tokens[3].kind, TokenType::Identifier(b"a".to_vec()));
         assert_eq!(tokens[4].kind, TokenType::Colon);
         assert_eq!(tokens[5].kind, TokenType::I32);
         assert_eq!(tokens[6].kind, TokenType::Comma);
-        assert_eq!(tokens[7].kind, TokenType::Identifier("b".to_string()));
+        assert_eq!(tokens[7].kind, TokenType::Identifier(b"b".to_vec()));
         assert_eq!(tokens[8].kind, TokenType::Colon);
         assert_eq!(tokens[9].kind, TokenType::I32);
         assert_eq!(tokens[10].kind, TokenType::Rparen);
@@ -770,9 +769,9 @@ mod tests {
         assert_eq!(tokens[12].kind, TokenType::I32);
         assert_eq!(tokens[13].kind, TokenType::Lbrace);
         assert_eq!(tokens[14].kind, TokenType::Return);
-        assert_eq!(tokens[15].kind, TokenType::Identifier("a".to_string()));
+        assert_eq!(tokens[15].kind, TokenType::Identifier(b"a".to_vec()));
         assert_eq!(tokens[16].kind, TokenType::Plus);
-        assert_eq!(tokens[17].kind, TokenType::Identifier("b".to_string()));
+        assert_eq!(tokens[17].kind, TokenType::Identifier(b"b".to_vec()));
         assert_eq!(tokens[18].kind, TokenType::Semicolon);
         assert_eq!(tokens[19].kind, TokenType::Rbrace);
     }
@@ -784,7 +783,7 @@ mod tests {
         assert_eq!(tokens[1].kind, TokenType::Lparen);
         assert_eq!(tokens[2].kind, TokenType::Number(0x3D));
         assert_eq!(tokens[3].kind, TokenType::Comma);
-        assert_eq!(tokens[4].kind, TokenType::Identifier("buffer".to_string()));
+        assert_eq!(tokens[4].kind, TokenType::Identifier(b"buffer".to_vec()));
         assert_eq!(tokens[5].kind, TokenType::Comma);
         assert_eq!(tokens[6].kind, TokenType::Number(0b1010));
         assert_eq!(tokens[7].kind, TokenType::Rparen);
@@ -806,17 +805,14 @@ mod tests {
     #[test]
     fn test_string_literals() {
         let tokens = lex_all(r#""hello" "world\n" "tab\there""#).unwrap();
-        assert_eq!(
-            tokens[0].kind,
-            TokenType::StringLiteral("hello".to_string())
-        );
+        assert_eq!(tokens[0].kind, TokenType::StringLiteral(b"hello".to_vec()));
         assert_eq!(
             tokens[1].kind,
-            TokenType::StringLiteral("world\n".to_string())
+            TokenType::StringLiteral(b"world\n".to_vec())
         );
         assert_eq!(
             tokens[2].kind,
-            TokenType::StringLiteral("tab\there".to_string())
+            TokenType::StringLiteral(b"tab\there".to_vec())
         );
     }
 
@@ -825,15 +821,15 @@ mod tests {
         let tokens = lex_all(r#""quote\"test" "backslash\\" "null\0end""#).unwrap();
         assert_eq!(
             tokens[0].kind,
-            TokenType::StringLiteral("quote\"test".to_string())
+            TokenType::StringLiteral(b"quote\"test".to_vec())
         );
         assert_eq!(
             tokens[1].kind,
-            TokenType::StringLiteral("backslash\\".to_string())
+            TokenType::StringLiteral(b"backslash\\".to_vec())
         );
         assert_eq!(
             tokens[2].kind,
-            TokenType::StringLiteral("null\0end".to_string())
+            TokenType::StringLiteral(b"null\0end".to_vec())
         );
     }
 
@@ -877,12 +873,12 @@ mod tests {
     fn test_mixed_literals() {
         let tokens = lex_all(r#"var msg: ptr = "Hello\n"; var c: u8 = 'x';"#).unwrap();
         assert_eq!(tokens[0].kind, TokenType::Var);
-        assert_eq!(tokens[1].kind, TokenType::Identifier("msg".to_string()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(b"msg".to_vec()));
         assert_eq!(tokens[3].kind, TokenType::Ptr);
         assert_eq!(tokens[4].kind, TokenType::Assign);
         assert_eq!(
             tokens[5].kind,
-            TokenType::StringLiteral("Hello\n".to_string())
+            TokenType::StringLiteral(b"Hello\n".to_vec())
         );
         assert_eq!(tokens[10].kind, TokenType::U8);
         assert_eq!(tokens[12].kind, TokenType::CharLiteral(b'x'));
@@ -891,10 +887,7 @@ mod tests {
     #[test]
     fn test_hex_escapes_in_strings() {
         let tokens = lex_all(r#""\x48\x65\x6c\x6c\x6f""#).unwrap();
-        assert_eq!(
-            tokens[0].kind,
-            TokenType::StringLiteral("Hello".to_string())
-        );
+        assert_eq!(tokens[0].kind, TokenType::StringLiteral(b"Hello".to_vec()));
     }
 
     #[test]
@@ -902,7 +895,7 @@ mod tests {
         let tokens = lex_all(r#""Hello\x20World\x21""#).unwrap();
         assert_eq!(
             tokens[0].kind,
-            TokenType::StringLiteral("Hello World!".to_string())
+            TokenType::StringLiteral(b"Hello World!".to_vec())
         );
     }
 
@@ -934,7 +927,7 @@ mod tests {
         let tokens = lex_all(r#""\xDE\xAD\xBE\xEF""#).unwrap();
         assert_eq!(
             tokens[0].kind,
-            TokenType::StringLiteral("\u{de}\u{ad}\u{be}\u{ef}".to_string())
+            TokenType::StringLiteral(vec![0xDE, 0xAD, 0xBE, 0xEF])
         );
     }
 }
