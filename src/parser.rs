@@ -59,3 +59,22 @@ pub struct Struct {
     name: TypeName,
     fields: Rc<[Field]>,
 }
+
+// temporary, no expression parsing
+#[derive(Debug, Clone, PartialEq)]
+pub struct Expression(Rc<[u8]>);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarDecl {
+    is_const: bool,
+    ty: Type,
+    name: VariableName,
+    expr: Option<Expression>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum TopLevelStatement {
+    GlobalDecl(VarDecl),
+    StructDecl(Rc<Struct>),
+    // TODO: functions as well
+}
