@@ -32,7 +32,33 @@ pub struct VariableName(Rc<[u8]>);
 pub enum Type {
     PrimitiveType(PrimitiveType),
     Struct(TypeName),
-    Pointer(Box<Type>),
+    Pointer(Pointer),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Pointer {
+    base: Rc<Type>,
+    indirection: usize,
+}
+
+impl Pointer {
+    fn new(base: &Type, indirection: usize) -> Self {
+        if let Type::Pointer(Pointer {
+            base: actual_base,
+            indirection: base_indirection,
+        }) = base
+        {
+            Self {
+                base: actual_base.clone(),
+                indirection: base_indirection + indirection,
+            }
+        } else {
+            Self {
+                base: Rc::new(base.clone()),
+                indirection,
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,7 +72,7 @@ pub enum PrimitiveType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum RegisterSizedType {
     PrimitiveType(PrimitiveType),
-    Pointer(Box<Type>),
+    Pointer(Pointer),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -213,11 +239,18 @@ impl Parser {
         };
         self.advance()?;
 
-        let mut ty = base_type;
+        let mut indirection = 0;
         while self.current.kind == TokenType::Star {
             self.advance()?;
-            ty = Type::Pointer(Box::new(ty));
+            indirection += 1;
         }
+
+        let ty = if indirection == 0 {
+            base_type
+        } else {
+            let concrete_type = Pointer::new(&base_type, indirection);
+            Type::Pointer(concrete_type)
+        };
 
         Ok(ty)
     }
@@ -271,7 +304,9 @@ impl fmt::Display for Type {
         match self {
             Type::PrimitiveType(pt) => write!(f, "{}", pt),
             Type::Struct(name) => write!(f, "{}", name),
-            Type::Pointer(inner) => write!(f, "*{}", inner),
+            Type::Pointer(Pointer { base, indirection }) => {
+                write!(f, "{}{}", base, "*".repeat(*indirection))
+            }
         }
     }
 }
