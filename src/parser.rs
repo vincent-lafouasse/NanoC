@@ -151,26 +151,31 @@ impl Parser {
     }
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
-        match self.current.kind.clone() {
-            TokenType::U8 => return Ok(Type::PrimitiveType(PrimitiveType::U8)),
-            TokenType::I32 => return Ok(Type::PrimitiveType(PrimitiveType::I32)),
-            TokenType::U32 => return Ok(Type::PrimitiveType(PrimitiveType::U32)),
-            TokenType::Ptr => return Ok(Type::PrimitiveType(PrimitiveType::Ptr)),
-            _ => (),
+        let base_type = match &self.current.kind {
+            TokenType::U8 => Type::PrimitiveType(PrimitiveType::U8),
+            TokenType::I32 => Type::PrimitiveType(PrimitiveType::I32),
+            TokenType::U32 => Type::PrimitiveType(PrimitiveType::U32),
+            TokenType::Ptr => Type::PrimitiveType(PrimitiveType::Ptr),
+            TokenType::Identifier(name) => {
+                let type_name = TypeName(name.clone());
+                Type::Struct(type_name)
+            }
+            _ => {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "type name".into(),
+                    found: self.current.kind.clone(),
+                });
+            }
         };
+        self.advance()?;
 
-        let base = if let TokenType::Identifier(name) = self.current.kind.clone() {
-            name.clone()
-        } else {
-            return Err(ParseError::UnexpectedToken {
-                expected: format!("{:?}", self.current.kind),
-                found: self.current.kind.clone(),
-            });
-        };
+        let mut ty = base_type;
+        while self.current.kind == TokenType::Star {
+            self.advance()?;
+            ty = Type::Pointer(Box::new(ty));
+        }
 
-        // maybe a cascade of pointers
-
-        todo!()
+        Ok(ty)
     }
 
     fn advance(&mut self) -> Result<(), ParseError> {
