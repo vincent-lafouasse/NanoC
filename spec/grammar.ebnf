@@ -8,6 +8,7 @@ top_level_statement = struct_decl
 struct_name = IDENTIFIER ;
 variable_name = IDENTIFIER ;
 function_name = INDENTIFIER ;
+label = IDENTIFIER ;
 
 type = primitive_type | struct_name | pointer ;
 
@@ -35,10 +36,10 @@ statement = var_decl
           | "{" statement* "}"
           | "break" ";"
           | "continue" ";"
-          | "goto" identifier ";"
-          | identifier ":" statement
+          | "goto" label ";"
+          | label ":" statement
           ;
 
-var_decl = ( "var" | "const" ) identifier ":" type ("=" expression)? ";" ;
+var_decl = ( "var" | "const" ) variable_name ":" type ("=" expression)? ";" ;
 
 expression = (* uhhhhhhhhh *) ;
