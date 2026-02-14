@@ -6,18 +6,25 @@ top_level_statement = struct_decl
                     ;
 
 struct_name = IDENTIFIER ;
-variable_name = IDENTIFIER;
+variable_name = IDENTIFIER ;
+function_name = INDENTIFIER ;
+
+type = primitive_type | struct_name | pointer ;
 
 primitive_type = "u8" | "i32" | "u32" | "ptr" ;
 
 base_type = primitive_type | struct_name ;
-
 pointer = base_type "*"+ ;
 
-type = primitive_type | struct_name | pointer ;
+struct_field = variable_name ":" type ","
+struct_decl = "struct" struct_name "{" struct_field+ "}" ;
 
-struct_decl = "struct" struct_name "{" (variable_name ":" type ",")+ "}" ;
+register_sized = primitive_type | pointer ;
+fn_arg = variable_name ":" register_sized ;
+fn_args = (* empty *)
+        | fn_arg ("," fn_arg)*
 
+fn_decl = "fn" function_name ("->" type)? "{" statement* "}" ;
 
 statement = var_decl
           | expression ";"
