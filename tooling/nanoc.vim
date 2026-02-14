@@ -15,7 +15,7 @@ syn keyword nanocConstant true false
 syn match nanocOperator '\v\+|\-|\*|/|\%|\&|\||\^|\~|\!|\<|\>|\='
 syn match nanocOperator '\v\&\&|\|\||\<\<|\>\>|\<\=|\>\=|[\=]{2}|\!\=|\-\>'
 
-syn match nanocLabel "\v^\s*\zs\w+\ze\s*:"
+syn match nanocLabel "\v^\s*\zs\w+\ze\s*:\s*$"
 syn match nanocLabelTarget "\w\+" contained
 
 " Numbers
