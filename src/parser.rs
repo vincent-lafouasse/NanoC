@@ -78,3 +78,8 @@ pub enum TopLevelStatement {
     StructDecl(Rc<Struct>),
     // TODO: functions as well
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Program {
+    statements: Rc<[TopLevelStatement]>,
+}
