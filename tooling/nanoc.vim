@@ -6,7 +6,7 @@ endif
 syn keyword nanocKeyword var const return if else struct while break continue syscall
 syn keyword nanocKeyword fn nextgroup=nanocFunction skipwhite
 syn keyword nanocKeyword goto nextgroup=nanocLabelTarget skipwhite
-syn keyword nanocType u8 i32 u32 ptr
+syn keyword nanocPrimitiveType u8 i32 u32 ptr
 
 " Constants
 syn keyword nanocConstant true false
@@ -46,7 +46,7 @@ syn match nanocFunction "\v\w+\ze\s*\("
 
 " Highlighting links
 hi def link nanocKeyword Keyword
-hi def link nanocType Type
+hi def link nanocPrimitiveType Keyword
 hi def link nanocConstant Constant
 hi def link nanocNumber Number
 hi def link nanocChar Character
