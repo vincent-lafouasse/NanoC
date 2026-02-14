@@ -274,7 +274,7 @@ impl Parser {
             }
             TokenType::Assign => {
                 self.advance()?;
-                let expr = self.parse_dummy_expression_with_semicolon()?;
+                let expr = self.parse_dummy_expression_until(|tok| tok == &TokenType::Semicolon)?;
                 Some(expr)
             }
             _ => {
@@ -293,15 +293,18 @@ impl Parser {
         })
     }
 
-    fn parse_dummy_expression_with_semicolon(&mut self) -> Result<Expression, ParseError> {
+    fn parse_dummy_expression_until<F>(&mut self, should_stop: F) -> Result<Expression, ParseError>
+    where
+        F: Fn(&TokenType) -> bool,
+    {
         let mut contents: Vec<Token> = Vec::new();
 
-        while self.current.kind != TokenType::Semicolon {
+        while !should_stop(&self.current.kind) {
             contents.push(self.current.clone());
             self.advance()?;
         }
 
-        // move past semicolon
+        // move past terminator
         self.advance()?;
 
         Ok(Expression(contents.into()))
