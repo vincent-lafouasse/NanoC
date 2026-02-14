@@ -29,6 +29,8 @@ fn_args = (* empty *)
 
 fn_decl = "fn" function_name ("->" type)? "{" statement* "}" ;
 
+var_decl = ("var" | "const") variable_name ":" type ("=" expression)? ";" ;
+
 statement = var_decl
           | expression ";"
           | "return" expression? ";"
@@ -41,6 +43,10 @@ statement = var_decl
           | label ":" statement
           ;
 
-var_decl = ("var" | "const") variable_name ":" type ("=" expression)? ";" ;
+lvalue = (* hmmmmmm *)
 
-expression = (* uhhhhhhhhh *) ;
+(* pratt parsed, precedence TBD *)
+expression = NUMBER
+           | expression + expression
+           | lvalue "=" expression
+           ;
