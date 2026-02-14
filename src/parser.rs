@@ -101,6 +101,43 @@ pub struct VarDecl {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct LValue(());
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
+    Expression(Expression),
+    VarDecl(VarDecl),
+    Assignment {
+        lvalue: LValue,
+        value: Expression,
+    },
+    ReturnStatement {
+        value: Expression,
+    },
+    If {
+        condition: Expression,
+        then_branch: Box<Statement>,
+        else_branch: Box<Statement>,
+    },
+    While {
+        condition: Expression,
+        body: Box<Statement>,
+    },
+    Block {
+        statements: Box<[Statement]>,
+    },
+    Break,
+    Continue,
+    Goto {
+        label: Box<[u8]>,
+    },
+    Labeled {
+        label: Box<[u8]>,
+        statement: Box<Statement>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum TopLevelStatement {
     GlobalDecl(VarDecl),
     StructDecl(Box<Struct>),
