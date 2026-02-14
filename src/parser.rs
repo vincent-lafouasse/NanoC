@@ -172,7 +172,7 @@ impl Parser {
             VariableName(id)
         } else {
             return Err(ParseError::UnexpectedToken {
-                expected: format!("{:?}", self.current.kind),
+                expected: "variable name".into(),
                 found: self.current.kind.clone(),
             });
         };
