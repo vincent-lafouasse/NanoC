@@ -159,12 +159,17 @@ impl Parser {
         let is_const = match self.current.kind.clone() {
             TokenType::Const => true,
             TokenType::Var => false,
-            _ => unreachable!(),
+            _ => {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "const or var".into(),
+                    found: self.current.kind.clone(),
+                });
+            }
         };
         self.advance()?;
 
-        let identifier = if let TokenType::Identifier(name) = self.current.kind.clone() {
-            name.clone()
+        let name = if let TokenType::Identifier(id) = self.current.kind.clone() {
+            VariableName(id)
         } else {
             return Err(ParseError::UnexpectedToken {
                 expected: format!("{:?}", self.current.kind),
@@ -177,33 +182,30 @@ impl Parser {
 
         let ty = self.parse_type()?;
 
-        match self.current.kind.clone() {
+        let expr = match self.current.kind.clone() {
             TokenType::Semicolon => {
                 self.advance()?;
-                let var_decl = VarDecl {
-                    is_const,
-                    name: VariableName(identifier),
-                    ty,
-                    expr: None,
-                };
-                Ok(var_decl)
+                None
             }
             TokenType::Assign => {
                 self.advance()?;
                 let expr = self.parse_dummy_expression_with_semicolon()?;
-                let var_decl = VarDecl {
-                    is_const,
-                    name: VariableName(identifier),
-                    ty,
-                    expr: Some(expr),
-                };
-                Ok(var_decl)
+                Some(expr)
             }
-            _ => Err(ParseError::UnexpectedToken {
-                expected: "semicolon or assignment".into(),
-                found: self.current.kind.clone(),
-            }),
-        }
+            _ => {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "semicolon or assignment".into(),
+                    found: self.current.kind.clone(),
+                })
+            }
+        };
+
+        Ok(VarDecl {
+            is_const,
+            name,
+            ty,
+            expr,
+        })
     }
 
     fn parse_dummy_expression_with_semicolon(&mut self) -> Result<Expression, ParseError> {
