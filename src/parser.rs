@@ -2,9 +2,9 @@ use std::rc::Rc;
 
 use crate::lexer::{LexError, Lexer, Token, TokenType};
 
-pub struct Parser<'a> {
-    source: &'a [u8],
-    lexer: Lexer<'a>,
+pub struct Parser {
+    source: Rc<[u8]>,
+    lexer: Lexer,
     current: Token,
 }
 
@@ -87,9 +87,9 @@ pub struct Program {
     statements: Rc<[TopLevelStatement]>,
 }
 
-impl Parser<'a> {
-    pub fn new<'a>(source: &'a [u8]) -> Self {
-        let lexer = Lexer::new(source);
+impl Parser {
+    pub fn new(source: Rc<[u8]>) -> Self {
+        let lexer = Lexer::new(Rc::clone(&source));
         todo!()
     }
 

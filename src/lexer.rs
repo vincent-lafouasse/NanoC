@@ -18,8 +18,10 @@ const KEYWORDS: &[(&[u8], TokenType)] = &[
     (b"while", TokenType::While),
 ];
 
-pub struct Lexer<'a> {
-    source: &'a [u8],
+use std::rc::Rc;
+
+pub struct Lexer {
+    source: Rc<[u8]>,
     position: usize,
     line: usize,
     column: usize,
@@ -134,8 +136,8 @@ fn format_error(source: &str, loc: &Location, message: &str) -> String {
     )
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(source: &'a [u8]) -> Self {
+impl Lexer {
+    pub fn new(source: Rc<[u8]>) -> Self {
         let current = source.first().copied();
         Self {
             source,
@@ -607,7 +609,8 @@ mod tests {
 
     fn lex_all(source: &str) -> Result<Vec<Token>, LexError> {
         let mut tokens = Vec::new();
-        let mut lexer = Lexer::new(source.as_bytes());
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut lexer = Lexer::new(source_rc);
 
         loop {
             let (token, new_lexer) = lexer.next_token()?;

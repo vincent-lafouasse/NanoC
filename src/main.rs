@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use nanoc::lexer::{Lexer, TokenType};
-
 use std::process::exit;
+use std::rc::Rc;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -31,10 +31,10 @@ fn main() {
         }
     };
 
-    let source_bytes = source.as_bytes();
     dbg!(&source);
 
-    let mut lexer = Lexer::new(source_bytes);
+    let source_rc: Rc<[u8]> = source.as_bytes().into();
+    let mut lexer = Lexer::new(source_rc);
     let mut token_count = 0;
 
     loop {
