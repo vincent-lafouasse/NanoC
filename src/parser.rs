@@ -127,7 +127,24 @@ impl Parser {
     fn parse_struct_decl(&mut self) -> Result<Struct, ParseError> {
         todo!()
     }
+
     fn parse_var_decl(&mut self) -> Result<VarDecl, ParseError> {
+        let is_const = match self.current.kind.clone() {
+            TokenType::Const => true,
+            TokenType::Var => false,
+            _ => unreachable!(),
+        };
+        self.advance()?;
+
+        let indentifier = if let TokenType::Identifier(name) = self.current.kind.clone() {
+            name.clone()
+        } else {
+            return Err(ParseError::UnexpectedToken {
+                expected: format!("{:?}", self.current.kind),
+                found: self.current.kind.clone(),
+            });
+        };
+
         todo!()
     }
 
