@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::lexer::{LexError, Lexer, Token};
+use crate::lexer::{LexError, Lexer, Token, TokenType};
 
 pub struct Parser<'a> {
     source: &'a [u8],
@@ -11,7 +11,10 @@ pub struct Parser<'a> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
     LexError(LexError),
-    UnexpectedToken { expected: String, found: Token },
+    UnexpectedToken {
+        expected: TokenType,
+        found: TokenType,
+    },
     UnexpectedEof,
 }
 
@@ -82,4 +85,32 @@ pub enum TopLevelStatement {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     statements: Rc<[TopLevelStatement]>,
+}
+
+impl Parser<'a> {
+    pub fn new<'a>(source: &'a [u8]) -> Self {
+        let lexer = Lexer::new(source);
+        todo!()
+    }
+
+    fn advance(&mut self) -> Result<(), ParseError> {
+        if self.current.kind != TokenType::Eof {
+            let (next_token, next_lexer) = self.lexer.next_token()?;
+            self.lexer = next_lexer;
+            self.current = next_token;
+        }
+
+        Ok(())
+    }
+
+    fn expect(&mut self, expected: TokenType) -> Result<(), ParseError> {
+        if self.current.kind == expected {
+            self.advance()
+        } else {
+            Err(ParseError::UnexpectedToken {
+                expected,
+                found: self.current,
+            })
+        }
+    }
 }
