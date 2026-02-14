@@ -325,7 +325,6 @@ impl Parser {
     }
 }
 
-// Pretty printing implementations
 impl fmt::Display for TypeName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", String::from_utf8_lossy(&self.0))
