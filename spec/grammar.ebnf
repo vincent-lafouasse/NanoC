@@ -41,6 +41,6 @@ statement = var_decl
           | label ":" statement
           ;
 
-var_decl = ( "var" | "const" ) variable_name ":" type ("=" expression)? ";" ;
+var_decl = ("var" | "const") variable_name ":" type ("=" expression)? ";" ;
 
 expression = (* uhhhhhhhhh *) ;
