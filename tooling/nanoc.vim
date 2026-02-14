@@ -27,8 +27,9 @@ syn match nanocNumber "\v<0b[01]+u?>"
 syn region nanocChar start="'" end="'" skip="\\." contains=nanocEscape
 syn region nanocString start='"' end='"' skip='\\.' contains=nanocEscape
 
-" escape sequences, e.g. \x67
+" escape sequences, namely \n \r \t \0 \\ \' \"
 syn match nanocEscape contained "\v\\[nrt0\\'\"]"
+" hex escape sequences, e.g. \x67
 syn match nanocEscape contained "\v\\x[0-9a-fA-F]{2}"
 
 syn match nanocDelimiter "\v[\(\)\{\}\[\]]"
