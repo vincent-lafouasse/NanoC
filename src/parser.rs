@@ -165,6 +165,20 @@ impl Parser {
         }
     }
 
+    fn parse_dummy_expression_with_semicolon(&mut self) -> Result<Expression, ParseError> {
+        let mut contents: Vec<Token> = Vec::new();
+
+        while self.current.kind != TokenType::Semicolon {
+            contents.push(self.current.clone());
+            self.advance()?;
+        }
+
+        // move past semicolon
+        self.advance()?;
+
+        Ok(Expression(contents.into()))
+    }
+
     fn parse_type(&mut self) -> Result<Type, ParseError> {
         let base_type = match &self.current.kind {
             TokenType::U8 => Type::PrimitiveType(PrimitiveType::U8),
