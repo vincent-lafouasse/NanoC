@@ -22,10 +22,13 @@ impl From<LexError> for ParseError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Named(Rc<[u8]>);
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     PrimitiveType(PrimitiveType),
-    Struct(Rc<Struct>),
-    Pointer(Rc<Struct>),
+    Struct(Named),
+    Pointer(Named),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,21 +39,20 @@ pub enum PrimitiveType {
     Ptr,
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum RegisterSizedType {
     PrimitiveType(PrimitiveType),
-    Pointer(Rc<Struct>),
+    Pointer(Named),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    ty: Type,
-    name: Rc<[u8]>,
+    ty: Named,
+    name: Named,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Struct {
-    name: Rc<[u8]>,
+    name: Named,
     fields: Rc<[Field]>,
 }
