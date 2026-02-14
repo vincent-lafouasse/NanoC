@@ -18,13 +18,14 @@ base_type = primitive_type | struct_name ;
 pointer = base_type "*"+ ;
 
 (* yes mandated trailing comma even on last field *)
-struct_field = variable_name ":" type ","
+struct_field = variable_name ":" type "," ;
 struct_decl = "struct" struct_name "{" struct_field+ "}" ;
 
 register_sized = primitive_type | pointer ;
 fn_arg = variable_name ":" register_sized ;
 fn_args = (* empty *)
         | fn_arg ("," fn_arg)*
+        ;
 
 fn_decl = "fn" function_name ("->" type)? "{" statement* "}" ;
 
