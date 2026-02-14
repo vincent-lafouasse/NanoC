@@ -1,0 +1,30 @@
+program = top_level_statement* ;
+
+top_level_statement = struct_decl
+                    | var_decl
+                    | function_decl
+                    ;
+
+struct_decl = "struct" identifier "{" (field ",")? "}" ;
+
+field = identifier ":" type ;
+
+type = base_type "*"* ;
+
+base_type = "u8" | "i32" | "u32" | "ptr" | identifier ;
+
+statement = var_decl
+          | expression ";"
+          | "return" expression? ";"
+          | "if" "(" expression ")" statement ("else" statement)?
+          | "while" "(" expression ")" statement
+          | "{" statement* "}"
+          | "break" ";"
+          | "continue" ";"
+          | "goto" identifier ";"
+          | identifier ":" statement
+          ;
+
+var_decl = ( "var" | "const" ) identifier ":" type ("=" expression)? ";" ;
+
+expression = (* uhhhhhhhhh *) ;
