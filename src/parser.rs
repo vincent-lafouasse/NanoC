@@ -99,6 +99,14 @@ impl Parser {
         })
     }
 
+    pub fn parse(&mut self) -> Result<Program, ParseError> {
+        let statements: Vec<TopLevelStatement> = Vec::new();
+
+        Ok(Program {
+            statements: statements.into(),
+        })
+    }
+
     fn advance(&mut self) -> Result<(), ParseError> {
         if self.current.kind != TokenType::Eof {
             self.current = self.lexer.next_token()?;
