@@ -5,7 +5,7 @@ endif
 syn case match
 
 " Keywords
-syn keyword nanocKeyword var const return if else while break continue syscall goto
+syn keyword nanocKeyword var const return if else while break continue syscall
 
 syn keyword nanocPrimitiveType u8 i32 u32 ptr
 
@@ -14,6 +14,8 @@ syn keyword nanocConstant true false
 syn match nanocOperator '\v\+|\-|\*|/|\%|\&|\||\^|\~|\!|\<|\>|\='
 syn match nanocOperator '\v\&\&|\|\||\<\<|\>\>|\<\=|\>\=|[\=]{2}|\!\=|\-\>'
 
+syn keyword nanocKeyword goto nextgroup=nanocLabelTarget skipwhite skipnl
+syn match nanocLabelTarget "\w\+" contained skipwhite skipnl
 syn match nanocLabel "\v^\s*\zs\w+\ze\s*:\s*$"
 
 " Numbers (with optional 'u' suffix)
@@ -69,6 +71,7 @@ hi def link nanocComment Comment
 hi def link nanocTodo Todo
 hi def link nanocOperator Operator
 hi def link nanocDelimiter Delimiter
+hi def link nanocLabelTarget Label
 hi def link nanocLabel Label
 
 hi def link nanocFunction Function
