@@ -145,6 +145,31 @@ impl Parser {
             });
         };
 
+        // let ty = self.parse_type()?;
+
+        todo!()
+    }
+
+    fn parse_type(&mut self) -> Result<Type, ParseError> {
+        match self.current.kind.clone() {
+            TokenType::U8 => return Ok(Type::PrimitiveType(PrimitiveType::U8)),
+            TokenType::I32 => return Ok(Type::PrimitiveType(PrimitiveType::I32)),
+            TokenType::U32 => return Ok(Type::PrimitiveType(PrimitiveType::U32)),
+            TokenType::Ptr => return Ok(Type::PrimitiveType(PrimitiveType::Ptr)),
+            _ => (),
+        };
+
+        let base = if let TokenType::Identifier(name) = self.current.kind.clone() {
+            name.clone()
+        } else {
+            return Err(ParseError::UnexpectedToken {
+                expected: format!("{:?}", self.current.kind),
+                found: self.current.kind.clone(),
+            });
+        };
+
+        // maybe a cascade of pointers
+
         todo!()
     }
 
