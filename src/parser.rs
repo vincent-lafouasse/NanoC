@@ -24,8 +24,8 @@ impl From<LexError> for ParseError {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     PrimitiveType(PrimitiveType),
-    Struct(Struct),
-    Pointer(Struct),
+    Struct(Rc<Struct>),
+    Pointer(Rc<Struct>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,7 +40,7 @@ pub enum PrimitiveType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum RegisterSizedType {
     PrimitiveType(PrimitiveType),
-    Pointer(Struct),
+    Pointer(Rc<Struct>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
