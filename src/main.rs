@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use nanoc::lexer::{Lexer, TokenType};
+use nanoc::parser::Parser;
 use std::process::exit;
 use std::rc::Rc;
 
@@ -34,26 +34,9 @@ fn main() {
     dbg!(&source);
 
     let source_rc: Rc<[u8]> = source.as_bytes().into();
-    let mut lexer = Lexer::new(source_rc);
-    let mut token_count = 0;
 
-    loop {
-        match lexer.next_token() {
-            Ok(token) => {
-                println!("{:?}", token);
+    let mut parser = Parser::new(source_rc).unwrap();
 
-                token_count += 1;
-
-                if matches!(token.kind, TokenType::Eof) {
-                    break;
-                }
-            }
-            Err(err) => {
-                eprintln!("{}", err.format(&source));
-                exit(1);
-            }
-        }
-    }
-
-    println!("\n{} tokens lexed successfully", token_count);
+    let program = parser.parse().unwrap();
+    println!("{}", program);
 }
