@@ -1,3 +1,4 @@
+use std::fmt;
 use std::rc::Rc;
 
 use crate::lexer::{LexError, Lexer, Token, TokenType};
@@ -238,5 +239,90 @@ impl Parser {
                 found: self.current.kind.clone(),
             })
         }
+    }
+}
+
+// Pretty printing implementations
+impl fmt::Display for TypeName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(&self.0))
+    }
+}
+
+impl fmt::Display for VariableName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(&self.0))
+    }
+}
+
+impl fmt::Display for PrimitiveType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PrimitiveType::U8 => write!(f, "u8"),
+            PrimitiveType::I32 => write!(f, "i32"),
+            PrimitiveType::U32 => write!(f, "u32"),
+            PrimitiveType::Ptr => write!(f, "ptr"),
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Type::PrimitiveType(pt) => write!(f, "{}", pt),
+            Type::Struct(name) => write!(f, "{}", name),
+            Type::Pointer(inner) => write!(f, "*{}", inner),
+        }
+    }
+}
+
+impl fmt::Display for Field {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}: {}", self.name, self.ty)
+    }
+}
+
+impl fmt::Display for Struct {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "struct {} {{", self.name)?;
+        for field in self.fields.iter() {
+            writeln!(f, "  {},", field)?;
+        }
+        write!(f, "}}")
+    }
+}
+
+impl fmt::Display for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<expr: {} tokens>", self.0.len())
+    }
+}
+
+impl fmt::Display for VarDecl {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let keyword = if self.is_const { "const" } else { "var" };
+        write!(f, "{} {}: {}", keyword, self.name, self.ty)?;
+        if let Some(ref expr) = self.expr {
+            write!(f, " = {}", expr)?;
+        }
+        write!(f, ";")
+    }
+}
+
+impl fmt::Display for TopLevelStatement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TopLevelStatement::GlobalDecl(decl) => write!(f, "{}", decl),
+            TopLevelStatement::StructDecl(s) => write!(f, "{}", s),
+        }
+    }
+}
+
+impl fmt::Display for Program {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for stmt in self.statements.iter() {
+            writeln!(f, "{}\n", stmt)?;
+        }
+        Ok(())
     }
 }
