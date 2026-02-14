@@ -33,6 +33,9 @@ syn region nanocString start='"' end='"' skip='\\.' contains=nanocEscape
 syn match nanocEscape contained "\v\\[nrt0\\'\"]"
 syn match nanocEscape contained "\v\\x[0-9a-fA-F]{2}"
 
+syn match nanocDelimiter "\v[\(\)\{\}\[\]]"
+hi def link nanocDelimiter Delimiter
+
 " Comments
 syn region nanocComment start="//" end="$"
 syn region nanocComment start="/\*" end="\*/"
