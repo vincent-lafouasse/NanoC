@@ -38,8 +38,9 @@ syn region nanocComment start="//" end="$" contains=nanocTodo
 syn region nanocComment start="/\*" end="\*/" contains=nanocTodo
 syn keyword nanocTodo contained TODO FIXME XXX BUG NOTE
 
-" function declaration
+" fn keyword
 syn keyword nanocKeyword fn nextgroup=nanocFunction skipwhite skipnl
+" function declaration
 syn match nanocFunction "\w\+" contained nextgroup=nanocFuncParams skipwhite skipnl
 " function call
 syn match nanocFunction "\v\w+\ze\s*\("
