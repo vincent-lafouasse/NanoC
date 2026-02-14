@@ -31,7 +31,7 @@ pub struct VariableName(Rc<[u8]>);
 pub enum Type {
     PrimitiveType(PrimitiveType),
     Struct(TypeName),
-    Pointer(TypeName),
+    Pointer(Box<Type>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,7 +45,7 @@ pub enum PrimitiveType {
 #[derive(Debug, Clone, PartialEq)]
 pub enum RegisterSizedType {
     PrimitiveType(PrimitiveType),
-    Pointer(TypeName),
+    Pointer(Box<Type>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,7 +57,7 @@ pub struct Field {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Struct {
     name: TypeName,
-    fields: Rc<[Field]>,
+    fields: Box<[Field]>,
 }
 
 // temporary, no expression parsing
@@ -75,13 +75,13 @@ pub struct VarDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TopLevelStatement {
     GlobalDecl(VarDecl),
-    StructDecl(Rc<Struct>),
+    StructDecl(Box<Struct>),
     // TODO: functions as well
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
-    statements: Rc<[TopLevelStatement]>,
+    statements: Box<[TopLevelStatement]>,
 }
 
 impl Parser {
