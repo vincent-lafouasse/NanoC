@@ -161,7 +161,21 @@ impl Parser {
                 };
                 Ok(var_decl)
             }
-            _ => panic!(),
+            TokenType::Assign => {
+                self.advance()?;
+                let expr = self.parse_dummy_expression_with_semicolon()?;
+                let var_decl = VarDecl {
+                    is_const,
+                    name: VariableName(identifier),
+                    ty,
+                    expr: Some(expr),
+                };
+                Ok(var_decl)
+            }
+            _ => Err(ParseError::UnexpectedToken {
+                expected: "semicolon or assignment".into(),
+                found: self.current.kind.clone(),
+            }),
         }
     }
 
