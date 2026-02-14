@@ -62,7 +62,7 @@ pub struct Struct {
 
 // temporary, no expression parsing
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expression(Rc<[u8]>);
+pub struct Expression(Rc<[Token]>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarDecl {
