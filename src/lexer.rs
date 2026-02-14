@@ -160,19 +160,20 @@ impl Lexer {
         }
     }
 
-    pub fn next_token(self) -> Result<(Token, Self), LexError> {
-        let lexer = self.skip_whitespace();
-        let start = lexer.position();
-        let (token_type, token_len) = lexer.scan_token()?;
+    pub fn next_token(&mut self) -> Result<Token, LexError> {
+        self.skip_whitespace();
+        let start = self.position();
+        let (token_type, token_len) = self.scan_token()?;
         let end = start + token_len;
         let token = Token {
             kind: token_type,
             span: Span { start, end },
         };
-        Ok((token, lexer.advance_to(end)))
+        self.advance_to(end);
+        Ok(token)
     }
 
-    fn skip_whitespace(self) -> Self {
+    fn skip_whitespace(&mut self) {
         let mut i = 0;
         loop {
             match self.peek(i) {
@@ -212,7 +213,7 @@ impl Lexer {
         }
 
         let new_pos = self.position() + i;
-        self.advance_to(new_pos)
+        self.advance_to(new_pos);
     }
 
     fn scan_token(&self) -> Result<(TokenType, usize), LexError> {
@@ -504,31 +505,21 @@ impl Lexer {
         }
     }
 
-    fn advance_to(self, new_position: usize) -> Self {
-        let current = self.source.get(new_position).copied();
-
+    fn advance_to(&mut self, new_position: usize) {
         // track line and column changes
-        let mut line = self.line;
-        let mut column = self.column;
-
         for i in self.position..new_position {
             if let Some(&ch) = self.source.get(i) {
                 if ch == b'\n' {
-                    line += 1;
-                    column = 1;
+                    self.line += 1;
+                    self.column = 1;
                 } else {
-                    column += 1;
+                    self.column += 1;
                 }
             }
         }
 
-        Self {
-            source: self.source,
-            position: new_position,
-            line,
-            column,
-            current,
-        }
+        self.position = new_position;
+        self.current = self.source.get(new_position).copied();
     }
 }
 
@@ -642,9 +633,18 @@ mod tests {
     fn test_identifiers() {
         let tokens = lex_all("foo bar_baz x123 _private").unwrap();
         assert_eq!(tokens[0].kind, TokenType::Identifier(Rc::from(&b"foo"[..])));
-        assert_eq!(tokens[1].kind, TokenType::Identifier(Rc::from(&b"bar_baz"[..])));
-        assert_eq!(tokens[2].kind, TokenType::Identifier(Rc::from(&b"x123"[..])));
-        assert_eq!(tokens[3].kind, TokenType::Identifier(Rc::from(&b"_private"[..])));
+        assert_eq!(
+            tokens[1].kind,
+            TokenType::Identifier(Rc::from(&b"bar_baz"[..]))
+        );
+        assert_eq!(
+            tokens[2].kind,
+            TokenType::Identifier(Rc::from(&b"x123"[..]))
+        );
+        assert_eq!(
+            tokens[3].kind,
+            TokenType::Identifier(Rc::from(&b"_private"[..]))
+        );
     }
 
     #[test]
@@ -786,7 +786,10 @@ mod tests {
         assert_eq!(tokens[1].kind, TokenType::Lparen);
         assert_eq!(tokens[2].kind, TokenType::Number(0x3D));
         assert_eq!(tokens[3].kind, TokenType::Comma);
-        assert_eq!(tokens[4].kind, TokenType::Identifier(Rc::from(&b"buffer"[..])));
+        assert_eq!(
+            tokens[4].kind,
+            TokenType::Identifier(Rc::from(&b"buffer"[..]))
+        );
         assert_eq!(tokens[5].kind, TokenType::Comma);
         assert_eq!(tokens[6].kind, TokenType::Number(0b1010));
         assert_eq!(tokens[7].kind, TokenType::Rparen);
@@ -808,7 +811,10 @@ mod tests {
     #[test]
     fn test_string_literals() {
         let tokens = lex_all(r#""hello" "world\n" "tab\there""#).unwrap();
-        assert_eq!(tokens[0].kind, TokenType::StringLiteral(Rc::from(&b"hello"[..])));
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral(Rc::from(&b"hello"[..]))
+        );
         assert_eq!(
             tokens[1].kind,
             TokenType::StringLiteral(Rc::from(&b"world\n"[..]))
@@ -890,7 +896,10 @@ mod tests {
     #[test]
     fn test_hex_escapes_in_strings() {
         let tokens = lex_all(r#""\x48\x65\x6c\x6c\x6f""#).unwrap();
-        assert_eq!(tokens[0].kind, TokenType::StringLiteral(Rc::from(&b"Hello"[..])));
+        assert_eq!(
+            tokens[0].kind,
+            TokenType::StringLiteral(Rc::from(&b"Hello"[..]))
+        );
     }
 
     #[test]

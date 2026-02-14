@@ -88,16 +88,20 @@ pub struct Program {
 }
 
 impl Parser {
-    pub fn new(source: Rc<[u8]>) -> Self {
-        let lexer = Lexer::new(Rc::clone(&source));
-        todo!()
+    pub fn new(source: Rc<[u8]>) -> Result<Self, ParseError> {
+        let mut lexer = Lexer::new(Rc::clone(&source));
+        let first_token = lexer.next_token()?;
+
+        Ok(Self {
+            source: source.clone(),
+            lexer,
+            current: first_token,
+        })
     }
 
     fn advance(&mut self) -> Result<(), ParseError> {
         if self.current.kind != TokenType::Eof {
-            let (next_token, next_lexer) = self.lexer.next_token()?;
-            self.lexer = next_lexer;
-            self.current = next_token;
+            self.current = self.lexer.next_token()?;
         }
 
         Ok(())
@@ -109,7 +113,7 @@ impl Parser {
         } else {
             Err(ParseError::UnexpectedToken {
                 expected,
-                found: self.current,
+                found: self.current.kind.clone(),
             })
         }
     }

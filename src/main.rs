@@ -39,11 +39,10 @@ fn main() {
 
     loop {
         match lexer.next_token() {
-            Ok((token, new_lexer)) => {
+            Ok(token) => {
                 println!("{:?}", token);
 
                 token_count += 1;
-                lexer = new_lexer;
 
                 if matches!(token.kind, TokenType::Eof) {
                     break;
