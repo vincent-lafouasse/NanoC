@@ -11,6 +11,8 @@ struct Node {
 var global_count: i32 = 0;
 const MAX_SIZE: u32 = 100u;
 
+/* TODO say hi */
+// XXX hello
 fn calculate(base: i32, offset: i32) {
     var result: i32;
     var point: Point;
