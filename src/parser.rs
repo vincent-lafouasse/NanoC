@@ -136,7 +136,7 @@ impl Parser {
         };
         self.advance()?;
 
-        let indentifier = if let TokenType::Identifier(name) = self.current.kind.clone() {
+        let identifier = if let TokenType::Identifier(name) = self.current.kind.clone() {
             name.clone()
         } else {
             return Err(ParseError::UnexpectedToken {
@@ -144,10 +144,25 @@ impl Parser {
                 found: self.current.kind.clone(),
             });
         };
+        self.advance()?;
 
-        // let ty = self.parse_type()?;
+        self.expect(TokenType::Colon)?;
 
-        todo!()
+        let ty = self.parse_type()?;
+
+        match self.current.kind.clone() {
+            TokenType::Semicolon => {
+                self.advance()?;
+                let var_decl = VarDecl {
+                    is_const,
+                    name: VariableName(identifier),
+                    ty,
+                    expr: None,
+                };
+                Ok(var_decl)
+            }
+            _ => panic!(),
+        }
     }
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
