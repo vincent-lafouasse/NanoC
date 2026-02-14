@@ -11,10 +11,7 @@ pub struct Parser {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
     LexError(LexError),
-    UnexpectedToken {
-        expected: TokenType,
-        found: TokenType,
-    },
+    UnexpectedToken { expected: String, found: TokenType },
     UnexpectedEof,
 }
 
@@ -100,11 +97,38 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Program, ParseError> {
-        let statements: Vec<TopLevelStatement> = Vec::new();
+        let mut statements: Vec<TopLevelStatement> = Vec::new();
+
+        while self.current.kind.clone() != TokenType::Eof {
+            let stmt = match self.current.kind.clone() {
+                TokenType::Struct => {
+                    TopLevelStatement::StructDecl(self.parse_struct_decl()?.into())
+                }
+                TokenType::Const | TokenType::Var => {
+                    TopLevelStatement::GlobalDecl(self.parse_var_decl()?)
+                }
+                TokenType::Fn => panic!("functions not implemented yet"),
+                _ => {
+                    return Err(ParseError::UnexpectedToken {
+                        expected: "top level statement".into(),
+                        found: self.current.kind.clone(),
+                    })
+                }
+            };
+
+            statements.push(stmt);
+        }
 
         Ok(Program {
             statements: statements.into(),
         })
+    }
+
+    fn parse_struct_decl(&mut self) -> Result<Struct, ParseError> {
+        todo!()
+    }
+    fn parse_var_decl(&mut self) -> Result<VarDecl, ParseError> {
+        todo!()
     }
 
     fn advance(&mut self) -> Result<(), ParseError> {
@@ -120,7 +144,7 @@ impl Parser {
             self.advance()
         } else {
             Err(ParseError::UnexpectedToken {
-                expected,
+                expected: format!("{:?}", expected),
                 found: self.current.kind.clone(),
             })
         }
