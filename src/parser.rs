@@ -50,7 +50,7 @@ pub enum RegisterSizedType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Field {
-    ty: TypeName,
+    ty: Type,
     name: VariableName,
 }
 
