@@ -296,7 +296,7 @@ impl Lexer {
         // binary search in KEYWORDS
         let token_type = match KEYWORDS.binary_search_by_key(&bytes, |&(s, _)| s) {
             Ok(idx) => KEYWORDS[idx].1.clone(),
-            Err(_) => TokenType::Identifier(bytes.to_vec()),
+            Err(_) => TokenType::Identifier(Rc::from(bytes)),
         };
 
         (token_type, len)
@@ -467,7 +467,7 @@ impl Lexer {
             }
         }
 
-        Ok((TokenType::StringLiteral(bytes), len))
+        Ok((TokenType::StringLiteral(Rc::from(bytes)), len))
     }
 
     fn scan_char_literal(&self) -> Result<(TokenType, usize), LexError> {
@@ -595,9 +595,9 @@ pub enum TokenType {
     Dot,
     Arrow,
 
-    Identifier(Vec<u8>),
+    Identifier(Rc<[u8]>),
     Number(i64),
-    StringLiteral(Vec<u8>),
+    StringLiteral(Rc<[u8]>),
     CharLiteral(u8),
 
     Eof,
@@ -641,10 +641,10 @@ mod tests {
     #[test]
     fn test_identifiers() {
         let tokens = lex_all("foo bar_baz x123 _private").unwrap();
-        assert_eq!(tokens[0].kind, TokenType::Identifier(b"foo".to_vec()));
-        assert_eq!(tokens[1].kind, TokenType::Identifier(b"bar_baz".to_vec()));
-        assert_eq!(tokens[2].kind, TokenType::Identifier(b"x123".to_vec()));
-        assert_eq!(tokens[3].kind, TokenType::Identifier(b"_private".to_vec()));
+        assert_eq!(tokens[0].kind, TokenType::Identifier(Rc::from(&b"foo"[..])));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(Rc::from(&b"bar_baz"[..])));
+        assert_eq!(tokens[2].kind, TokenType::Identifier(Rc::from(&b"x123"[..])));
+        assert_eq!(tokens[3].kind, TokenType::Identifier(Rc::from(&b"_private"[..])));
     }
 
     #[test]
@@ -746,7 +746,7 @@ mod tests {
     fn test_variable_declaration() {
         let tokens = lex_all("var x: u32 = 0xFF;").unwrap();
         assert_eq!(tokens[0].kind, TokenType::Var);
-        assert_eq!(tokens[1].kind, TokenType::Identifier(b"x".to_vec()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(Rc::from(&b"x"[..])));
         assert_eq!(tokens[2].kind, TokenType::Colon);
         assert_eq!(tokens[3].kind, TokenType::U32);
         assert_eq!(tokens[4].kind, TokenType::Assign);
@@ -758,13 +758,13 @@ mod tests {
     fn test_function_declaration() {
         let tokens = lex_all("fn add(a: i32, b: i32) -> i32 { return a + b; }").unwrap();
         assert_eq!(tokens[0].kind, TokenType::Fn);
-        assert_eq!(tokens[1].kind, TokenType::Identifier(b"add".to_vec()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(Rc::from(&b"add"[..])));
         assert_eq!(tokens[2].kind, TokenType::Lparen);
-        assert_eq!(tokens[3].kind, TokenType::Identifier(b"a".to_vec()));
+        assert_eq!(tokens[3].kind, TokenType::Identifier(Rc::from(&b"a"[..])));
         assert_eq!(tokens[4].kind, TokenType::Colon);
         assert_eq!(tokens[5].kind, TokenType::I32);
         assert_eq!(tokens[6].kind, TokenType::Comma);
-        assert_eq!(tokens[7].kind, TokenType::Identifier(b"b".to_vec()));
+        assert_eq!(tokens[7].kind, TokenType::Identifier(Rc::from(&b"b"[..])));
         assert_eq!(tokens[8].kind, TokenType::Colon);
         assert_eq!(tokens[9].kind, TokenType::I32);
         assert_eq!(tokens[10].kind, TokenType::Rparen);
@@ -772,9 +772,9 @@ mod tests {
         assert_eq!(tokens[12].kind, TokenType::I32);
         assert_eq!(tokens[13].kind, TokenType::Lbrace);
         assert_eq!(tokens[14].kind, TokenType::Return);
-        assert_eq!(tokens[15].kind, TokenType::Identifier(b"a".to_vec()));
+        assert_eq!(tokens[15].kind, TokenType::Identifier(Rc::from(&b"a"[..])));
         assert_eq!(tokens[16].kind, TokenType::Plus);
-        assert_eq!(tokens[17].kind, TokenType::Identifier(b"b".to_vec()));
+        assert_eq!(tokens[17].kind, TokenType::Identifier(Rc::from(&b"b"[..])));
         assert_eq!(tokens[18].kind, TokenType::Semicolon);
         assert_eq!(tokens[19].kind, TokenType::Rbrace);
     }
@@ -786,7 +786,7 @@ mod tests {
         assert_eq!(tokens[1].kind, TokenType::Lparen);
         assert_eq!(tokens[2].kind, TokenType::Number(0x3D));
         assert_eq!(tokens[3].kind, TokenType::Comma);
-        assert_eq!(tokens[4].kind, TokenType::Identifier(b"buffer".to_vec()));
+        assert_eq!(tokens[4].kind, TokenType::Identifier(Rc::from(&b"buffer"[..])));
         assert_eq!(tokens[5].kind, TokenType::Comma);
         assert_eq!(tokens[6].kind, TokenType::Number(0b1010));
         assert_eq!(tokens[7].kind, TokenType::Rparen);
@@ -808,14 +808,14 @@ mod tests {
     #[test]
     fn test_string_literals() {
         let tokens = lex_all(r#""hello" "world\n" "tab\there""#).unwrap();
-        assert_eq!(tokens[0].kind, TokenType::StringLiteral(b"hello".to_vec()));
+        assert_eq!(tokens[0].kind, TokenType::StringLiteral(Rc::from(&b"hello"[..])));
         assert_eq!(
             tokens[1].kind,
-            TokenType::StringLiteral(b"world\n".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"world\n"[..]))
         );
         assert_eq!(
             tokens[2].kind,
-            TokenType::StringLiteral(b"tab\there".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"tab\there"[..]))
         );
     }
 
@@ -824,15 +824,15 @@ mod tests {
         let tokens = lex_all(r#""quote\"test" "backslash\\" "null\0end""#).unwrap();
         assert_eq!(
             tokens[0].kind,
-            TokenType::StringLiteral(b"quote\"test".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"quote\"test"[..]))
         );
         assert_eq!(
             tokens[1].kind,
-            TokenType::StringLiteral(b"backslash\\".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"backslash\\"[..]))
         );
         assert_eq!(
             tokens[2].kind,
-            TokenType::StringLiteral(b"null\0end".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"null\0end"[..]))
         );
     }
 
@@ -876,12 +876,12 @@ mod tests {
     fn test_mixed_literals() {
         let tokens = lex_all(r#"var msg: ptr = "Hello\n"; var c: u8 = 'x';"#).unwrap();
         assert_eq!(tokens[0].kind, TokenType::Var);
-        assert_eq!(tokens[1].kind, TokenType::Identifier(b"msg".to_vec()));
+        assert_eq!(tokens[1].kind, TokenType::Identifier(Rc::from(&b"msg"[..])));
         assert_eq!(tokens[3].kind, TokenType::Ptr);
         assert_eq!(tokens[4].kind, TokenType::Assign);
         assert_eq!(
             tokens[5].kind,
-            TokenType::StringLiteral(b"Hello\n".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"Hello\n"[..]))
         );
         assert_eq!(tokens[10].kind, TokenType::U8);
         assert_eq!(tokens[12].kind, TokenType::CharLiteral(b'x'));
@@ -890,7 +890,7 @@ mod tests {
     #[test]
     fn test_hex_escapes_in_strings() {
         let tokens = lex_all(r#""\x48\x65\x6c\x6c\x6f""#).unwrap();
-        assert_eq!(tokens[0].kind, TokenType::StringLiteral(b"Hello".to_vec()));
+        assert_eq!(tokens[0].kind, TokenType::StringLiteral(Rc::from(&b"Hello"[..])));
     }
 
     #[test]
@@ -898,7 +898,7 @@ mod tests {
         let tokens = lex_all(r#""Hello\x20World\x21""#).unwrap();
         assert_eq!(
             tokens[0].kind,
-            TokenType::StringLiteral(b"Hello World!".to_vec())
+            TokenType::StringLiteral(Rc::from(&b"Hello World!"[..]))
         );
     }
 
@@ -928,9 +928,7 @@ mod tests {
     #[test]
     fn test_byte_array_pattern() {
         let tokens = lex_all(r#""\xDE\xAD\xBE\xEF""#).unwrap();
-        assert_eq!(
-            tokens[0].kind,
-            TokenType::StringLiteral(vec![0xDE, 0xAD, 0xBE, 0xEF])
-        );
+        let expected: Rc<[u8]> = Rc::from(vec![0xDE, 0xAD, 0xBE, 0xEF]);
+        assert_eq!(tokens[0].kind, TokenType::StringLiteral(expected));
     }
 }
