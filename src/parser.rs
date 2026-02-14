@@ -14,6 +14,7 @@ pub enum ParseError {
     LexError(LexError),
     UnexpectedToken { expected: String, found: TokenType },
     UnexpectedEof,
+    EmptyStruct { name: Rc<[u8]> },
 }
 
 impl From<LexError> for ParseError {
@@ -152,7 +153,54 @@ impl Parser {
     }
 
     fn parse_struct_decl(&mut self) -> Result<Struct, ParseError> {
-        todo!()
+        self.expect(TokenType::Struct)?;
+
+        let name = if let TokenType::Identifier(id) = self.current.kind.clone() {
+            TypeName(id)
+        } else {
+            return Err(ParseError::UnexpectedToken {
+                expected: "struct name".into(),
+                found: self.current.kind.clone(),
+            });
+        };
+        self.advance()?;
+
+        self.expect(TokenType::Lbrace)?;
+
+        let mut fields: Vec<Field> = Vec::new();
+        while self.current.kind != TokenType::Rbrace {
+            let field_name = if let TokenType::Identifier(id) = self.current.kind.clone() {
+                VariableName(id)
+            } else {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "field name".into(),
+                    found: self.current.kind.clone(),
+                });
+            };
+            self.advance()?;
+
+            self.expect(TokenType::Colon)?;
+
+            let field_type = self.parse_type()?;
+
+            self.expect(TokenType::Comma)?;
+
+            fields.push(Field {
+                ty: field_type,
+                name: field_name,
+            });
+        }
+
+        if fields.is_empty() {
+            return Err(ParseError::EmptyStruct { name: name.0 });
+        }
+
+        self.expect(TokenType::Rbrace)?;
+
+        Ok(Struct {
+            name,
+            fields: fields.into(),
+        })
     }
 
     fn parse_var_decl(&mut self) -> Result<VarDecl, ParseError> {
