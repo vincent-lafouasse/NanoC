@@ -122,11 +122,11 @@ pub struct Struct {
 
 // temporary, no expression parsing
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expression(Rc<[Token]>);
+pub struct DummyExpression(Rc<[Token]>);
 
 #[derive(Debug, Clone, PartialEq)]
 enum VariableInitializer {
-    Initializer(Expression),
+    Initializer(DummyExpression),
     Undefined,
     Zeroed,
 }
@@ -144,22 +144,22 @@ pub struct LValue(());
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    Expression(Expression),
+    DummyExpression(DummyExpression),
     VarDecl(VarDecl),
     Assignment {
         lvalue: LValue,
-        value: Expression,
+        value: DummyExpression,
     },
     ReturnStatement {
-        value: Expression,
+        value: DummyExpression,
     },
     If {
-        condition: Expression,
+        condition: DummyExpression,
         then_branch: Box<Statement>,
         else_branch: Box<Statement>,
     },
     While {
-        condition: Expression,
+        condition: DummyExpression,
         body: Box<Statement>,
     },
     Block {
@@ -335,7 +335,10 @@ impl Parser {
         })
     }
 
-    fn parse_dummy_expression_until<F>(&mut self, should_stop: F) -> Result<Expression, ParseError>
+    fn parse_dummy_expression_until<F>(
+        &mut self,
+        should_stop: F,
+    ) -> Result<DummyExpression, ParseError>
     where
         F: Fn(&TokenType) -> bool,
     {
@@ -346,7 +349,7 @@ impl Parser {
             self.advance()?;
         }
 
-        Ok(Expression(contents.into()))
+        Ok(DummyExpression(contents.into()))
     }
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
@@ -623,7 +626,7 @@ impl fmt::Display for Struct {
     }
 }
 
-impl fmt::Display for Expression {
+impl fmt::Display for DummyExpression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<expr: {} tokens>", self.0.len())
     }
