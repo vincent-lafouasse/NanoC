@@ -408,28 +408,92 @@ impl Parser {
     }
 }
 
-enum BinaryOperation {
-    Addition,
-    Subtraction,
+// higher = tighter binding
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u8)]
+enum Precedence {
+    None = 0,
+    Assignment = 1, // =
+    LogicalOr = 2,  // ||
+    LogicalAnd = 3, // &&
+    BitwiseOr = 4,  // |
+    BitwiseXor = 5, // ^
+    BitwiseAnd = 6, // &
+    Equality = 7,   // == !=
+    Comparison = 8, // < > <= >=
+    Shift = 9,      // << >>
+    Term = 10,      // + -
+    Factor = 11,    // * / %
+    Unary = 12,     // ! ~ - &
+    Postfix = 13,   // -> . [] ()
 }
 
-enum ExpressionAtom {
-    Literal,      // todo put something in there
-    FunctionCall, // something something
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BinaryOp {
+    // Arithmetic
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    // Bitwise
+    BitAnd,
+    BitOr,
+    BitXor,
+    Lshift,
+    Rshift,
+    // Comparison
+    Eq,
+    Neq,
+    Lt,
+    Le,
+    Gt,
+    Ge,
+    // Logical
+    And,
+    Or,
 }
 
-enum __Expression {
-    Grouping(Box<__Expression>),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UnaryOp {
+    Negate,     // -
+    LogicalNot, // !
+    BitwiseNot, // ~
+    AddrOf,     // &
+    Deref,      // *
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum Expr {
+    Number(i64),
+    Identifier(Rc<[u8]>),
+    StringLiteral(Rc<[u8]>),
+    CharLiteral(u8),
     Binary {
-        op: BinaryOperation,
-        a: Box<__Expression>,
-        b: Box<__Expression>,
+        op: BinaryOp,
+        left: Box<Expr>,
+        right: Box<Expr>,
     },
+    Unary {
+        op: UnaryOp,
+        operand: Box<Expr>,
+    },
+    Grouping(Box<Expr>),
+    // TODO: field access, array index, function call
 }
 
 impl Parser {
-    fn parse_expression(&mut self) -> Result<__Expression, ParseError> {
-        todo!()
+    fn parse_expression(&mut self) -> Result<Expr, ParseError> {
+        self.parse_expression_bp(Precedence::None)
+    }
+
+    fn parse_expression_bp(&mut self, _min_prec: Precedence) -> Result<Expr, ParseError> {
+        // TODO: implement Pratt parsing algorithm
+        // 1. Parse prefix expression (or atom)
+        // 2. While next operator has higher precedence:
+        //    - Parse infix/postfix with appropriate precedence
+        // 3. Return expression tree
+        todo!("Pratt parsing not yet implemented")
     }
 }
 
