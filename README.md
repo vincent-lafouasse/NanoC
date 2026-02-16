@@ -41,6 +41,10 @@ fn main() -> i32 {
 }
 ```
 
+## Ideas ?
+
+- completely disallow missing unitializer, introduce `undefined` and `zeroed` keywords
+
 ## Building
 
 ```bash
