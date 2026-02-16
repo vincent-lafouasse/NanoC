@@ -37,8 +37,6 @@ statement = var_decl
           | "if" "(" expression ")" statement ("else" statement)?
           | "while" "(" expression ")" statement
           | "{" statement* "}"
-          | "break" ";"
-          | "continue" ";"
           | "goto" label ";"
           | label ":" statement
           ;

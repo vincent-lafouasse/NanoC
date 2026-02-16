@@ -1,8 +1,6 @@
 // sorted for binary search
 const KEYWORDS: &[(&[u8], TokenType)] = &[
-    (b"break", TokenType::Break),
     (b"const", TokenType::Const),
-    (b"continue", TokenType::Continue),
     (b"else", TokenType::Else),
     (b"fn", TokenType::Fn),
     (b"goto", TokenType::Goto),
@@ -617,7 +615,7 @@ mod tests {
 
     #[test]
     fn test_keywords() {
-        let tokens = lex_all("fn var const return if else while break").unwrap();
+        let tokens = lex_all("fn var const return if else while").unwrap();
         assert_eq!(tokens[0].kind, TokenType::Fn);
         assert_eq!(tokens[1].kind, TokenType::Var);
         assert_eq!(tokens[2].kind, TokenType::Const);
@@ -625,7 +623,6 @@ mod tests {
         assert_eq!(tokens[4].kind, TokenType::If);
         assert_eq!(tokens[5].kind, TokenType::Else);
         assert_eq!(tokens[6].kind, TokenType::While);
-        assert_eq!(tokens[7].kind, TokenType::Break);
     }
 
     #[test]
