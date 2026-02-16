@@ -604,10 +604,9 @@ mod tests {
         let mut lexer = Lexer::new(source_rc);
 
         loop {
-            let (token, new_lexer) = lexer.next_token()?;
+            let token = lexer.next_token()?;
             let is_eof = matches!(token.kind, TokenType::Eof);
             tokens.push(token);
-            lexer = new_lexer;
             if is_eof {
                 break;
             }
