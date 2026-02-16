@@ -497,6 +497,69 @@ impl Parser {
     }
 }
 
+impl fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            BinaryOp::Add => "+",
+            BinaryOp::Sub => "-",
+            BinaryOp::Mul => "*",
+            BinaryOp::Div => "/",
+            BinaryOp::Mod => "%",
+            BinaryOp::BitAnd => "&",
+            BinaryOp::BitOr => "|",
+            BinaryOp::BitXor => "^",
+            BinaryOp::Lshift => "<<",
+            BinaryOp::Rshift => ">>",
+            BinaryOp::Eq => "==",
+            BinaryOp::Neq => "!=",
+            BinaryOp::Lt => "<",
+            BinaryOp::Le => "<=",
+            BinaryOp::Gt => ">",
+            BinaryOp::Ge => ">=",
+            BinaryOp::And => "&&",
+            BinaryOp::Or => "||",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            UnaryOp::Negate => "-",
+            UnaryOp::LogicalNot => "!",
+            UnaryOp::BitwiseNot => "~",
+            UnaryOp::AddrOf => "&",
+            UnaryOp::Deref => "*",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl fmt::Display for Expr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expr::Number(n) => write!(f, "{}", n),
+            Expr::Identifier(id) => write!(f, "{}", String::from_utf8_lossy(id)),
+            Expr::StringLiteral(s) => {
+                write!(f, "\"{}\"", String::from_utf8_lossy(s))
+            }
+            Expr::CharLiteral(ch) => {
+                write!(f, "'{}'", *ch as char)
+            }
+            Expr::Binary { op, left, right } => {
+                write!(f, "({} {} {})", op, left, right)
+            }
+            Expr::Unary { op, operand } => {
+                write!(f, "({} {})", op, operand)
+            }
+            Expr::Grouping(expr) => {
+                write!(f, "(group {})", expr)
+            }
+        }
+    }
+}
+
 impl fmt::Display for TypeName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
@@ -684,5 +747,109 @@ mod tests {
             program.statements[2],
             TopLevelStatement::GlobalDecl(_)
         ));
+    }
+
+    // S-expression formatting tests for when Pratt parser is implemented
+    #[test]
+    fn test_expr_display_atoms() {
+        let num = Expr::Number(42);
+        assert_eq!(format!("{}", num), "42");
+
+        let id = Expr::Identifier(Rc::from(&b"foo"[..]));
+        assert_eq!(format!("{}", id), "foo");
+
+        let str_lit = Expr::StringLiteral(Rc::from(&b"hello"[..]));
+        assert_eq!(format!("{}", str_lit), "\"hello\"");
+
+        let ch = Expr::CharLiteral(b'x');
+        assert_eq!(format!("{}", ch), "'x'");
+    }
+
+    #[test]
+    fn test_expr_display_binary() {
+        // 3 + 4 -> (+ 3 4)
+        let add = Expr::Binary {
+            op: BinaryOp::Add,
+            left: Box::new(Expr::Number(3)),
+            right: Box::new(Expr::Number(4)),
+        };
+        assert_eq!(format!("{}", add), "(+ 3 4)");
+
+        // x * y -> (* x y)
+        let mul = Expr::Binary {
+            op: BinaryOp::Mul,
+            left: Box::new(Expr::Identifier(Rc::from(&b"x"[..]))),
+            right: Box::new(Expr::Identifier(Rc::from(&b"y"[..]))),
+        };
+        assert_eq!(format!("{}", mul), "(* x y)");
+    }
+
+    #[test]
+    fn test_expr_display_unary() {
+        // -x -> (- x)
+        let neg = Expr::Unary {
+            op: UnaryOp::Negate,
+            operand: Box::new(Expr::Identifier(Rc::from(&b"x"[..]))),
+        };
+        assert_eq!(format!("{}", neg), "(- x)");
+
+        // !flag -> (! flag)
+        let not = Expr::Unary {
+            op: UnaryOp::LogicalNot,
+            operand: Box::new(Expr::Identifier(Rc::from(&b"flag"[..]))),
+        };
+        assert_eq!(format!("{}", not), "(! flag)");
+    }
+
+    #[test]
+    fn test_expr_display_nested() {
+        // 3 + 4 * 5 -> (+ 3 (* 4 5))
+        let expr = Expr::Binary {
+            op: BinaryOp::Add,
+            left: Box::new(Expr::Number(3)),
+            right: Box::new(Expr::Binary {
+                op: BinaryOp::Mul,
+                left: Box::new(Expr::Number(4)),
+                right: Box::new(Expr::Number(5)),
+            }),
+        };
+        assert_eq!(format!("{}", expr), "(+ 3 (* 4 5))");
+
+        // -x + y -> (+ (- x) y)
+        let expr2 = Expr::Binary {
+            op: BinaryOp::Add,
+            left: Box::new(Expr::Unary {
+                op: UnaryOp::Negate,
+                operand: Box::new(Expr::Identifier(Rc::from(&b"x"[..]))),
+            }),
+            right: Box::new(Expr::Identifier(Rc::from(&b"y"[..]))),
+        };
+        assert_eq!(format!("{}", expr2), "(+ (- x) y)");
+    }
+
+    #[test]
+    fn test_expr_display_complex() {
+        // (a && b) || c -> (|| (&& a b) c)
+        let expr = Expr::Binary {
+            op: BinaryOp::Or,
+            left: Box::new(Expr::Binary {
+                op: BinaryOp::And,
+                left: Box::new(Expr::Identifier(Rc::from(&b"a"[..]))),
+                right: Box::new(Expr::Identifier(Rc::from(&b"b"[..]))),
+            }),
+            right: Box::new(Expr::Identifier(Rc::from(&b"c"[..]))),
+        };
+        assert_eq!(format!("{}", expr), "(|| (&& a b) c)");
+    }
+
+    #[test]
+    fn test_expr_display_grouping() {
+        // (x + y) -> (group (+ x y))
+        let expr = Expr::Grouping(Box::new(Expr::Binary {
+            op: BinaryOp::Add,
+            left: Box::new(Expr::Identifier(Rc::from(&b"x"[..]))),
+            right: Box::new(Expr::Identifier(Rc::from(&b"y"[..]))),
+        }));
+        assert_eq!(format!("{}", expr), "(group (+ x y))");
     }
 }
