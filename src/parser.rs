@@ -164,8 +164,8 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Program, ParseError> {
         let mut statements: Vec<TopLevelStatement> = Vec::new();
 
-        while self.current.kind.clone() != TokenType::Eof {
-            let stmt = match self.current.kind.clone() {
+        while self.peek_kind() != &TokenType::Eof {
+            let stmt = match self.peek_kind() {
                 TokenType::Struct => {
                     TopLevelStatement::StructDecl(self.parse_struct_decl()?.into())
                 }
@@ -176,7 +176,7 @@ impl Parser {
                 _ => {
                     return Err(ParseError::UnexpectedToken {
                         expected: "top level statement".into(),
-                        found: self.current.kind.clone(),
+                        found: self.peek_kind().clone(),
                     })
                 }
             };
@@ -192,12 +192,12 @@ impl Parser {
     fn parse_struct_decl(&mut self) -> Result<Struct, ParseError> {
         self.expect(TokenType::Struct)?;
 
-        let name = if let TokenType::Identifier(id) = self.current.kind.clone() {
-            TypeName(id)
+        let name = if let TokenType::Identifier(id) = self.peek_kind() {
+            TypeName(id.clone())
         } else {
             return Err(ParseError::UnexpectedToken {
                 expected: "struct name".into(),
-                found: self.current.kind.clone(),
+                found: self.peek_kind().clone(),
             });
         };
         self.advance()?;
@@ -206,12 +206,12 @@ impl Parser {
 
         let mut fields: Vec<Field> = Vec::new();
         while self.current.kind != TokenType::Rbrace {
-            let field_name = if let TokenType::Identifier(id) = self.current.kind.clone() {
-                VariableName(id)
+            let field_name = if let TokenType::Identifier(id) = self.peek_kind() {
+                VariableName(id.clone())
             } else {
                 return Err(ParseError::UnexpectedToken {
                     expected: "field name".into(),
-                    found: self.current.kind.clone(),
+                    found: self.peek_kind().clone(),
                 });
             };
             self.advance()?;
@@ -241,24 +241,24 @@ impl Parser {
     }
 
     fn parse_var_decl(&mut self) -> Result<VarDecl, ParseError> {
-        let is_const = match self.current.kind.clone() {
+        let is_const = match self.peek_kind() {
             TokenType::Const => true,
             TokenType::Var => false,
             _ => {
                 return Err(ParseError::UnexpectedToken {
                     expected: "const or var".into(),
-                    found: self.current.kind.clone(),
+                    found: self.peek_kind().clone(),
                 });
             }
         };
         self.advance()?;
 
-        let name = if let TokenType::Identifier(id) = self.current.kind.clone() {
-            VariableName(id)
+        let name = if let TokenType::Identifier(id) = self.peek_kind() {
+            VariableName(id.clone())
         } else {
             return Err(ParseError::UnexpectedToken {
                 expected: "variable name".into(),
-                found: self.current.kind.clone(),
+                found: self.peek_kind().clone(),
             });
         };
         self.advance()?;
@@ -267,7 +267,7 @@ impl Parser {
 
         let ty = self.parse_type()?;
 
-        let expr = match self.current.kind.clone() {
+        let expr = match self.peek_kind() {
             TokenType::Semicolon => {
                 self.advance()?;
                 None
@@ -311,7 +311,7 @@ impl Parser {
     }
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
-        let base_type = match &self.current.kind {
+        let base_type = match self.peek_kind() {
             TokenType::U8 => Type::PrimitiveType(PrimitiveType::U8),
             TokenType::I32 => Type::PrimitiveType(PrimitiveType::I32),
             TokenType::U32 => Type::PrimitiveType(PrimitiveType::U32),
@@ -323,14 +323,14 @@ impl Parser {
             _ => {
                 return Err(ParseError::UnexpectedToken {
                     expected: "type name".into(),
-                    found: self.current.kind.clone(),
+                    found: self.peek_kind().clone(),
                 });
             }
         };
         self.advance()?;
 
         let mut indirection = 0;
-        while self.current.kind == TokenType::Star {
+        while self.peek_kind() == &TokenType::Star {
             self.advance()?;
             indirection += 1;
         }
@@ -345,8 +345,12 @@ impl Parser {
         Ok(ty)
     }
 
+    fn peek_kind(&self) -> &TokenType {
+        &self.current.kind
+    }
+
     fn advance(&mut self) -> Result<(), ParseError> {
-        if self.current.kind != TokenType::Eof {
+        if self.peek_kind() != &TokenType::Eof {
             self.current = self.lexer.next_token()?;
         }
 
