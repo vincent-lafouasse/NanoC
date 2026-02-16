@@ -408,6 +408,31 @@ impl Parser {
     }
 }
 
+enum BinaryOperation {
+    Addition,
+    Subtraction,
+}
+
+enum ExpressionAtom {
+    Literal,      // todo put something in there
+    FunctionCall, // something something
+}
+
+enum __Expression {
+    Grouping(Box<__Expression>),
+    Binary {
+        op: BinaryOperation,
+        a: Box<__Expression>,
+        b: Box<__Expression>,
+    },
+}
+
+impl Parser {
+    fn parse_expression(&mut self) -> Result<__Expression, ParseError> {
+        todo!()
+    }
+}
+
 impl fmt::Display for TypeName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
