@@ -5,7 +5,7 @@ endif
 syn case match
 
 " Keywords
-syn keyword nanocKeyword var const return if else while syscall
+syn keyword nanocKeyword var const return if else while syscall undefined zeroed
 
 syn keyword nanocPrimitiveType u8 i32 u32 ptr
 

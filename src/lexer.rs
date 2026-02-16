@@ -12,8 +12,10 @@ const KEYWORDS: &[(&[u8], TokenType)] = &[
     (b"syscall", TokenType::Syscall),
     (b"u32", TokenType::U32),
     (b"u8", TokenType::U8),
+    (b"undefined", TokenType::Undefined),
     (b"var", TokenType::Var),
     (b"while", TokenType::While),
+    (b"zeroed", TokenType::Zeroed),
 ];
 
 use std::rc::Rc;
@@ -578,6 +580,12 @@ pub enum TokenType {
     Rshift,
 
     Assign, // = as in x = 3
+
+    // variable must always have an initializer
+    // that init. can be an expression, `zeroed`, or `undefined`
+    // `const` variables cannot be `undefined`
+    Undefined,
+    Zeroed,
 
     Lparen,
     Rparen,

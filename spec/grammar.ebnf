@@ -29,7 +29,9 @@ fn_args = (* empty *)
 
 fn_decl = "fn" function_name ("->" type)? "{" statement* "}" ;
 
-var_decl = ("var" | "const") variable_name ":" type ("=" expression)? ";" ;
+(* always an initalizer, with keywords `zeroed` and `undefined` *)
+var_initializer = expression | "zeroed" | "undefined" ;
+var_decl = ("var" | "const") variable_name ":" type "=" var_initializer ";" ;
 
 statement = var_decl
           | expression ";"

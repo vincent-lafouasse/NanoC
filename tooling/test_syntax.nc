@@ -8,8 +8,10 @@ struct Node {
     next: Node*,
 }
 
-var global_count: i32 = 0;
+var global_count: i32 = zeroed;
 const MAX_SIZE: u32 = 100u;
+
+var node: Node = zeroed;
 
 /* TODO say hi */
 // XXX hello
@@ -26,8 +28,8 @@ fn calculate(base: i32, offset: i32) {
     node_ptr->value = 42u;
     node_ptr->next = 0x0;
 
-    var p: u8*;
-    var pp: i32**;
+    var p: u8* = undefined;
+    var pp: i32** = undefined;
 
     if result > 0 {
         return result;
