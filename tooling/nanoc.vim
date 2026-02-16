@@ -32,7 +32,7 @@ syn match nanocEscape contained "\v\\[nrt0\\'\"]"
 " hex escape sequences, e.g. \x67
 syn match nanocEscape contained "\v\\x[0-9a-fA-F]{2}"
 
-syn match nanocDelimiter "\v[\(\)\{\}\[\]]"
+syn match nanocDelimiter "\v[\(\)\{\}\[\];]"
 
 syn region nanocComment start="//" end="$" contains=nanocTodo
 syn region nanocComment start="/\*" end="\*/" contains=nanocTodo
