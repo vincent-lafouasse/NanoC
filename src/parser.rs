@@ -24,10 +24,42 @@ impl From<LexError> for ParseError {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TypeName(Rc<[u8]>);
+pub struct TypeName {
+    rc: Rc<[u8]>,
+}
+
+impl TypeName {
+    pub fn new(name: Rc<[u8]>) -> Self {
+        Self { rc: name }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.rc
+    }
+
+    pub fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.rc).unwrap_or("")
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariableName(Rc<[u8]>);
+pub struct VariableName {
+    rc: Rc<[u8]>,
+}
+
+impl VariableName {
+    pub fn new(name: Rc<[u8]>) -> Self {
+        Self { rc: name }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.rc
+    }
+
+    pub fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.rc).unwrap_or("")
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
@@ -193,7 +225,7 @@ impl Parser {
         self.expect(TokenType::Struct)?;
 
         let name = if let TokenType::Identifier(id) = self.peek_kind() {
-            TypeName(id.clone())
+            TypeName::new(id.clone())
         } else {
             return Err(ParseError::UnexpectedToken {
                 expected: "struct name".into(),
@@ -207,7 +239,7 @@ impl Parser {
         let mut fields: Vec<Field> = Vec::new();
         while self.current.kind != TokenType::Rbrace {
             let field_name = if let TokenType::Identifier(id) = self.peek_kind() {
-                VariableName(id.clone())
+                VariableName::new(id.clone())
             } else {
                 return Err(ParseError::UnexpectedToken {
                     expected: "field name".into(),
@@ -229,7 +261,9 @@ impl Parser {
         }
 
         if fields.is_empty() {
-            return Err(ParseError::EmptyStruct { name: name.0 });
+            return Err(ParseError::EmptyStruct {
+                name: name.rc.clone(),
+            });
         }
 
         self.expect(TokenType::Rbrace)?;
@@ -254,7 +288,7 @@ impl Parser {
         self.advance()?;
 
         let name = if let TokenType::Identifier(id) = self.peek_kind() {
-            VariableName(id.clone())
+            VariableName::new(id.clone())
         } else {
             return Err(ParseError::UnexpectedToken {
                 expected: "variable name".into(),
@@ -317,7 +351,7 @@ impl Parser {
             TokenType::U32 => Type::PrimitiveType(PrimitiveType::U32),
             TokenType::Ptr => Type::PrimitiveType(PrimitiveType::Ptr),
             TokenType::Identifier(name) => {
-                let type_name = TypeName(name.clone());
+                let type_name = TypeName::new(name.clone());
                 Type::Struct(type_name)
             }
             _ => {
@@ -371,13 +405,13 @@ impl Parser {
 
 impl fmt::Display for TypeName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", String::from_utf8_lossy(&self.0))
+        write!(f, "{}", self.as_str())
     }
 }
 
 impl fmt::Display for VariableName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", String::from_utf8_lossy(&self.0))
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -452,5 +486,99 @@ impl fmt::Display for Program {
             writeln!(f, "{}\n", stmt)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_one(source: &str) -> Result<TopLevelStatement, ParseError> {
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut parser = Parser::new(source_rc)?;
+        let program = parser.parse()?;
+
+        assert_eq!(
+            program.statements.len(),
+            1,
+            "expected exactly one top-level statement"
+        );
+        Ok(program.statements[0].clone())
+    }
+
+    #[test]
+    fn test_simple_struct() {
+        let source = "struct Point { x: i32, y: i32, }";
+        let stmt = parse_one(source).unwrap();
+
+        match stmt {
+            TopLevelStatement::StructDecl(s) => {
+                assert_eq!(s.name.as_bytes(), b"Point");
+                assert_eq!(s.fields.len(), 2);
+                assert_eq!(s.fields[0].name.as_bytes(), b"x");
+                assert_eq!(s.fields[1].name.as_bytes(), b"y");
+            }
+            _ => panic!("expected struct declaration"),
+        }
+    }
+
+    #[test]
+    fn test_empty_struct_error() {
+        let source = "struct Empty { }";
+        let result = parse_one(source);
+
+        match result {
+            Err(ParseError::EmptyStruct { name }) => {
+                assert_eq!(name.as_ref(), b"Empty");
+            }
+            _ => panic!("expected empty struct error"),
+        }
+    }
+
+    #[test]
+    fn test_var_decl_with_init() {
+        let source = "var x: u32 = 42;";
+        let stmt = parse_one(source).unwrap();
+
+        match stmt {
+            TopLevelStatement::GlobalDecl(decl) => {
+                assert!(!decl.is_const);
+                assert_eq!(decl.name.0.as_ref(), b"x");
+                assert!(matches!(decl.ty, Type::PrimitiveType(PrimitiveType::U32)));
+                assert!(decl.expr.is_some());
+            }
+            _ => panic!("expected variable declaration"),
+        }
+    }
+
+    #[test]
+    fn test_multiple_top_level_statements() {
+        let source = r#"
+            struct Point { x: i32, y: i32, }
+            var origin: Point*;
+            const MAX: u32 = 100;
+        "#;
+
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut parser = Parser::new(source_rc).unwrap();
+        let program = parser.parse().unwrap();
+
+        assert_eq!(program.statements.len(), 3);
+
+        // Check first is struct
+        assert!(matches!(
+            program.statements[0],
+            TopLevelStatement::StructDecl(_)
+        ));
+
+        // Check second and third are globals
+        assert!(matches!(
+            program.statements[1],
+            TopLevelStatement::GlobalDecl(_)
+        ));
+        assert!(matches!(
+            program.statements[2],
+            TopLevelStatement::GlobalDecl(_)
+        ));
     }
 }
