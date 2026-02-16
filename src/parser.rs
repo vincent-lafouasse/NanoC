@@ -543,7 +543,7 @@ mod tests {
         match stmt {
             TopLevelStatement::GlobalDecl(decl) => {
                 assert!(!decl.is_const);
-                assert_eq!(decl.name.0.as_ref(), b"x");
+                assert_eq!(decl.name.as_bytes(), b"x");
                 assert!(matches!(decl.ty, Type::PrimitiveType(PrimitiveType::U32)));
                 assert!(decl.expr.is_some());
             }
