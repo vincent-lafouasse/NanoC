@@ -545,7 +545,19 @@ impl fmt::Display for Expr {
                 write!(f, "\"{}\"", String::from_utf8_lossy(s))
             }
             Expr::CharLiteral(ch) => {
-                write!(f, "'{}'", *ch as char)
+                let repr = match ch {
+                    b'\n' => "\\n".to_string(),
+                    b'\t' => "\\t".to_string(),
+                    b'\r' => "\\r".to_string(),
+                    b'\\' => "\\\\".to_string(),
+                    b'\'' => "\\'".to_string(),
+                    b'\0' => "\\0".to_string(),
+                    // Printable ASCII
+                    0x20..=0x7E => format!("{}", *ch as char),
+                    // Non-printable: use hex escape
+                    _ => format!("\\x{:02X}", ch),
+                };
+                write!(f, "'{}'", repr)
             }
             Expr::Binary { op, left, right } => {
                 write!(f, "({} {} {})", op, left, right)
@@ -851,5 +863,27 @@ mod tests {
             right: Box::new(Expr::Identifier(Rc::from(&b"y"[..]))),
         }));
         assert_eq!(format!("{}", expr), "(group (+ x y))");
+    }
+
+    #[test]
+    fn test_expr_display_char_escapes() {
+        // Printable ASCII
+        assert_eq!(format!("{}", Expr::CharLiteral(b'x')), "'x'");
+        assert_eq!(format!("{}", Expr::CharLiteral(b'A')), "'A'");
+        assert_eq!(format!("{}", Expr::CharLiteral(b' ')), "' '");
+
+        // Common escapes
+        assert_eq!(format!("{}", Expr::CharLiteral(b'\n')), "'\\n'");
+        assert_eq!(format!("{}", Expr::CharLiteral(b'\t')), "'\\t'");
+        assert_eq!(format!("{}", Expr::CharLiteral(b'\r')), "'\\r'");
+        assert_eq!(format!("{}", Expr::CharLiteral(b'\0')), "'\\0'");
+        assert_eq!(format!("{}", Expr::CharLiteral(b'\'')), "'\\''");
+        assert_eq!(format!("{}", Expr::CharLiteral(b'\\')), "'\\\\'");
+
+        // Non-printable: hex escape
+        assert_eq!(format!("{}", Expr::CharLiteral(0x01)), "'\\x01'");
+        assert_eq!(format!("{}", Expr::CharLiteral(0x1F)), "'\\x1F'");
+        assert_eq!(format!("{}", Expr::CharLiteral(0xFF)), "'\\xFF'");
+        assert_eq!(format!("{}", Expr::CharLiteral(0x7F)), "'\\x7F'"); // DEL
     }
 }
