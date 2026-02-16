@@ -7,8 +7,4 @@ edition = "2021"
 name = "nanoc"
 path = "src/main.rs"
 
-[[bin]]
-name = "grammar-check"
-path = "src/bin/grammar-check.rs"
-
 [dependencies]
