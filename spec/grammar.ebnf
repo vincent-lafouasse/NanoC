@@ -45,8 +45,14 @@ statement = var_decl
 
 lvalue = (* hmmmmmm *)
 
+literal = NUMBER | IDENTIFIER | (* others *)
+atom = literal | (* others *)
+
+bin_op = "+" | "-"
+bin_op_expr = expression bin_op expression
+
 (* pratt parsed, precedence TBD *)
-expression = NUMBER
-           | expression + expression
-           | lvalue "=" expression
+expression = atom
+           | bin_op_expr
+           | unary_op_expr
            ;
