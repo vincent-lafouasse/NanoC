@@ -44,6 +44,7 @@ fn main() -> i32 {
 ## Ideas ?
 
 - completely disallow missing unitializer, introduce `undefined` and `zeroed` keywords
+- introduce modules and `pub`, imports trigger a shallow pass of the imported module. module names are namespaced by `::` mangled to `$`
 
 ## Building
 
