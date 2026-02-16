@@ -136,6 +136,14 @@ fn format_error(source: &str, loc: &Location, message: &str) -> String {
 
 impl Lexer {
     pub fn new(source: Rc<[u8]>) -> Self {
+        // everything breaks if this isn't sorted
+        for i in 1..KEYWORDS.len() {
+            assert!(
+                KEYWORDS[i - 1].0 < KEYWORDS[i].0,
+                "KEYWORDS array must be sorted for binary search"
+            );
+        }
+
         let current = source.first().copied();
         Self {
             source,
