@@ -43,6 +43,7 @@ cool:
     var x: i32 = calculate(10, 5);
     syscall(1, x, "hello world", '\n', '1', '\x67');
 
+    // break and continue are not keywords
     const break: i32 = 67;
     var continue: i32 = break;
     goto cool;
