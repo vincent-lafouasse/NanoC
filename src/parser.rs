@@ -125,11 +125,18 @@ pub struct Struct {
 pub struct Expression(Rc<[Token]>);
 
 #[derive(Debug, Clone, PartialEq)]
+enum VariableInitializer {
+    Initializer(Expression),
+    Undefined,
+    Zeroed,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct VarDecl {
     is_const: bool,
     ty: Type,
     name: VariableName,
-    expr: Option<Expression>,
+    initializer: VariableInitializer,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -301,29 +308,30 @@ impl Parser {
 
         let ty = self.parse_type()?;
 
-        let expr = match self.peek_kind() {
-            TokenType::Semicolon => {
+        self.expect(TokenType::Assign)?;
+
+        let initializer = match self.peek_kind() {
+            TokenType::Undefined => {
                 self.advance()?;
-                None
+                VariableInitializer::Undefined
             }
-            TokenType::Assign => {
+            TokenType::Zeroed => {
                 self.advance()?;
-                let expr = self.parse_dummy_expression_until(|tok| tok == &TokenType::Semicolon)?;
-                Some(expr)
+                VariableInitializer::Zeroed
             }
             _ => {
-                return Err(ParseError::UnexpectedToken {
-                    expected: "semicolon or assignment".into(),
-                    found: self.current.kind.clone(),
-                })
+                let expr = self.parse_dummy_expression_until(|tok| tok == &TokenType::Semicolon)?;
+                VariableInitializer::Initializer(expr)
             }
         };
+
+        self.expect(TokenType::Semicolon)?;
 
         Ok(VarDecl {
             is_const,
             name,
             ty,
-            expr,
+            initializer,
         })
     }
 
@@ -337,9 +345,6 @@ impl Parser {
             contents.push(self.current.clone());
             self.advance()?;
         }
-
-        // move past terminator
-        self.advance()?;
 
         Ok(Expression(contents.into()))
     }
@@ -463,11 +468,18 @@ impl fmt::Display for Expression {
 impl fmt::Display for VarDecl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let keyword = if self.is_const { "const" } else { "var" };
-        write!(f, "{} {}: {}", keyword, self.name, self.ty)?;
-        if let Some(ref expr) = self.expr {
-            write!(f, " = {}", expr)?;
-        }
-        write!(f, ";")
+        let initializer: String = match &self.initializer {
+            VariableInitializer::Zeroed => "zeroed".into(),
+            VariableInitializer::Undefined => "".into(),
+            VariableInitializer::Initializer(expr) => {
+                format!("{}", expr)
+            }
+        };
+        write!(
+            f,
+            "{} {}: {} = {};",
+            keyword, self.name, self.ty, initializer
+        )
     }
 }
 
@@ -545,7 +557,10 @@ mod tests {
                 assert!(!decl.is_const);
                 assert_eq!(decl.name.as_bytes(), b"x");
                 assert!(matches!(decl.ty, Type::PrimitiveType(PrimitiveType::U32)));
-                assert!(decl.expr.is_some());
+                assert!(matches!(
+                    decl.initializer,
+                    VariableInitializer::Initializer(..)
+                ));
             }
             _ => panic!("expected variable declaration"),
         }
@@ -555,7 +570,7 @@ mod tests {
     fn test_multiple_top_level_statements() {
         let source = r#"
             struct Point { x: i32, y: i32, }
-            var origin: Point*;
+            var origin: Point* = undefined;
             const MAX: u32 = 100;
         "#;
 
