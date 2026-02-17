@@ -457,7 +457,6 @@ enum BinaryOp {
     Or,
 }
 
-// hm might not work, need to think of 2 token ops
 impl TryFrom<&TokenType> for BinaryOp {
     type Error = ();
 
@@ -470,8 +469,21 @@ impl TryFrom<&TokenType> for BinaryOp {
             TokenType::Slash => Ok(BinaryOp::Div),
             TokenType::Mod => Ok(BinaryOp::Mod),
             // Bitwise
-            TokenType::Ampersand => Ok(BinaryOp::Mod),
-            TokenType::Pipe => Ok(BinaryOp::Mod),
+            TokenType::Ampersand => Ok(BinaryOp::BitAnd),
+            TokenType::Pipe => Ok(BinaryOp::BitOr),
+            TokenType::Xor => Ok(BinaryOp::BitXor),
+            TokenType::Lshift => Ok(BinaryOp::Lshift),
+            TokenType::Rshift => Ok(BinaryOp::Rshift),
+            // Comparison
+            TokenType::Eq => Ok(BinaryOp::Eq),
+            TokenType::Neq => Ok(BinaryOp::Neq),
+            TokenType::Lt => Ok(BinaryOp::Lt),
+            TokenType::Le => Ok(BinaryOp::Le),
+            TokenType::Gt => Ok(BinaryOp::Gt),
+            TokenType::Ge => Ok(BinaryOp::Ge),
+            // Logical
+            TokenType::And => Ok(BinaryOp::And),
+            TokenType::Or => Ok(BinaryOp::Or),
             _ => Err(()),
         }
     }
