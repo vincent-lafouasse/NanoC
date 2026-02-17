@@ -605,16 +605,25 @@ impl Parser {
         Ok(expr)
     }
 
-    fn parse_expression_bp(&mut self, _min_prec: Precedence) -> Result<Expr, ParseError> {
+    fn parse_expression_bp(&mut self, min_prec: Precedence) -> Result<Expr, ParseError> {
         let lhs = self.parse_prefix_expr_or_atom()?;
 
-        match BinaryOp::try_from(self.peek_kind()) {
-            Err(()) => Ok(lhs),
-            Ok(op) => {
-                let _precedence = Precedence::from(&op);
-                todo!()
+        while let Ok(op) = BinaryOp::try_from(self.peek_kind()) {
+            let precedence = Precedence::from(&op);
+
+            if precedence <= min_prec {
+                // stop aggregating operations at this precedence level and return to caller
+                // there is a binary operation after this but it'll get parsed in an outer call
+                // with a lower min_precedence. perhaps the top level call with min_precedence = 0
+                return Ok(lhs);
             }
+
+            // keep binding
+            self.advance()?;
+            todo!();
         }
+
+        Ok(lhs)
     }
 }
 
