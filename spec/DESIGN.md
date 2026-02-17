@@ -723,6 +723,74 @@ Makes precedence and associativity bugs obvious.
    - Adds complexity
    - **Proposal:** Later, not MVP
 
+4. **Compiler warnings:** Which warnings should the compiler emit?
+
+   **Rationale:** While NanoC aims for simplicity, some code patterns are error-prone or surprising. Warnings can help users catch mistakes without adding language complexity.
+
+   **Proposed warnings:**
+
+   **a) Precedence warnings** (Priority: HIGH)
+
+   Warn about potentially confusing operator precedence, especially where bitwise operators mix with comparison/equality operators.
+
+   ```c
+   // Warning: '&' has lower precedence than '=='; '==' will be evaluated first
+   if (x & 0xFF == 0) { ... }
+   //    ^~~~~~~~~~~
+   // Suggestion: Use parentheses: (x & 0xFF) == 0
+   ```
+
+   This is surprising because:
+   - Most programmers expect bitwise AND to bind tighter than equality
+   - C's precedence puts equality above bitwise operators (inherited from B language)
+   - Even experienced programmers get this wrong
+
+   Similar warnings for:
+   - `x | FLAG == y` → suggest `(x | FLAG) == y`
+   - `x ^ y == 0` → suggest `(x ^ y) == 0`
+   - `a < b & mask` → suggest `a < (b & mask)` or `(a < b) & mask`
+
+   **b) Unused variable warnings**
+   ```c
+   var temp: i32 = compute();  // Warning: variable 'temp' is unused
+   ```
+
+   **c) Const variable never read**
+   ```c
+   const MAX: i32 = 100;  // Warning: constant 'MAX' is never used
+   ```
+
+   **d) Suspicious assignment in condition**
+   ```c
+   if (x = 5) { ... }  // Warning: using assignment in condition (did you mean '=='?)
+   ```
+   Note: NanoC doesn't support this syntax in conditions, but if we add it, warn about it.
+
+   **e) Unreachable code**
+   ```c
+   fn example() -> i32 {
+       return 42;
+       var x: i32 = 0;  // Warning: unreachable code
+   }
+   ```
+
+   **f) Function declared but never called** (for non-exported functions)
+   ```c
+   fn helper() -> i32 {  // Warning: function 'helper' is never used
+       return 5;
+   }
+   ```
+
+   **Implementation approach:**
+   - Warnings are purely optional and don't affect compilation
+   - Can be enabled/disabled via compiler flags (e.g., `-Wall`, `-Wno-precedence`)
+   - Should not impact the simplicity of the core compiler
+   - Could be implemented as a separate analysis pass after parsing
+
+   **Status:** Proposed
+   - Precedence warnings: HIGH priority (genuinely confusing)
+   - Other warnings: MEDIUM priority (nice to have)
+
 ---
 
 ## Appendix
