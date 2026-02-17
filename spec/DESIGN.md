@@ -667,6 +667,45 @@ Makes precedence and associativity bugs obvious.
    - Return zero (defined but misleading)
    - **Current:** UB (same as C), may add optional checking
 
+6. **`inline` keyword:** Force function inlining at call sites
+
+   **Proposal:**
+   ```c
+   inline fn square(x: i32) -> i32 {
+       return x * x;
+   }
+
+   fn compute() -> i32 {
+       return square(5);  // Always inlined
+   }
+   ```
+
+   **Semantics:**
+   - The `inline` keyword guarantees the function will be inlined at every call site
+   - This is NOT a hint or optimization suggestion - it is a mandate
+   - The compiler must inline the function or fail with an error if inlining is impossible
+   - Recursive calls to `inline` functions are a compile error
+   - Taking the address of an `inline` function is a compile error
+
+   **Rationale:**
+   - Provides deterministic performance characteristics (no call overhead)
+   - Makes code generation predictable for users who need it
+   - Users, not the compiler, decide if inlining is beneficial for their use case
+   - Useful for hot paths where call overhead matters
+   - Explicit control over the generated assembly (fits NanoC's philosophy)
+
+   **Trade-offs:**
+   - May increase code size (duplicated function bodies)
+   - User is responsible for deciding if inlining is actually beneficial
+   - Whether it improves or harms performance is the user's concern, not the compiler's
+
+   **Implementation notes:**
+   - Inline during codegen phase, not in AST/IR
+   - May need to detect recursive inline calls during semantic analysis
+   - Function address-taking requires generating both inline and out-of-line versions
+
+   **Status:** Proposed, not yet implemented
+
 ### Implementation
 
 1. **Error recovery:** Should parser attempt to continue after errors?
