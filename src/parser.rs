@@ -431,6 +431,23 @@ enum Precedence {
     Postfix = 13,   // -> . [] ()
 }
 
+impl From<&BinaryOp> for Precedence {
+    fn from(op: &BinaryOp) -> Precedence {
+        match op {
+            BinaryOp::Or => Precedence::LogicalOr,
+            BinaryOp::And => Precedence::LogicalAnd,
+            BinaryOp::BitOr => Precedence::BitwiseOr,
+            BinaryOp::BitXor => Precedence::BitwiseXor,
+            BinaryOp::BitAnd => Precedence::BitwiseAnd,
+            BinaryOp::Eq | BinaryOp::Neq => Precedence::Equality,
+            BinaryOp::Gt | BinaryOp::Ge | BinaryOp::Lt | BinaryOp::Le => Precedence::Comparison,
+            BinaryOp::Lshift | BinaryOp::Rshift => Precedence::Shift,
+            BinaryOp::Add | BinaryOp::Sub => Precedence::Term,
+            BinaryOp::Mul | BinaryOp::Div | BinaryOp::Mod => Precedence::Factor,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BinaryOp {
     // Arithmetic
