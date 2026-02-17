@@ -13,13 +13,15 @@ A minimal systems programming language that compiles to RISC-V assembly.
 ## Language Features
 
 - Primitive types: `u8`, `i32`, `u32`, `ptr`
-- Typed pointers: `Point*`, `Buffer*` (type-safe struct access)
+- Typed pointers: `Point*`, `Buffer*`
 - Static arrays: `i32[10]`, `u8[256]`
-- Structs (pass by pointer)
+- Structs (never passed by value)
 - Direct syscalls via `syscall` keyword
 - Control flow: `if`/`else`, `while`, `break`, `continue`, `goto`
 - Operators: arithmetic, bitwise, comparison, logical
 - Immutable bindings with `const`
+
+see `./spec/DESIGN.md` and `./spec/grammar.ebnf` for detailed information
 
 ## Example
 
@@ -40,11 +42,6 @@ fn main() -> i32 {
     return 0;
 }
 ```
-
-## Ideas ?
-
-- completely disallow missing unitializer, introduce `undefined` and `zeroed` keywords
-- introduce modules and `pub`, imports trigger a shallow pass of the imported module. module names are namespaced by `::` mangled to `$`
 
 ## Building
 
