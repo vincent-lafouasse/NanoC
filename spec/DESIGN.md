@@ -579,10 +579,71 @@ Makes precedence and associativity bugs obvious.
    - Could be confusing
    - **Proposal:** Static error
 
-2. **Tuple returns:** Add or use output params?
-   - Tuples use both return registers
-   - More ergonomic
-   - **Proposal:** Add tuples: `fn f() -> (i32, i32)`
+2. **Tuple returns and error handling:** Multiple proposals for using both RISC-V return registers (a0, a1)
+
+   **Background:** RISC-V calling convention provides two return registers (a0 and a1). Most functions only use a0. We could use both registers for richer return semantics.
+
+   **Proposal A: Simple tuples (minimal)**
+   ```c
+   fn divmod(a: i32, b: i32) -> (i32, i32) {
+       return (a / b, a % b);
+   }
+
+   var quot: i32;
+   var rem: i32;
+   (quot, rem) = divmod(10, 3);
+   ```
+   - Pro: Minimal syntax, explicit
+   - Con: Doesn't address error handling ergonomics
+
+   **Proposal B: Tuple-based Result pattern (convention)**
+   ```c
+   // Convention: (value, error_code)
+   // a0 = value (or garbage if error)
+   // a1 = error code (0 = success)
+
+   fn divide(a: i32, b: i32) -> (i32, i32) {
+       if (b == 0) {
+           return (0, 1);  // ERR_DIV_ZERO
+       }
+       return (a / b, 0);  // value, no error
+   }
+
+   var result: i32;
+   var err: i32;
+   (result, err) = divide(10, 0);
+   if (err != 0) {
+       // Handle error
+   }
+   ```
+   - Pro: Uses both registers, explicit error handling
+   - Con: Very verbose for error propagation
+
+   **Proposal C: Zig-style `try` (ergonomic)**
+   ```c
+   fn process_file() -> (i32, i32) {
+       const fd = try open_file("data.txt");  // Auto-propagate on error
+       const data = try read_data(fd);
+       const result = try process(data);
+       return (result, 0);
+   }
+
+   // `try` desugars to:
+   // var fd: i32;
+   // var err: i32;
+   // (fd, err) = open_file("data.txt");
+   // if (err != 0) { return (undefined, err); }
+   ```
+   - Pro: Ergonomic, explicit keyword, makes error handling practical
+   - Con: Adds keyword, implicit control flow (early return)
+   - Similar to Zig's error handling (proven in practice)
+
+   **Current leaning:**
+   - Proposal A (simple tuples) for general use
+   - Either skip Result pattern entirely (too verbose without `try`)
+   - OR add `try` keyword (Proposal C) if error handling becomes important
+
+   **Key insight:** Without `try` semantics, the Result pattern is too verbose to be practical. Either commit to `try` or stick with traditional C error codes.
 
 3. **Array syntax:** Static arrays in grammar but not implemented
    - Should be `i32[10]` or `[10]i32`?
