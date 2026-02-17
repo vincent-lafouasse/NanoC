@@ -1463,8 +1463,8 @@ mod tests {
         let expr = parse_expr_from_source("a * b + c / d").unwrap();
         assert_eq!(format!("{}", expr), "(+ (* a b) (/ c d))");
 
-        // x & 0xFF == 0 → (== (& x 255) 0)
+        // x & 0xFF == 0 → (& x (== 255 0))
         let expr = parse_expr_from_source("x & 0xFF == 0").unwrap();
-        assert_eq!(format!("{}", expr), "(== (& x 255) 0)");
+        assert_eq!(format!("{}", expr), "(& x (== 255 0))");
     }
 }
