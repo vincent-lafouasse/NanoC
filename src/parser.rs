@@ -1666,7 +1666,10 @@ mod tests {
     fn test_function_call_nested() {
         // foo(bar(x), baz(y, z))
         let expr = parse_expr_from_source("foo(bar(x), baz(y, z))").unwrap();
-        assert_eq!(format!("{}", expr), "(call foo (call bar x) (call baz y z))");
+        assert_eq!(
+            format!("{}", expr),
+            "(call foo (call bar x) (call baz y z))"
+        );
     }
 
     #[test]
@@ -1706,7 +1709,10 @@ mod tests {
 
         // p->x * p->x + p->y * p->y → (+ (* (-> p x) (-> p x)) (* (-> p y) (-> p y)))
         let expr = parse_expr_from_source("p->x * p->x + p->y * p->y").unwrap();
-        assert_eq!(format!("{}", expr), "(+ (* (-> p x) (-> p x)) (* (-> p y) (-> p y)))");
+        assert_eq!(
+            format!("{}", expr),
+            "(+ (* (-> p x) (-> p x)) (* (-> p y) (-> p y)))"
+        );
     }
 
     #[test]
