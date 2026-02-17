@@ -15,6 +15,7 @@ pub enum ParseError {
     UnexpectedToken { expected: String, found: TokenType },
     UnexpectedEof,
     EmptyStruct { name: Rc<[u8]> },
+    Unimplemented { reason: &'static str },
 }
 
 impl From<LexError> for ParseError {
@@ -557,40 +558,38 @@ impl Parser {
     fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         use TokenType as T;
 
-        let expr = match self.peek_kind() {
+        match self.peek_kind() {
             T::Identifier(id) => {
                 let id = id.clone();
                 self.advance()?;
                 if let T::Lparen = self.peek_kind() {
-                    panic!("no function call atoms yet");
+                    Err(ParseError::Unimplemented {
+                        reason: "function calls aren't implemented yet",
+                    })
                 } else {
-                    Expr::Identifier(id)
+                    Ok(Expr::Identifier(id))
                 }
             }
             T::Number(x) => {
                 let x = *x;
                 self.advance()?;
-                Expr::Number(x)
+                Ok(Expr::Number(x))
             }
             T::StringLiteral(s) => {
                 let s = s.clone();
                 self.advance()?;
-                Expr::StringLiteral(s)
+                Ok(Expr::StringLiteral(s))
             }
             T::CharLiteral(c) => {
                 let c = *c;
                 self.advance()?;
-                Expr::CharLiteral(c)
+                Ok(Expr::CharLiteral(c))
             }
-            _ => {
-                return Err(ParseError::UnexpectedToken {
-                    expected: "literal, variable or function call".into(),
-                    found: self.peek_kind().clone(),
-                })
-            }
-        };
-
-        Ok(expr)
+            _ => Err(ParseError::UnexpectedToken {
+                expected: "literal, variable or function call".into(),
+                found: self.peek_kind().clone(),
+            }),
+        }
     }
 
     fn parse_prefix_expr_or_atom(&mut self) -> Result<Expr, ParseError> {
