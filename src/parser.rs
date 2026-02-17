@@ -578,7 +578,20 @@ impl fmt::Display for Expr {
             Expr::Number(n) => write!(f, "{}", n),
             Expr::Identifier(id) => write!(f, "{}", String::from_utf8_lossy(id)),
             Expr::StringLiteral(s) => {
-                write!(f, "\"{}\"", String::from_utf8_lossy(s))
+                write!(f, "\"")?;
+                for &byte in s.as_ref() {
+                    match byte {
+                        b'\n' => write!(f, "\\n")?,
+                        b'\t' => write!(f, "\\t")?,
+                        b'\r' => write!(f, "\\r")?,
+                        b'\\' => write!(f, "\\\\")?,
+                        b'"' => write!(f, "\\\"")?,
+                        b'\0' => write!(f, "\\0")?,
+                        0x20..=0x7E => write!(f, "{}", byte as char)?,
+                        _ => write!(f, "\\x{:02X}", byte)?,
+                    }
+                }
+                write!(f, "\"")
             }
             Expr::CharLiteral(ch) => {
                 let repr = match ch {
