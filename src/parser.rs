@@ -413,6 +413,7 @@ impl Parser {
 }
 
 // higher = tighter binding
+// per https://en.cppreference.com/w/c/language/operator_precedence.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 enum Precedence {
