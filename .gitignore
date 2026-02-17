@@ -1,6 +1,5 @@
 /target
 local*
-catppuccin
 
 # mdbook generated output
 /book/book/
