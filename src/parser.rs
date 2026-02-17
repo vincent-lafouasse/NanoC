@@ -1629,4 +1629,178 @@ mod tests {
             "(|| a (&& b (| c (^ d (& e (== f (< g (<< h (+ i (* j k))))))))))"
         );
     }
+
+    // --- Postfix expressions (unimplemented, tests expected to fail) ---
+    // S-expression conventions used below:
+    //   function call:     (call f a b c)
+    //   pointer access:    (-> p field)
+    //   value access:      (. s field)
+    //   array index:       ([] arr i)
+
+    #[test]
+    fn test_function_call_no_args() {
+        let expr = parse_expr_from_source("foo()").unwrap();
+        assert_eq!(format!("{}", expr), "(call foo)");
+    }
+
+    #[test]
+    fn test_function_call_one_arg() {
+        let expr = parse_expr_from_source("foo(x)").unwrap();
+        assert_eq!(format!("{}", expr), "(call foo x)");
+    }
+
+    #[test]
+    fn test_function_call_multiple_args() {
+        let expr = parse_expr_from_source("foo(a, b, c)").unwrap();
+        assert_eq!(format!("{}", expr), "(call foo a b c)");
+    }
+
+    #[test]
+    fn test_function_call_expr_args() {
+        // args can be arbitrary expressions
+        let expr = parse_expr_from_source("foo(a + b, c * d, !flag)").unwrap();
+        assert_eq!(format!("{}", expr), "(call foo (+ a b) (* c d) (! flag))");
+    }
+
+    #[test]
+    fn test_function_call_nested() {
+        // foo(bar(x), baz(y, z))
+        let expr = parse_expr_from_source("foo(bar(x), baz(y, z))").unwrap();
+        assert_eq!(format!("{}", expr), "(call foo (call bar x) (call baz y z))");
+    }
+
+    #[test]
+    fn test_function_call_in_expression() {
+        // foo(a) + bar(b) → (+ (call foo a) (call bar b))
+        let expr = parse_expr_from_source("foo(a) + bar(b)").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (call foo a) (call bar b))");
+
+        // foo(x) * 2 + 1 → (+ (* (call foo x) 2) 1)
+        let expr = parse_expr_from_source("foo(x) * 2 + 1").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (* (call foo x) 2) 1)");
+    }
+
+    #[test]
+    fn test_arrow_field_access() {
+        // p->x → (-> p x)
+        let expr = parse_expr_from_source("p->x").unwrap();
+        assert_eq!(format!("{}", expr), "(-> p x)");
+    }
+
+    #[test]
+    fn test_arrow_chained() {
+        // p->next->val → (-> (-> p next) val)
+        let expr = parse_expr_from_source("p->next->val").unwrap();
+        assert_eq!(format!("{}", expr), "(-> (-> p next) val)");
+
+        // a->b->c->d → left-associative
+        let expr = parse_expr_from_source("a->b->c->d").unwrap();
+        assert_eq!(format!("{}", expr), "(-> (-> (-> a b) c) d)");
+    }
+
+    #[test]
+    fn test_arrow_in_expression() {
+        // p->x + p->y → (+ (-> p x) (-> p y))
+        let expr = parse_expr_from_source("p->x + p->y").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (-> p x) (-> p y))");
+
+        // p->x * p->x + p->y * p->y → (+ (* (-> p x) (-> p x)) (* (-> p y) (-> p y)))
+        let expr = parse_expr_from_source("p->x * p->x + p->y * p->y").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (* (-> p x) (-> p x)) (* (-> p y) (-> p y)))");
+    }
+
+    #[test]
+    fn test_dot_field_access() {
+        // s.x → (. s x)
+        let expr = parse_expr_from_source("s.x").unwrap();
+        assert_eq!(format!("{}", expr), "(. s x)");
+
+        // s.x + s.y
+        let expr = parse_expr_from_source("s.x + s.y").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (. s x) (. s y))");
+    }
+
+    #[test]
+    fn test_array_index() {
+        // arr[i] → ([] arr i)
+        let expr = parse_expr_from_source("arr[i]").unwrap();
+        assert_eq!(format!("{}", expr), "([] arr i)");
+
+        // arr[i + 1] → ([] arr (+ i 1))
+        let expr = parse_expr_from_source("arr[i + 1]").unwrap();
+        assert_eq!(format!("{}", expr), "([] arr (+ i 1))");
+    }
+
+    #[test]
+    fn test_array_index_chained() {
+        // matrix[i][j] → ([] ([] matrix i) j)
+        let expr = parse_expr_from_source("matrix[i][j]").unwrap();
+        assert_eq!(format!("{}", expr), "([] ([] matrix i) j)");
+    }
+
+    #[test]
+    fn test_array_index_in_expression() {
+        // arr[i] + arr[i + 1] → (+ ([] arr i) ([] arr (+ i 1)))
+        let expr = parse_expr_from_source("arr[i] + arr[i + 1]").unwrap();
+        assert_eq!(format!("{}", expr), "(+ ([] arr i) ([] arr (+ i 1)))");
+    }
+
+    #[test]
+    fn test_postfix_mixed() {
+        // array of struct pointers: arr[i]->x
+        let expr = parse_expr_from_source("arr[i]->x").unwrap();
+        assert_eq!(format!("{}", expr), "(-> ([] arr i) x)");
+
+        // function returning pointer: get_point()->x
+        let expr = parse_expr_from_source("get_point()->x").unwrap();
+        assert_eq!(format!("{}", expr), "(-> (call get_point) x)");
+
+        // function call on result of index: arr[i](x)
+        let expr = parse_expr_from_source("vtable[i](x)").unwrap();
+        assert_eq!(format!("{}", expr), "(call ([] vtable i) x)");
+    }
+
+    #[test]
+    fn test_unary_on_postfix() {
+        // deref of function result: *get_ptr()
+        let expr = parse_expr_from_source("*get_ptr()").unwrap();
+        assert_eq!(format!("{}", expr), "(* (call get_ptr))");
+
+        // address of field: &p->x
+        let expr = parse_expr_from_source("&p->x").unwrap();
+        assert_eq!(format!("{}", expr), "(& (-> p x))");
+
+        // negate field: -p->val
+        let expr = parse_expr_from_source("-p->val").unwrap();
+        assert_eq!(format!("{}", expr), "(- (-> p val))");
+
+        // not array element: !arr[i]
+        let expr = parse_expr_from_source("!arr[i]").unwrap();
+        assert_eq!(format!("{}", expr), "(! ([] arr i))");
+    }
+
+    #[test]
+    fn test_postfix_complex() {
+        // p->x * p->y + foo(a, b->z) == get_val(arr[i])
+        let expr = parse_expr_from_source("p->x * p->y + foo(a, b->z) == get_val(arr[i])").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(== (+ (* (-> p x) (-> p y)) (call foo a (-> b z))) (call get_val ([] arr i)))"
+        );
+
+        // !is_valid(p->data) && count > 0
+        let expr = parse_expr_from_source("!is_valid(p->data) && count > 0").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(&& (! (call is_valid (-> p data))) (> count 0))"
+        );
+
+        // buf[len - 1] != '\0'
+        let expr = parse_expr_from_source("buf[len - 1] != '\\0'").unwrap();
+        assert_eq!(format!("{}", expr), "(!= ([] buf (- len 1)) '\\0')");
+
+        // &arr[i] + stride * j
+        let expr = parse_expr_from_source("&arr[i] + stride * j").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (& ([] arr i)) (* stride j))");
+    }
 }
