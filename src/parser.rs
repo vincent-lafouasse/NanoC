@@ -1278,4 +1278,162 @@ mod tests {
         let expr = parse_prefix_from_source("~0b1010").unwrap();
         assert_eq!(format!("{}", expr), "(~ 10)");
     }
+
+    // Helper for testing parse_expression
+    fn parse_expr_from_source(source: &str) -> Result<Expr, ParseError> {
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut parser = Parser::new(source_rc)?;
+        parser.parse_expression()
+    }
+
+    #[test]
+    fn test_parse_expression_simple_binary() {
+        // 1 + 2 → (+ 1 2)
+        let expr = parse_expr_from_source("1 + 2").unwrap();
+        assert_eq!(format!("{}", expr), "(+ 1 2)");
+
+        // 3 * 4 → (* 3 4)
+        let expr = parse_expr_from_source("3 * 4").unwrap();
+        assert_eq!(format!("{}", expr), "(* 3 4)");
+
+        // x - y → (- x y)
+        let expr = parse_expr_from_source("x - y").unwrap();
+        assert_eq!(format!("{}", expr), "(- x y)");
+    }
+
+    #[test]
+    fn test_parse_expression_precedence() {
+        // 1 + 2 * 3 → (+ 1 (* 2 3))
+        let expr = parse_expr_from_source("1 + 2 * 3").unwrap();
+        assert_eq!(format!("{}", expr), "(+ 1 (* 2 3))");
+
+        // 1 * 2 + 3 → (+ (* 1 2) 3)
+        let expr = parse_expr_from_source("1 * 2 + 3").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (* 1 2) 3)");
+
+        // a * b + c * d → (+ (* a b) (* c d))
+        let expr = parse_expr_from_source("a * b + c * d").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (* a b) (* c d))");
+    }
+
+    #[test]
+    fn test_parse_expression_left_associative() {
+        // 1 + 2 + 3 → (+ (+ 1 2) 3)
+        let expr = parse_expr_from_source("1 + 2 + 3").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (+ 1 2) 3)");
+
+        // 10 - 5 - 2 → (- (- 10 5) 2)
+        let expr = parse_expr_from_source("10 - 5 - 2").unwrap();
+        assert_eq!(format!("{}", expr), "(- (- 10 5) 2)");
+
+        // a * b * c → (* (* a b) c)
+        let expr = parse_expr_from_source("a * b * c").unwrap();
+        assert_eq!(format!("{}", expr), "(* (* a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_with_prefix() {
+        // -1 + 2 → (+ (- 1) 2)
+        let expr = parse_expr_from_source("-1 + 2").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (- 1) 2)");
+
+        // 1 + -2 → (+ 1 (- 2))
+        let expr = parse_expr_from_source("1 + -2").unwrap();
+        assert_eq!(format!("{}", expr), "(+ 1 (- 2))");
+
+        // !a && b → (&& (! a) b)
+        let expr = parse_expr_from_source("!a && b").unwrap();
+        assert_eq!(format!("{}", expr), "(&& (! a) b)");
+
+        // *p + 5 → (+ (* p) 5)
+        let expr = parse_expr_from_source("*p + 5").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (* p) 5)");
+    }
+
+    #[test]
+    fn test_parse_expression_bitwise() {
+        // a | b → (| a b)
+        let expr = parse_expr_from_source("a | b").unwrap();
+        assert_eq!(format!("{}", expr), "(| a b)");
+
+        // x & y → (& x y)
+        let expr = parse_expr_from_source("x & y").unwrap();
+        assert_eq!(format!("{}", expr), "(& x y)");
+
+        // a ^ b → (^ a b)
+        let expr = parse_expr_from_source("a ^ b").unwrap();
+        assert_eq!(format!("{}", expr), "(^ a b)");
+
+        // a | b & c → (| a (& b c)) - bitwise AND has higher precedence
+        let expr = parse_expr_from_source("a | b & c").unwrap();
+        assert_eq!(format!("{}", expr), "(| a (& b c))");
+    }
+
+    #[test]
+    fn test_parse_expression_comparison() {
+        // x == y → (== x y)
+        let expr = parse_expr_from_source("x == y").unwrap();
+        assert_eq!(format!("{}", expr), "(== x y)");
+
+        // a < b → (< a b)
+        let expr = parse_expr_from_source("a < b").unwrap();
+        assert_eq!(format!("{}", expr), "(< a b)");
+
+        // x <= y → (<= x y)
+        let expr = parse_expr_from_source("x <= y").unwrap();
+        assert_eq!(format!("{}", expr), "(<= x y)");
+
+        // a + b < c * d → (< (+ a b) (* c d))
+        let expr = parse_expr_from_source("a + b < c * d").unwrap();
+        assert_eq!(format!("{}", expr), "(< (+ a b) (* c d))");
+    }
+
+    #[test]
+    fn test_parse_expression_logical() {
+        // a && b → (&& a b)
+        let expr = parse_expr_from_source("a && b").unwrap();
+        assert_eq!(format!("{}", expr), "(&& a b)");
+
+        // x || y → (|| x y)
+        let expr = parse_expr_from_source("x || y").unwrap();
+        assert_eq!(format!("{}", expr), "(|| x y)");
+
+        // a && b || c → (|| (&& a b) c)
+        let expr = parse_expr_from_source("a && b || c").unwrap();
+        assert_eq!(format!("{}", expr), "(|| (&& a b) c)");
+
+        // a < b && c > d → (&& (< a b) (> c d))
+        let expr = parse_expr_from_source("a < b && c > d").unwrap();
+        assert_eq!(format!("{}", expr), "(&& (< a b) (> c d))");
+    }
+
+    #[test]
+    fn test_parse_expression_shifts() {
+        // x << 2 → (<< x 2)
+        let expr = parse_expr_from_source("x << 2").unwrap();
+        assert_eq!(format!("{}", expr), "(<< x 2)");
+
+        // y >> 1 → (>> y 1)
+        let expr = parse_expr_from_source("y >> 1").unwrap();
+        assert_eq!(format!("{}", expr), "(>> y 1)");
+
+        // a + b << 2 → (<< (+ a b) 2) - shift has lower precedence than add
+        let expr = parse_expr_from_source("a + b << 2").unwrap();
+        assert_eq!(format!("{}", expr), "(<< (+ a b) 2)");
+    }
+
+    #[test]
+    fn test_parse_expression_complex() {
+        // 1 + 2 * 3 - 4 → (- (+ 1 (* 2 3)) 4)
+        let expr = parse_expr_from_source("1 + 2 * 3 - 4").unwrap();
+        assert_eq!(format!("{}", expr), "(- (+ 1 (* 2 3)) 4)");
+
+        // a * b + c / d → (+ (* a b) (/ c d))
+        let expr = parse_expr_from_source("a * b + c / d").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (* a b) (/ c d))");
+
+        // x & 0xFF == 0 → (== (& x 255) 0)
+        let expr = parse_expr_from_source("x & 0xFF == 0").unwrap();
+        assert_eq!(format!("{}", expr), "(== (& x 255) 0)");
+    }
 }
