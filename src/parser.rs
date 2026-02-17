@@ -429,7 +429,7 @@ enum Precedence {
     Shift,      // << >>
     Term,       // + -
     Factor,     // * / %
-    Unary,      // ! ~ - &
+    Prefix,     // ! ~ - &
     Postfix,    // -> . [] ()
 }
 
