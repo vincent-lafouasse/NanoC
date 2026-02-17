@@ -466,6 +466,21 @@ enum UnaryOp {
     Deref,      // *
 }
 
+impl TryFrom<&TokenType> for UnaryOp {
+    type Error = ();
+
+    fn try_from(token: &TokenType) -> Result<Self, Self::Error> {
+        match token {
+            TokenType::Minus => Ok(UnaryOp::Negate),
+            TokenType::Not => Ok(UnaryOp::LogicalNot),
+            TokenType::Bnot => Ok(UnaryOp::BitwiseNot),
+            TokenType::Ampersand => Ok(UnaryOp::AddrOf),
+            TokenType::Star => Ok(UnaryOp::Deref),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum Expr {
     Number(i64),
