@@ -11,3 +11,5 @@ build-dir = "book"
 [output.html]
 default-theme = "rust"
 git-repository-url = "https://github.com/vincent-lafouasse/NanoC"
+additional-js = ["theme/nanoc-highlight.js"]
+additional-css = ["theme/nanoc-syntax.css"]

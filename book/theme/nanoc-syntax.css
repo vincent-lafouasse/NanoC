@@ -1,0 +1,57 @@
+/* Keywords: fn, struct, return, if, else, while, goto, inline */
+.hljs-keyword {
+    color: #8959a8;
+    font-weight: 600;
+}
+
+/* Storage keywords: var, const */
+.hljs-built_in {
+    color: #c82829;
+}
+
+/* Types: u8, i32, u32, ptr, Point* */
+.hljs-type {
+    color: #4271ae;
+}
+
+/* Function and struct names */
+.hljs-title.function,
+.hljs-title.class {
+    color: #c99e00;
+}
+
+/* String and character literals */
+.hljs-string {
+    color: #718c00;
+}
+
+/* Numbers */
+.hljs-number {
+    color: #f5871f;
+}
+
+/* Special keywords: undefined, zeroed, syscall */
+.hljs-literal {
+    color: #c82829;
+}
+
+/* Operators: *, ->, +, =, etc. */
+.hljs-operator {
+    color: #888;
+}
+
+/* Comments */
+.hljs-comment {
+    color: #969896;
+    font-style: italic;
+}
+
+/* Labels (for goto) */
+.hljs-symbol {
+    color: #8959a8;
+}
+
+/* Punctuation */
+.hljs-punctuation {
+    color: #555;
+}
