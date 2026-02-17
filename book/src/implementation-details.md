@@ -15,11 +15,6 @@
 
 **Current priority:** Correctness over speed
 
-The compiler should:
-- Parse 10,000 lines in < 100ms
-- Compile simple programs in < 1s
-- Keep memory under 100MB for typical files
-
 **Not priorities:**
 - Parallel compilation
 - Incremental compilation

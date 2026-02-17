@@ -109,7 +109,7 @@ fn add(a: i32, b: i32) -> i32 { ... }
 
 **Open Design Question:** How to use both return registers (a0, a1)?
 
-**Option 1: Tuple returns** (recommended)
+**Option 1: Tuple returns** (simple, minimal)
 ```c
 fn divmod(a: i32, b: i32) -> (i32, i32) {
     return (a / b, a % b);
@@ -120,11 +120,16 @@ var rem: i32;
 (quot, rem) = divmod(10, 3);
 ```
 
-**Option 2: Output parameters** (explicit but doesn't use both registers)
+**Option 2: Some kind of zig style error ** (could be cool but useless without some kind of `try` mechanics)
 ```c
-fn divmod(a: i32, b: i32, quot: i32*, rem: i32*) {
-    *quot = a / b;
-    *rem = a % b;
+fn can_fail() -> (x: i32, Error) {
+    try can_also_fail(x);
+
+    if (x == 0) {
+        return Err(my_error(x));
+    }
+
+    return Ok(x);
 }
 ```
 
@@ -138,6 +143,23 @@ All standard C operators with standard precedence:
 - Comparison: `==`, `!=`, `<`, `<=`, `>`, `>=`
 - Logical: `&&`, `||`, `!`
 - Pointer: `&` (address-of), `*` (deref), `->` (field access)
+
+```rust
+None = 0       // Entry point
+Assignment = 1 // =
+LogicalOr = 2  // ||
+LogicalAnd = 3 // &&
+BitwiseOr = 4  // |
+BitwiseXor = 5 // ^
+BitwiseAnd = 6 // &
+Equality = 7   // == !=
+Comparison = 8 // < > <= >=
+Shift = 9      // << >>
+Term = 10      // + -
+Factor = 11    // * / %
+Unary = 12     // ! ~ - &
+Postfix = 13   // -> . [] ()
+```
 
 **No operator overloading.** Each operator has exactly one meaning.
 

@@ -11,8 +11,6 @@
 # Implementation
 
 - [Implementation Details](implementation-details.md)
-- [Testing Strategy](testing-strategy.md)
-- [Contributing](contributing.md)
 
 # Planning
 

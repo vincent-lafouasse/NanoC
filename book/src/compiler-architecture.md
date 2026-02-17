@@ -54,8 +54,6 @@ The lexer is complete and well-tested:
 
 **Invariant:** The `KEYWORDS` array must be sorted (checked at runtime in constructor).
 
-**Implementation note:** The lexer uses `Rc<[u8]>` for source sharing without copying.
-
 ### Parser Details
 
 **File:** `src/parser.rs`
@@ -70,7 +68,7 @@ The lexer is complete and well-tested:
 - ✅ Type parsing (primitives, pointers, structs)
 - ✅ Struct declarations
 - ✅ Variable declarations with `zeroed`/`undefined`
-- 🚧 Expression parsing (Pratt algorithm - TODO)
+- 🚧 Expression parsing (Pratt algorithm - partial implementation)
 - ❌ Function declarations
 - ❌ Statements (if/while/blocks)
 
@@ -114,12 +112,6 @@ Postfix = 13   // -> . [] ()
 -x + y     →  (+ (- x) y)
 a && b || c → (|| (&& a b) c)
 ```
-
-**Next steps:**
-1. Implement `parse_expression_bp()` (binding power recursion)
-2. Add prefix parsing (atoms, unary ops)
-3. Add infix parsing (binary ops)
-4. Add postfix parsing (field access, array index, calls)
 
 ### Semantic Analysis (Not Started)
 
