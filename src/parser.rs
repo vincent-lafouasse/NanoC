@@ -935,4 +935,130 @@ mod tests {
         assert_eq!(format!("{}", Expr::CharLiteral(0xFF)), "'\\xFF'");
         assert_eq!(format!("{}", Expr::CharLiteral(0x7F)), "'\\x7F'"); // DEL
     }
+
+    // Helper for testing parse_atom
+    fn parse_atom_from_source(source: &str) -> Result<Expr, ParseError> {
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut parser = Parser::new(source_rc)?;
+        parser.parse_atom()
+    }
+
+    #[test]
+    fn test_parse_atom_identifier() {
+        let expr = parse_atom_from_source("foo").unwrap();
+        assert_eq!(format!("{}", expr), "foo");
+        assert!(matches!(expr, Expr::Identifier(_)));
+
+        let expr = parse_atom_from_source("_private").unwrap();
+        assert_eq!(format!("{}", expr), "_private");
+
+        let expr = parse_atom_from_source("x123").unwrap();
+        assert_eq!(format!("{}", expr), "x123");
+    }
+
+    #[test]
+    fn test_parse_atom_number_decimal() {
+        let expr = parse_atom_from_source("42").unwrap();
+        assert_eq!(format!("{}", expr), "42");
+        assert!(matches!(expr, Expr::Number(42)));
+
+        let expr = parse_atom_from_source("0").unwrap();
+        assert!(matches!(expr, Expr::Number(0)));
+
+        let expr = parse_atom_from_source("2147483647").unwrap();
+        assert!(matches!(expr, Expr::Number(2147483647)));
+    }
+
+    #[test]
+    fn test_parse_atom_number_hex() {
+        let expr = parse_atom_from_source("0xFF").unwrap();
+        assert_eq!(format!("{}", expr), "255");
+        assert!(matches!(expr, Expr::Number(0xFF)));
+
+        let expr = parse_atom_from_source("0x1A3B").unwrap();
+        assert!(matches!(expr, Expr::Number(0x1A3B)));
+
+        let expr = parse_atom_from_source("0xDEADBEEF").unwrap();
+        assert!(matches!(expr, Expr::Number(0xDEADBEEF)));
+    }
+
+    #[test]
+    fn test_parse_atom_number_binary() {
+        let expr = parse_atom_from_source("0b1010").unwrap();
+        assert_eq!(format!("{}", expr), "10");
+        assert!(matches!(expr, Expr::Number(0b1010)));
+
+        let expr = parse_atom_from_source("0b11110000").unwrap();
+        assert!(matches!(expr, Expr::Number(0b11110000)));
+
+        let expr = parse_atom_from_source("0b1").unwrap();
+        assert!(matches!(expr, Expr::Number(1)));
+    }
+
+    #[test]
+    fn test_parse_atom_string_literal() {
+        let expr = parse_atom_from_source(r#""hello""#).unwrap();
+        assert_eq!(format!("{}", expr), r#""hello""#);
+        assert!(matches!(expr, Expr::StringLiteral(_)));
+
+        let expr = parse_atom_from_source(r#""world\n""#).unwrap();
+        assert_eq!(format!("{}", expr), r#""world\n""#);
+
+        let expr = parse_atom_from_source(r#""tab\there""#).unwrap();
+        assert_eq!(format!("{}", expr), r#""tab\there""#);
+    }
+
+    #[test]
+    fn test_parse_atom_string_hex_escapes() {
+        let expr = parse_atom_from_source(r#""\x48\x69""#).unwrap();
+        // Should be "Hi" (0x48 = 'H', 0x69 = 'i')
+        assert!(matches!(expr, Expr::StringLiteral(_)));
+        if let Expr::StringLiteral(bytes) = expr {
+            assert_eq!(bytes.as_ref(), b"Hi");
+        }
+    }
+
+    #[test]
+    fn test_parse_atom_char_literal() {
+        let expr = parse_atom_from_source("'a'").unwrap();
+        assert_eq!(format!("{}", expr), "'a'");
+        assert!(matches!(expr, Expr::CharLiteral(b'a')));
+
+        let expr = parse_atom_from_source("'Z'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'Z')));
+
+        let expr = parse_atom_from_source("'0'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'0')));
+    }
+
+    #[test]
+    fn test_parse_atom_char_escapes() {
+        let expr = parse_atom_from_source(r"'\n'").unwrap();
+        assert_eq!(format!("{}", expr), r"'\n'");
+        assert!(matches!(expr, Expr::CharLiteral(b'\n')));
+
+        let expr = parse_atom_from_source(r"'\t'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'\t')));
+
+        let expr = parse_atom_from_source(r"'\0'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'\0')));
+
+        let expr = parse_atom_from_source(r"'\''").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'\'')));
+
+        let expr = parse_atom_from_source(r"'\\'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'\\')));
+    }
+
+    #[test]
+    fn test_parse_atom_char_hex_escape() {
+        let expr = parse_atom_from_source(r"'\x41'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(b'A'))); // 0x41 = 'A'
+
+        let expr = parse_atom_from_source(r"'\xFF'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(0xFF)));
+
+        let expr = parse_atom_from_source(r"'\x00'").unwrap();
+        assert!(matches!(expr, Expr::CharLiteral(0x00)));
+    }
 }
