@@ -172,7 +172,7 @@ NanoC makes several behaviors well-defined that C leaves undefined or implementa
 | Behavior            | C  | NanoC                          |
 |---------------------|----|--------------------------------|
 | Signed overflow     | UB | Two's complement wrap          |
-| Division by zero    | UB | Returns -1                     |
+| Division by zero    | UB | UB (same as C)                 |
 | Signed right shift  | ID | Arithmetic shift               |
 | Left shift negative | UB | Bitwise operation              |
 | Evaluation order    | US | Left-to-right                  |
@@ -197,14 +197,20 @@ var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
 
 #### Division by Zero
 **C behavior:** Undefined behavior
-**NanoC behavior:** Returns -1 (defined)
+**NanoC behavior:** Undefined behavior (same as C)
 
 ```c
-var x: i32 = 10 / 0;  // x = -1 (defined, not UB)
-var y: i32 = 10 % 0;  // y = -1 (defined, not UB)
+var x: i32 = 10 / 0;  // UB
+var y: i32 = 10 % 0;  // UB
 ```
 
-**Rationale:** Hardware division instructions on RISC-V don't trap on divide-by-zero - they return specific values. We expose this behavior rather than adding checks. `-1` is the RISC-V spec behavior for division by zero.
+**Rationale:** Integer division by zero is trivially detectable before the operation. Defining a return value would mask bugs rather than expose them. Users should guard explicitly:
+
+```c
+if (b != 0) {
+    var result: i32 = a / b;
+}
+```
 
 #### Signed Right Shift
 **C behavior:** Implementation-defined (arithmetic or logical shift)

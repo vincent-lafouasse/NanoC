@@ -203,6 +203,19 @@
    }
    ```
 
+   **g) Division by literal zero** (Priority: HIGH, candidate for hard error)
+
+   Division by zero is UB in NanoC. When the divisor is a literal `0`, the compiler can catch it statically.
+
+   ```c
+   var x: i32 = a / 0;   // Error: division by zero
+   var y: i32 = a % 0;   // Error: division by zero
+   ```
+
+   **Proposal:** Promote this to a hard compile error rather than a warning, since there is no legitimate use case for dividing by a literal zero. A warning would suggest the code might be acceptable — it never is.
+
+   Note: This only applies to literal `0`. Division by a variable whose runtime value happens to be zero remains UB and is the programmer's responsibility to guard against.
+
    **Implementation approach:**
    - Warnings are purely optional and don't affect compilation
    - Can be enabled/disabled via compiler flags (e.g., `-Wall`, `-Wno-precedence`)
