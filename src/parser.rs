@@ -517,7 +517,12 @@ impl Parser {
                 self.advance()?;
                 Expr::CharLiteral(c)
             }
-            _ => panic!(),
+            _ => {
+                return Err(ParseError::UnexpectedToken {
+                    expected: "literal, variable or function call".into(),
+                    found: self.peek_kind().clone(),
+                })
+            }
         };
 
         Ok(expr)
