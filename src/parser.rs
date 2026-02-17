@@ -490,6 +490,22 @@ impl Parser {
         self.parse_expression_bp(Precedence::None)
     }
 
+    fn parse_atom(&mut self) -> Result<Expr, ParseError> {
+        use TokenType as T;
+
+        match self.peek_kind() {
+            T::Identifier(id) => {
+                let id = id.clone();
+                self.advance()?;
+                if let T::Lparen = self.peek_kind() {
+                    panic!("no function call atoms yet");
+                }
+                Ok(Expr::Identifier(id))
+            }
+            _ => panic!(),
+        }
+    }
+
     fn parse_expression_bp(&mut self, _min_prec: Precedence) -> Result<Expr, ParseError> {
         // TODO: implement Pratt parsing algorithm
         // 1. Parse prefix expression (or atom)
