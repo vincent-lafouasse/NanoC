@@ -1463,8 +1463,170 @@ mod tests {
         let expr = parse_expr_from_source("a * b + c / d").unwrap();
         assert_eq!(format!("{}", expr), "(+ (* a b) (/ c d))");
 
-        // x & 0xFF == 0 → (& x (== 255 0))
+        // x & 0xFF == 0 → (& x (== 255 0)) - == binds tighter than &
         let expr = parse_expr_from_source("x & 0xFF == 0").unwrap();
         assert_eq!(format!("{}", expr), "(& x (== 255 0))");
+    }
+
+    #[test]
+    fn test_prec_logical_or_vs_and() {
+        // || is weaker than &&: a || b && c → (|| a (&& b c))
+        let expr = parse_expr_from_source("a || b && c").unwrap();
+        assert_eq!(format!("{}", expr), "(|| a (&& b c))");
+
+        // left-associativity of ||: a || b || c → (|| (|| a b) c)
+        let expr = parse_expr_from_source("a || b || c").unwrap();
+        assert_eq!(format!("{}", expr), "(|| (|| a b) c)");
+    }
+
+    #[test]
+    fn test_prec_logical_and_vs_bitwise_or() {
+        // && is weaker than |: a && b | c → (&& a (| b c))
+        let expr = parse_expr_from_source("a && b | c").unwrap();
+        assert_eq!(format!("{}", expr), "(&& a (| b c))");
+
+        // left-associativity of &&: a && b && c → (&& (&& a b) c)
+        let expr = parse_expr_from_source("a && b && c").unwrap();
+        assert_eq!(format!("{}", expr), "(&& (&& a b) c)");
+    }
+
+    #[test]
+    fn test_prec_bitwise_or_vs_xor() {
+        // | is weaker than ^: a | b ^ c → (| a (^ b c))
+        let expr = parse_expr_from_source("a | b ^ c").unwrap();
+        assert_eq!(format!("{}", expr), "(| a (^ b c))");
+    }
+
+    #[test]
+    fn test_prec_bitwise_xor_vs_and() {
+        // ^ is weaker than &: a ^ b & c → (^ a (& b c))
+        let expr = parse_expr_from_source("a ^ b & c").unwrap();
+        assert_eq!(format!("{}", expr), "(^ a (& b c))");
+    }
+
+    #[test]
+    fn test_prec_bitwise_and_vs_equality() {
+        // & is weaker than ==: a & b == c → (& a (== b c))
+        let expr = parse_expr_from_source("a & b == c").unwrap();
+        assert_eq!(format!("{}", expr), "(& a (== b c))");
+
+        // & is weaker than !=: a & b != c → (& a (!= b c))
+        let expr = parse_expr_from_source("a & b != c").unwrap();
+        assert_eq!(format!("{}", expr), "(& a (!= b c))");
+
+        // so treachorous that clang emits warnings for this construct
+        let expr = parse_expr_from_source("x & mask == value").unwrap();
+        assert_eq!(format!("{}", expr), "(& x (== mask value))");
+    }
+
+    #[test]
+    fn test_prec_equality_vs_comparison() {
+        // == is weaker than <: a == b < c → (== a (< b c))
+        let expr = parse_expr_from_source("a == b < c").unwrap();
+        assert_eq!(format!("{}", expr), "(== a (< b c))");
+
+        // != is weaker than >=: a != b >= c → (!= a (>= b c))
+        let expr = parse_expr_from_source("a != b >= c").unwrap();
+        assert_eq!(format!("{}", expr), "(!= a (>= b c))");
+    }
+
+    #[test]
+    fn test_prec_comparison_vs_shift() {
+        // < is weaker than <<: a < b << c → (< a (<< b c))
+        let expr = parse_expr_from_source("a < b << c").unwrap();
+        assert_eq!(format!("{}", expr), "(< a (<< b c))");
+
+        // > is weaker than >>: a > b >> c → (> a (>> b c))
+        let expr = parse_expr_from_source("a > b >> c").unwrap();
+        assert_eq!(format!("{}", expr), "(> a (>> b c))");
+    }
+
+    #[test]
+    fn test_prec_shift_vs_add() {
+        // << is weaker than +: a << b + c → (<< a (+ b c))
+        let expr = parse_expr_from_source("a << b + c").unwrap();
+        assert_eq!(format!("{}", expr), "(<< a (+ b c))");
+
+        // >> is weaker than -: a >> b - c → (>> a (- b c))
+        let expr = parse_expr_from_source("a >> b - c").unwrap();
+        assert_eq!(format!("{}", expr), "(>> a (- b c))");
+    }
+
+    #[test]
+    fn test_prec_add_vs_factor() {
+        // + is weaker than *: a + b * c → (+ a (* b c))
+        let expr = parse_expr_from_source("a + b * c").unwrap();
+        assert_eq!(format!("{}", expr), "(+ a (* b c))");
+
+        // - is weaker than /: a - b / c → (- a (/ b c))
+        let expr = parse_expr_from_source("a - b / c").unwrap();
+        assert_eq!(format!("{}", expr), "(- a (/ b c))");
+
+        // - is weaker than %: a - b % c → (- a (% b c))
+        let expr = parse_expr_from_source("a - b % c").unwrap();
+        assert_eq!(format!("{}", expr), "(- a (% b c))");
+    }
+
+    #[test]
+    fn test_prec_unary_binds_tightest() {
+        // unary binds tighter than any binary: -a * b → (* (- a) b)
+        let expr = parse_expr_from_source("-a * b").unwrap();
+        assert_eq!(format!("{}", expr), "(* (- a) b)");
+
+        // ~a + b → (+ (~ a) b)
+        let expr = parse_expr_from_source("~a + b").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (~ a) b)");
+
+        // !a || b → (|| (! a) b)
+        let expr = parse_expr_from_source("!a || b").unwrap();
+        assert_eq!(format!("{}", expr), "(|| (! a) b)");
+
+        // *a == b → (== (* a) b)
+        let expr = parse_expr_from_source("*a == b").unwrap();
+        assert_eq!(format!("{}", expr), "(== (* a) b)");
+
+        // unary on rhs: a + -b → (+ a (- b))
+        let expr = parse_expr_from_source("a + -b").unwrap();
+        assert_eq!(format!("{}", expr), "(+ a (- b))");
+
+        // a * -b * c → (* (* a (- b)) c)
+        let expr = parse_expr_from_source("a * -b * c").unwrap();
+        assert_eq!(format!("{}", expr), "(* (* a (- b)) c)");
+    }
+
+    #[test]
+    fn test_prec_long_chains() {
+        // Long additive chain: a + b + c + d + e → left-associative
+        let expr = parse_expr_from_source("a + b + c + d + e").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (+ (+ (+ a b) c) d) e)");
+
+        // Long multiplicative chain
+        let expr = parse_expr_from_source("a * b * c * d").unwrap();
+        assert_eq!(format!("{}", expr), "(* (* (* a b) c) d)");
+
+        // Alternating +/- left-associates correctly
+        let expr = parse_expr_from_source("a + b - c + d - e").unwrap();
+        assert_eq!(format!("{}", expr), "(- (+ (- (+ a b) c) d) e)");
+    }
+
+    #[test]
+    fn test_prec_full_hierarchy() {
+        // Exercise every level: a || b && c | d ^ e & f == g < h << i + j * k
+        // Builds right-to-left from tightest:
+        //   j * k           → (* j k)
+        //   i + (* j k)     → (+ i (* j k))
+        //   h << (+ ...)    → (<< h (+ i (* j k)))
+        //   g < (<< ...)    → (< g (<< h (+ i (* j k))))
+        //   f == (< ...)    → (== f (< g (<< h (+ i (* j k)))))
+        //   e & (== ...)    → (& e (== f (< g (<< h (+ i (* j k))))))
+        //   d ^ (& ...)     → (^ d (& e (== f (< g (<< h (+ i (* j k)))))))
+        //   c | (^ ...)     → (| c (^ d (& e (== f (< g (<< h (+ i (* j k))))))))
+        //   b && (| ...)    → (&& b (| c (^ d (& e (== f (< g (<< h (+ i (* j k)))))))))
+        //   a || (&& ...)   → (|| a (&& b (| c (^ d (& e (== f (< g (<< h (+ i (* j k))))))))))
+        let expr = parse_expr_from_source("a || b && c | d ^ e & f == g < h << i + j * k").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(|| a (&& b (| c (^ d (& e (== f (< g (<< h (+ i (* j k))))))))))"
+        );
     }
 }
