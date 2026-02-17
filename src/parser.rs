@@ -613,7 +613,7 @@ impl Parser {
     }
 
     fn parse_expression_bp(&mut self, min_prec: Precedence) -> Result<Expr, ParseError> {
-        let lhs = self.parse_prefix_expr_or_atom()?;
+        let mut left = self.parse_prefix_expr_or_atom()?;
 
         while let Ok(op) = BinaryOp::try_from(self.peek_kind()) {
             let precedence = Precedence::from(&op);
@@ -622,15 +622,29 @@ impl Parser {
                 // stop aggregating operations at this precedence level and return to caller
                 // there is a binary operation after this but it'll get parsed in an outer call
                 // with a lower min_precedence. perhaps the top level call with min_precedence = 0
-                return Ok(lhs);
+                return Ok(left);
             }
 
             // keep binding
             self.advance()?;
-            todo!();
+
+            // following canonical Pratt parsing semantics, this assumes left-associativity.
+            // assignment is the exception that requires (unimplemented yet) custom logic
+            let next_prec = precedence.next();
+            let right = self.parse_expression_bp(next_prec)?;
+            let right = Box::new(right);
+
+            let new_left = Expr::Binary {
+                op,
+                left: Box::new(left),
+                right,
+            };
+            left = new_left;
+
+            // continue binding at this precedence level
         }
 
-        Ok(lhs)
+        Ok(left)
     }
 }
 
