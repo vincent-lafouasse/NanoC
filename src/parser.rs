@@ -599,7 +599,7 @@ impl Parser {
                 let operand = Box::new(self.parse_prefix_expr_or_atom()?);
                 Expr::Unary { op, operand }
             }
-            _ => self.parse_atom()?,
+            Err(()) => self.parse_atom()?,
         };
 
         Ok(expr)
