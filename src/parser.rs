@@ -457,6 +457,26 @@ enum BinaryOp {
     Or,
 }
 
+// hm might not work, need to think of 2 token ops
+impl TryFrom<&TokenType> for BinaryOp {
+    type Error = ();
+
+    fn try_from(token: &TokenType) -> Result<Self, Self::Error> {
+        match token {
+            // Arithmetic
+            TokenType::Plus => Ok(BinaryOp::Add),
+            TokenType::Minus => Ok(BinaryOp::Sub),
+            TokenType::Star => Ok(BinaryOp::Mul),
+            TokenType::Slash => Ok(BinaryOp::Div),
+            TokenType::Mod => Ok(BinaryOp::Mod),
+            // Bitwise
+            TokenType::Ampersand => Ok(BinaryOp::Mod),
+            TokenType::Pipe => Ok(BinaryOp::Mod),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum UnaryOp {
     Negate,     // -
