@@ -416,20 +416,27 @@ impl Parser {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 enum Precedence {
-    None = 0,
-    Assignment = 1, // =
-    LogicalOr = 2,  // ||
-    LogicalAnd = 3, // &&
-    BitwiseOr = 4,  // |
-    BitwiseXor = 5, // ^
-    BitwiseAnd = 6, // &
-    Equality = 7,   // == !=
-    Comparison = 8, // < > <= >=
-    Shift = 9,      // << >>
-    Term = 10,      // + -
-    Factor = 11,    // * / %
-    Unary = 12,     // ! ~ - &
-    Postfix = 13,   // -> . [] ()
+    None,
+    Assignment, // =
+    LogicalOr,  // ||
+    LogicalAnd, // &&
+    BitwiseOr,  // |
+    BitwiseXor, // ^
+    BitwiseAnd, // &
+    Equality,   // == !=
+    Comparison, // < > <= >=
+    Shift,      // << >>
+    Term,       // + -
+    Factor,     // * / %
+    Unary,      // ! ~ - &
+    Postfix,    // -> . [] ()
+}
+
+impl Precedence {
+    /// Returns the next precedence level (for left-associative operators)
+    fn next(self) -> Self {
+        unsafe { std::mem::transmute((self as u8) + 1) }
+    }
 }
 
 impl From<&BinaryOp> for Precedence {
