@@ -186,6 +186,107 @@ All standard C operators with standard precedence:
 
 **No operator overloading.** Each operator has exactly one meaning.
 
+### Defined Behavior (C Undefined Behavior)
+
+NanoC makes several behaviors well-defined that C leaves undefined or implementation-defined. This makes code more predictable and easier to reason about.
+
+**Quick Reference:**
+
+| Behavior            | C  | NanoC                          |
+|---------------------|----|--------------------------------|
+| Signed overflow     | UB | Two's complement wrap          |
+| Division by zero    | UB | Returns -1                     |
+| Signed right shift  | ID | Arithmetic shift               |
+| Left shift negative | UB | Bitwise operation              |
+| Evaluation order    | US | Left-to-right                  |
+| Uninitialized vars  | UB | UB (explicit with `undefined`) |
+| Array out-of-bounds | UB | UB (same as C)                 |
+| Null dereference    | UB | UB (same as C)                 |
+
+UB: Undefined Behavior
+ID: Implementation-Defined
+US: Unspecified
+
+#### Signed Integer Overflow
+**C behavior:** Undefined behavior
+**NanoC behavior:** Two's complement wrapping (defined)
+
+```c
+const MAX: i32 = 2147483647;
+var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
+```
+
+**Rationale:** RISC-V integers are two's complement. Undefined behavior here serves no optimization purpose and makes overflow bugs harder to reason about.
+
+#### Division by Zero
+**C behavior:** Undefined behavior
+**NanoC behavior:** Returns -1 (defined)
+
+```c
+var x: i32 = 10 / 0;  // x = -1 (defined, not UB)
+var y: i32 = 10 % 0;  // y = -1 (defined, not UB)
+```
+
+**Rationale:** Hardware division instructions on RISC-V don't trap on divide-by-zero - they return specific values. We expose this behavior rather than adding checks. `-1` is the RISC-V spec behavior for division by zero.
+
+#### Signed Right Shift
+**C behavior:** Implementation-defined (arithmetic or logical shift)
+**NanoC behavior:** Arithmetic shift (sign-extends)
+
+```c
+var x: i32 = -8 >> 1;  // x = -4 (arithmetic shift, defined)
+```
+
+**Rationale:** RISC-V has distinct arithmetic (`sra`) and logical (`srl`) shift instructions. We always use arithmetic shift for signed types, logical for unsigned.
+
+#### Left Shift of Negative Numbers
+**C behavior:** Undefined behavior
+**NanoC behavior:** Bitwise operation (defined)
+
+```c
+var x: i32 = -1 << 2;  // x = -4 (defined)
+```
+
+**Rationale:** Shifts are bitwise operations. The bit pattern shifts left regardless of sign interpretation. Two's complement makes this well-defined.
+
+#### Evaluation Order
+**C behavior:** Unspecified for most operators
+**NanoC behavior:** Left-to-right (defined)
+
+```c
+fn side_effect() -> i32 { ... }
+var x: i32 = side_effect() + side_effect();  // left call happens first
+```
+
+**Rationale:** Predictable evaluation order makes debugging easier and removes subtle bugs. We always evaluate left operand before right operand.
+
+#### Out-of-Bounds Array Access
+**C behavior:** Undefined behavior
+**NanoC behavior:** Still undefined behavior (for now)
+
+**Open question:** Should we define this? Options:
+1. Keep as UB (performance)
+2. Trap/panic (safety)
+3. Return zero (defined but dangerous)
+
+**Current decision:** UB (same as C). May add optional bounds checking later.
+
+#### Null Pointer Dereference
+**C behavior:** Undefined behavior
+**NanoC behavior:** Undefined behavior
+
+**Rationale:** Null dereferences cause page faults in hardware. We don't add overhead to check every pointer access. Use explicit checks if needed.
+
+#### Uninitialized Memory
+**C behavior:** Undefined behavior (implicit)
+**NanoC behavior:** Explicit with `undefined` keyword
+
+```c
+var x: i32 = undefined;  // Explicitly undefined (not implicit!)
+```
+
+**Rationale:** While the behavior is still undefined, making it explicit prevents *accidental* undefined behavior. You must write `undefined` to opt into UB.
+
 ---
 
 ## Compiler Architecture
@@ -492,6 +593,12 @@ Makes precedence and associativity bugs obvious.
    - Should be `u8*` for safety?
    - Null-terminated?
    - **Proposal:** Unsure if we want null termination
+
+5. **Array bounds checking:** Leave as UB or define behavior?
+   - UB (performance, matches C)
+   - Trap/panic (safety)
+   - Return zero (defined but misleading)
+   - **Current:** UB (same as C), may add optional checking
 
 ### Implementation
 
