@@ -611,7 +611,7 @@ impl Parser {
         match BinaryOp::try_from(self.peek_kind()) {
             Err(()) => Ok(lhs),
             Ok(op) => {
-                let _ = op;
+                let _precedence = Precedence::from(&op);
                 todo!()
             }
         }
