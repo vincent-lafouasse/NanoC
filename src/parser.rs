@@ -589,12 +589,15 @@ impl Parser {
     }
 
     fn parse_expression_bp(&mut self, _min_prec: Precedence) -> Result<Expr, ParseError> {
-        // TODO: implement Pratt parsing algorithm
-        // 1. Parse prefix expression (or atom)
-        // 2. While next operator has higher precedence:
-        //    - Parse infix/postfix with appropriate precedence
-        // 3. Return expression tree
-        todo!("Pratt parsing not yet implemented")
+        let lhs = self.parse_prefix_expr_or_atom()?;
+
+        match BinaryOp::try_from(self.peek_kind()) {
+            Err(()) => Ok(lhs),
+            Ok(op) => {
+                let _ = op;
+                todo!()
+            }
+        }
     }
 }
 
