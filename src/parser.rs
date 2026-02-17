@@ -493,17 +493,34 @@ impl Parser {
     fn parse_atom(&mut self) -> Result<Expr, ParseError> {
         use TokenType as T;
 
-        match self.peek_kind() {
+        let expr = match self.peek_kind() {
             T::Identifier(id) => {
                 let id = id.clone();
                 self.advance()?;
                 if let T::Lparen = self.peek_kind() {
                     panic!("no function call atoms yet");
                 }
-                Ok(Expr::Identifier(id))
+                Expr::Identifier(id)
+            }
+            T::Number(x) => {
+                let x = *x;
+                self.advance()?;
+                Expr::Number(x)
+            }
+            T::StringLiteral(s) => {
+                let s = s.clone();
+                self.advance()?;
+                Expr::StringLiteral(s)
+            }
+            T::CharLiteral(c) => {
+                let c = *c;
+                self.advance()?;
+                Expr::CharLiteral(c)
             }
             _ => panic!(),
-        }
+        };
+
+        Ok(expr)
     }
 
     fn parse_expression_bp(&mut self, _min_prec: Precedence) -> Result<Expr, ParseError> {
