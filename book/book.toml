@@ -1,0 +1,13 @@
+[book]
+title = "NanoC Design Document"
+authors = ["NanoC Contributors"]
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "rust"
+git-repository-url = "https://github.com/vincent-lafouasse/NanoC"

@@ -1,62 +1,46 @@
 # NanoC
 
-A minimal systems programming language that compiles to RISC-V assembly.
+A minimal systems programming language targeting RISC-V.
 
-## Design Goals
+## Features
 
-- **Context-free grammar** - easy to parse and reason about
-- **Readable assembly** - predictable mapping to RISC-V instructions
-- **Minimal type system** - primitives and typed pointers, no implicit conversions
-- **No runtime** - direct syscalls, no libc dependency
-- **Simple calling convention** - register-sized arguments only
+- **Minimal**: Small, predictable language with no hidden behavior
+- **Context-free grammar**: Easy to parse and reason about
+- **No runtime**: Direct syscalls, no libc dependency
+- **Explicit everything**: No implicit conversions or hidden allocations
+- **Readable assembly**: Almost 1:1 mapping to RISC-V instructions
 
-## Language Features
+## Documentation
 
-- Primitive types: `u8`, `i32`, `u32`, `ptr`
-- Typed pointers: `Point*`, `Buffer*`
-- Static arrays: `i32[10]`, `u8[256]`
-- Structs (never passed by value)
-- Direct syscalls via `syscall` keyword
-- Control flow: `if`/`else`, `while`, `break`, `continue`, `goto`
-- Operators: arithmetic, bitwise, comparison, logical
-- Immutable bindings with `const`
-
-see `./spec/DESIGN.md` and `./spec/grammar.ebnf` for detailed information
-
-## Example
-
-```c
-struct Point {
-    x: i32;
-    y: i32;
-}
-
-fn point_add(a: Point*, b: Point*, result: Point*) {
-    result->x = a->x + b->x;
-    result->y = a->y + b->y;
-}
-
-fn main() -> i32 {
-    const msg: ptr = "Hello, NanoC!\n";
-    syscall(SYS_write, 1, msg, 14);
-    return 0;
-}
-```
-
-## Building
+The comprehensive design documentation is available as an mdBook:
 
 ```bash
+cd book
+mdbook serve
+```
+
+Then open http://localhost:3000
+
+See [`book/README.md`](book/README.md) for more details on building the documentation.
+
+## Quick Start
+
+```bash
+# Build the compiler
 cargo build --release
+
+# Compile a NanoC program (when implemented)
+./target/release/nanoc program.nc -o program.s
 ```
 
-## Usage
+## Project Status
 
-Lex a file:
-```bash
-cargo run -- test.nc
-```
+Currently implementing:
+- ✅ Lexer
+- ✅ Parser (partial - structs, variables, expressions)
+- 🚧 Semantic analysis
+- 🚧 Code generation
 
-Lex a code string:
-```bash
-cargo run -- -c "fn main() -> i32 { return 0; }"
-```
+## License
+
+TBD
