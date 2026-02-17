@@ -563,8 +563,9 @@ impl Parser {
                 self.advance()?;
                 if let T::Lparen = self.peek_kind() {
                     panic!("no function call atoms yet");
+                } else {
+                    Expr::Identifier(id)
                 }
-                Expr::Identifier(id)
             }
             T::Number(x) => {
                 let x = *x;
