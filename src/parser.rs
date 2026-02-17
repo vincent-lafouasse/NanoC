@@ -563,6 +563,19 @@ impl Parser {
         Ok(expr)
     }
 
+    fn parse_prefix_expr_or_atom(&mut self) -> Result<Expr, ParseError> {
+        let expr = match UnaryOp::try_from(self.peek_kind()) {
+            Ok(op) => {
+                self.advance()?;
+                let operand = Box::new(self.parse_prefix_expr_or_atom()?);
+                Expr::Unary { op, operand }
+            }
+            _ => self.parse_atom()?,
+        };
+
+        Ok(expr)
+    }
+
     fn parse_expression_bp(&mut self, _min_prec: Precedence) -> Result<Expr, ParseError> {
         // TODO: implement Pratt parsing algorithm
         // 1. Parse prefix expression (or atom)
