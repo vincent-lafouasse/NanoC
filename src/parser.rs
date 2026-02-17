@@ -1114,4 +1114,136 @@ mod tests {
         let expr = parse_atom_from_source(r"'\x00'").unwrap();
         assert!(matches!(expr, Expr::CharLiteral(0x00)));
     }
+
+    // Helper for testing parse_prefix_expr_or_atom
+    fn parse_prefix_from_source(source: &str) -> Result<Expr, ParseError> {
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut parser = Parser::new(source_rc)?;
+        parser.parse_prefix_expr_or_atom()
+    }
+
+    #[test]
+    fn test_parse_prefix_atoms() {
+        // Should parse atoms same as parse_atom
+        let expr = parse_prefix_from_source("42").unwrap();
+        assert_eq!(format!("{}", expr), "42");
+
+        let expr = parse_prefix_from_source("foo").unwrap();
+        assert_eq!(format!("{}", expr), "foo");
+
+        let expr = parse_prefix_from_source(r#""hello""#).unwrap();
+        assert_eq!(format!("{}", expr), r#""hello""#);
+    }
+
+    #[test]
+    fn test_parse_prefix_negate() {
+        // -42 → (- 42)
+        let expr = parse_prefix_from_source("-42").unwrap();
+        assert_eq!(format!("{}", expr), "(- 42)");
+
+        // -x → (- x)
+        let expr = parse_prefix_from_source("-x").unwrap();
+        assert_eq!(format!("{}", expr), "(- x)");
+    }
+
+    #[test]
+    fn test_parse_prefix_logical_not() {
+        // !flag → (! flag)
+        let expr = parse_prefix_from_source("!flag").unwrap();
+        assert_eq!(format!("{}", expr), "(! flag)");
+
+        // !1 → (! 1)
+        let expr = parse_prefix_from_source("!1").unwrap();
+        assert_eq!(format!("{}", expr), "(! 1)");
+    }
+
+    #[test]
+    fn test_parse_prefix_bitwise_not() {
+        // ~bits → (~ bits)
+        let expr = parse_prefix_from_source("~bits").unwrap();
+        assert_eq!(format!("{}", expr), "(~ bits)");
+
+        // ~0xFF → (~ 255)
+        let expr = parse_prefix_from_source("~0xFF").unwrap();
+        assert_eq!(format!("{}", expr), "(~ 255)");
+    }
+
+    #[test]
+    fn test_parse_prefix_addr_of() {
+        // &x → (& x)
+        let expr = parse_prefix_from_source("&x").unwrap();
+        assert_eq!(format!("{}", expr), "(& x)");
+
+        // &variable → (& variable)
+        let expr = parse_prefix_from_source("&variable").unwrap();
+        assert_eq!(format!("{}", expr), "(& variable)");
+    }
+
+    #[test]
+    fn test_parse_prefix_deref() {
+        // *ptr → (* ptr)
+        let expr = parse_prefix_from_source("*my_ptr").unwrap();
+        assert_eq!(format!("{}", expr), "(* my_ptr)");
+
+        // *p → (* p)
+        let expr = parse_prefix_from_source("*p").unwrap();
+        assert_eq!(format!("{}", expr), "(* p)");
+    }
+
+    #[test]
+    fn test_parse_prefix_nested() {
+        // --x → (- (- x))
+        let expr = parse_prefix_from_source("--x").unwrap();
+        assert_eq!(format!("{}", expr), "(- (- x))");
+
+        // !-flag → (! (- flag))
+        let expr = parse_prefix_from_source("!-flag").unwrap();
+        assert_eq!(format!("{}", expr), "(! (- flag))");
+
+        // -*ptr → (- (* ptr))
+        let expr = parse_prefix_from_source("-*my_ptr").unwrap();
+        assert_eq!(format!("{}", expr), "(- (* my_ptr))");
+
+        // &*p → (& (* p))
+        let expr = parse_prefix_from_source("&*p").unwrap();
+        assert_eq!(format!("{}", expr), "(& (* p))");
+
+        // *&x → (* (& x))
+        let expr = parse_prefix_from_source("*&x").unwrap();
+        assert_eq!(format!("{}", expr), "(* (& x))");
+    }
+
+    #[test]
+    fn test_parse_prefix_triple_nested() {
+        // ---x → (- (- (- x)))
+        let expr = parse_prefix_from_source("---x").unwrap();
+        assert_eq!(format!("{}", expr), "(- (- (- x)))");
+
+        // !!flag → (! (! flag))
+        let expr = parse_prefix_from_source("!!flag").unwrap();
+        assert_eq!(format!("{}", expr), "(! (! flag))");
+
+        // ~-!x → (~ (- (! x)))
+        let expr = parse_prefix_from_source("~-!x").unwrap();
+        assert_eq!(format!("{}", expr), "(~ (- (! x)))");
+    }
+
+    #[test]
+    fn test_parse_prefix_with_numbers() {
+        // -0 → (- 0)
+        let expr = parse_prefix_from_source("-0").unwrap();
+        assert_eq!(format!("{}", expr), "(- 0)");
+
+        // -0xFF → (- 255)
+        let expr = parse_prefix_from_source("-0xFF").unwrap();
+        assert_eq!(format!("{}", expr), "(- 255)");
+
+        // !0 → (! 0)
+        let expr = parse_prefix_from_source("!0").unwrap();
+        assert_eq!(format!("{}", expr), "(! 0)");
+
+        // ~0b1010 → (~ 10)
+        let expr = parse_prefix_from_source("~0b1010").unwrap();
+        assert_eq!(format!("{}", expr), "(~ 10)");
+    }
 }
