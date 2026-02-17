@@ -618,7 +618,7 @@ impl Parser {
         while let Ok(op) = BinaryOp::try_from(self.peek_kind()) {
             let precedence = Precedence::from(&op);
 
-            if precedence <= min_prec {
+            if precedence < min_prec {
                 // stop aggregating operations at this precedence level and return to caller
                 // there is a binary operation after this but it'll get parsed in an outer call
                 // with a lower min_precedence. perhaps the top level call with min_precedence = 0
