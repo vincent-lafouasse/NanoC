@@ -351,6 +351,12 @@ The lexer is complete and well-tested:
 
 **File:** `src/parser.rs`
 
+**Architecture:** Hybrid approach
+- **Top-level & statements:** Ad-hoc recursive descent parser
+- **Expressions:** Pratt parser (operator precedence climbing)
+
+**Rationale:** NanoC's dirt-simple context-free grammar makes recursive descent trivial for most constructs. Only expressions need the sophistication of Pratt parsing to handle precedence and associativity elegantly. No need for a full parser generator when the grammar is this straightforward.
+
 **Current status:**
 - ✅ Type parsing (primitives, pointers, structs)
 - ✅ Struct declarations
