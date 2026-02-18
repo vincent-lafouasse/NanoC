@@ -629,10 +629,11 @@ impl Parser {
                 T::Lparen => {
                     self.advance()?;
                     let mut args = Vec::new();
-                    while !matches!(self.peek_kind(), T::Rparen | T::Eof) {
+                    if !matches!(self.peek_kind(), T::Rparen) {
                         args.push(self.parse_expression()?);
-                        if matches!(self.peek_kind(), T::Comma) {
+                        while matches!(self.peek_kind(), T::Comma) {
                             self.advance()?;
+                            args.push(self.parse_expression()?);
                         }
                     }
                     self.expect(T::Rparen)?;
@@ -2054,8 +2055,12 @@ mod tests {
 
     // --- syscall ---
 
-    // no need to test syscall with no args since at least the sycall number must be passed
-    // no arg syscall is caught at semantic analysis
+    #[test]
+    fn test_syscall_no_args_is_parse_error() {
+        // syscall() — parser unconditionally parses first arg, `)` is not valid expr start
+        let result = parse_expr_from_source("syscall()");
+        assert!(result.is_err());
+    }
 
     #[test]
     fn test_syscall_one_arg() {
@@ -2113,6 +2118,527 @@ mod tests {
         assert_eq!(
             format!("{}", expr),
             "(&& (< (syscall SYS_WRITE STDOUT s 16) 0) (!= errno 0))"
+        );
+    }
+
+    // ================================================================
+    // Error cases — expression parsing
+    // ================================================================
+
+    #[test]
+    fn test_parse_expr_error_empty_parens() {
+        // () is not a valid expression (would need to be a valid atom inside)
+        let result = parse_expr_from_source("()");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_missing_closing_paren() {
+        let result = parse_expr_from_source("(a + b");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_missing_closing_bracket() {
+        let result = parse_expr_from_source("arr[i");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_dangling_binary_op() {
+        // right operand missing
+        let result = parse_expr_from_source("a +");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_dangling_prefix_at_end() {
+        // prefix with no operand: a + - <eof>
+        let result = parse_expr_from_source("a + -");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("a + !");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_leading_nonprefix_op() {
+        // these tokens are binary-only, not valid as prefix
+        let result = parse_expr_from_source("/ a");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("% a");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("== a");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("<< a");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("|| a");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_double_binary_op() {
+        // two non-prefix binary ops in a row
+        // NOTE: a + * b is NOT an error because * is also prefix (deref)
+        let result = parse_expr_from_source("a + / b");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("a == == b");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_empty_brackets() {
+        // arr[] — missing index expression
+        let result = parse_expr_from_source("arr[]");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_arrow_missing_field() {
+        let result = parse_expr_from_source("p->42");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("p->");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_error_dot_missing_field() {
+        let result = parse_expr_from_source("s.42");
+        assert!(result.is_err());
+
+        let result = parse_expr_from_source("s.");
+        assert!(result.is_err());
+    }
+
+    // ================================================================
+    // Function call argument list: comma required, no trailing comma
+    // ================================================================
+
+    #[test]
+    fn test_call_missing_comma_is_error() {
+        let result = parse_expr_from_source("foo(a b)");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_call_missing_comma_with_exprs_is_error() {
+        let result = parse_expr_from_source("foo(a + b c * d)");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_call_trailing_comma_is_error() {
+        let result = parse_expr_from_source("foo(a, b,)");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_syscall_missing_comma_is_error() {
+        let result = parse_expr_from_source("syscall(1 2)");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_syscall_trailing_comma_is_error() {
+        let result = parse_expr_from_source("syscall(1,)");
+        assert!(result.is_err());
+    }
+
+    // ================================================================
+    // Prefix/binary operator ambiguity (same symbol, different role)
+    // ================================================================
+    //
+    // `-`, `*`, and `&` each serve as both prefix and binary operators.
+    // The S-expression Display uses the same symbol for both, making the
+    // output visually ambiguous. These tests verify the structure directly.
+
+    #[test]
+    fn test_ampersand_prefix_then_binary() {
+        // &a & b → addr-of(a) bitwise-and b
+        let expr = parse_expr_from_source("&a & b").unwrap();
+        assert_eq!(format!("{}", expr), "(& (& a) b)");
+
+        // verify structure: outer is BitAnd, inner is AddrOf
+        match &expr {
+            Expr::Binary {
+                op: BinaryOp::BitAnd,
+                left,
+                ..
+            } => {
+                assert!(matches!(
+                    left.as_ref(),
+                    Expr::Unary {
+                        op: UnaryOp::AddrOf,
+                        ..
+                    }
+                ));
+            }
+            other => panic!("expected Binary::BitAnd, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_star_prefix_then_binary() {
+        // *a * b → deref(a) mul b
+        let expr = parse_expr_from_source("*a * b").unwrap();
+        assert_eq!(format!("{}", expr), "(* (* a) b)");
+
+        match &expr {
+            Expr::Binary {
+                op: BinaryOp::Mul,
+                left,
+                ..
+            } => {
+                assert!(matches!(
+                    left.as_ref(),
+                    Expr::Unary {
+                        op: UnaryOp::Deref,
+                        ..
+                    }
+                ));
+            }
+            other => panic!("expected Binary::Mul, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_minus_prefix_then_binary() {
+        // -a - b → negate(a) sub b
+        let expr = parse_expr_from_source("-a - b").unwrap();
+        assert_eq!(format!("{}", expr), "(- (- a) b)");
+
+        match &expr {
+            Expr::Binary {
+                op: BinaryOp::Sub,
+                left,
+                ..
+            } => {
+                assert!(matches!(
+                    left.as_ref(),
+                    Expr::Unary {
+                        op: UnaryOp::Negate,
+                        ..
+                    }
+                ));
+            }
+            other => panic!("expected Binary::Sub, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_double_deref_then_mul() {
+        // **pp * x → deref(deref(pp)) mul x
+        let expr = parse_expr_from_source("**pp * x").unwrap();
+        assert_eq!(format!("{}", expr), "(* (* (* pp)) x)");
+
+        // outer is Mul
+        assert!(matches!(
+            &expr,
+            Expr::Binary {
+                op: BinaryOp::Mul,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn test_addr_of_deref_then_bitwise_and() {
+        // &*p & mask → addr-of(deref(p)) bitwise-and mask
+        let expr = parse_expr_from_source("&*p & mask").unwrap();
+        assert_eq!(format!("{}", expr), "(& (& (* p)) mask)");
+
+        match &expr {
+            Expr::Binary {
+                op: BinaryOp::BitAnd,
+                left,
+                ..
+            } => match left.as_ref() {
+                Expr::Unary {
+                    op: UnaryOp::AddrOf,
+                    operand,
+                } => {
+                    assert!(matches!(
+                        operand.as_ref(),
+                        Expr::Unary {
+                            op: UnaryOp::Deref,
+                            ..
+                        }
+                    ));
+                }
+                other => panic!("expected AddrOf, got {:?}", other),
+            },
+            other => panic!("expected BitAnd, got {:?}", other),
+        }
+    }
+
+    // ================================================================
+    // Additional operator coverage
+    // ================================================================
+
+    #[test]
+    fn test_parse_expression_div_standalone() {
+        let expr = parse_expr_from_source("a / b").unwrap();
+        assert_eq!(format!("{}", expr), "(/ a b)");
+    }
+
+    #[test]
+    fn test_parse_expression_mod_standalone() {
+        let expr = parse_expr_from_source("a % b").unwrap();
+        assert_eq!(format!("{}", expr), "(% a b)");
+    }
+
+    #[test]
+    fn test_parse_expression_neq_standalone() {
+        let expr = parse_expr_from_source("a != b").unwrap();
+        assert_eq!(format!("{}", expr), "(!= a b)");
+    }
+
+    #[test]
+    fn test_parse_expression_shift_left_associative() {
+        // a << b << c → (<< (<< a b) c)
+        let expr = parse_expr_from_source("a << b << c").unwrap();
+        assert_eq!(format!("{}", expr), "(<< (<< a b) c)");
+
+        // a >> b >> c → (>> (>> a b) c)
+        let expr = parse_expr_from_source("a >> b >> c").unwrap();
+        assert_eq!(format!("{}", expr), "(>> (>> a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_comparison_same_level() {
+        // all comparison ops share a precedence level, left-associative
+        // a < b > c → (> (< a b) c)
+        let expr = parse_expr_from_source("a < b > c").unwrap();
+        assert_eq!(format!("{}", expr), "(> (< a b) c)");
+
+        // a <= b >= c → (>= (<= a b) c)
+        let expr = parse_expr_from_source("a <= b >= c").unwrap();
+        assert_eq!(format!("{}", expr), "(>= (<= a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_equality_left_associative() {
+        // a == b != c → (!= (== a b) c)
+        let expr = parse_expr_from_source("a == b != c").unwrap();
+        assert_eq!(format!("{}", expr), "(!= (== a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_bitwise_or_left_associative() {
+        let expr = parse_expr_from_source("a | b | c").unwrap();
+        assert_eq!(format!("{}", expr), "(| (| a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_bitwise_xor_left_associative() {
+        let expr = parse_expr_from_source("a ^ b ^ c").unwrap();
+        assert_eq!(format!("{}", expr), "(^ (^ a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_bitwise_and_left_associative() {
+        let expr = parse_expr_from_source("a & b & c").unwrap();
+        assert_eq!(format!("{}", expr), "(& (& a b) c)");
+    }
+
+    #[test]
+    fn test_parse_expression_div_mod_left_associative() {
+        // a / b % c → same precedence level
+        let expr = parse_expr_from_source("a / b % c").unwrap();
+        assert_eq!(format!("{}", expr), "(% (/ a b) c)");
+
+        let expr = parse_expr_from_source("a % b / c * d").unwrap();
+        assert_eq!(format!("{}", expr), "(* (/ (% a b) c) d)");
+    }
+
+    // ================================================================
+    // More postfix + prefix interactions
+    // ================================================================
+
+    #[test]
+    fn test_deref_of_index() {
+        // *arr[0] — postfix binds tighter than prefix
+        // → deref of (arr indexed by 0)
+        let expr = parse_expr_from_source("*arr[0]").unwrap();
+        assert_eq!(format!("{}", expr), "(* ([] arr 0))");
+    }
+
+    #[test]
+    fn test_addr_of_dot_access() {
+        // &s.x → addr-of (s dot x)
+        let expr = parse_expr_from_source("&s.x").unwrap();
+        assert_eq!(format!("{}", expr), "(& (. s x))");
+    }
+
+    #[test]
+    fn test_deref_of_arrow_chain() {
+        // *p->next->val — all postfix first, then deref wraps everything
+        let expr = parse_expr_from_source("*p->next->val").unwrap();
+        assert_eq!(format!("{}", expr), "(* (-> (-> p next) val))");
+    }
+
+    #[test]
+    fn test_negate_of_call_result() {
+        // -foo(x) → negate(call foo x)
+        let expr = parse_expr_from_source("-foo(x)").unwrap();
+        assert_eq!(format!("{}", expr), "(- (call foo x))");
+    }
+
+    #[test]
+    fn test_bitwise_not_of_index() {
+        // ~arr[i] → bitwise-not(arr indexed by i)
+        let expr = parse_expr_from_source("~arr[i]").unwrap();
+        assert_eq!(format!("{}", expr), "(~ ([] arr i))");
+    }
+
+    // ================================================================
+    // Chained and higher-order calls
+    // ================================================================
+
+    #[test]
+    fn test_chained_call() {
+        // foo()() — call the result of a call
+        let expr = parse_expr_from_source("foo()()").unwrap();
+        assert_eq!(format!("{}", expr), "(call (call foo))");
+    }
+
+    #[test]
+    fn test_chained_call_with_args() {
+        // foo(a)(b, c)
+        let expr = parse_expr_from_source("foo(a)(b, c)").unwrap();
+        assert_eq!(format!("{}", expr), "(call (call foo a) b c)");
+    }
+
+    #[test]
+    fn test_call_then_index() {
+        // get_array()[0]
+        let expr = parse_expr_from_source("get_array()[0]").unwrap();
+        assert_eq!(format!("{}", expr), "([] (call get_array) 0)");
+    }
+
+    #[test]
+    fn test_call_then_arrow_then_call() {
+        // get_obj()->method(x)
+        let expr = parse_expr_from_source("get_obj()->method(x)").unwrap();
+        // NOTE: this parses as calling the field access result, not as a method call
+        // (-> (call get_obj) method) then call that with x
+        // Actually: postfix is left-iterative, so:
+        //   get_obj → atom
+        //   () → call get_obj []
+        //   -> method → arrow (call get_obj) method
+        //   but wait, method is a field, not followed by (
+        //   Hmm, actually -> gives us a FieldAccess expr, then the next postfix
+        //   iteration sees ( and wraps in Call
+        assert_eq!(format!("{}", expr), "(call (-> (call get_obj) method) x)");
+    }
+
+    // ================================================================
+    // Syscall edge cases
+    // ================================================================
+
+    #[test]
+    fn test_syscall_nested_as_argument() {
+        let expr = parse_expr_from_source("syscall(1, 1, syscall(9, 0, 4096), 10)").unwrap();
+        assert_eq!(format!("{}", expr), "(syscall 1 1 (syscall 9 0 4096) 10)");
+    }
+
+    #[test]
+    fn test_syscall_single_complex_expr() {
+        let expr = parse_expr_from_source("syscall(base + offset * 8)").unwrap();
+        assert_eq!(format!("{}", expr), "(syscall (+ base (* offset 8)))");
+    }
+
+    // ================================================================
+    // Grouping edge cases
+    // ================================================================
+
+    #[test]
+    fn test_grouping_forces_right_assoc_subtraction() {
+        // a - (b - c) — grouping prevents left-association
+        let expr = parse_expr_from_source("a - (b - c)").unwrap();
+        assert_eq!(format!("{}", expr), "(- a (group (- b c)))");
+    }
+
+    #[test]
+    fn test_grouping_the_treacherous_bitwise_case() {
+        // (x & 0xFF) == 0 — the "correct" way to write what most people mean
+        let expr = parse_expr_from_source("(x & 0xFF) == 0").unwrap();
+        assert_eq!(format!("{}", expr), "(== (group (& x 255)) 0)");
+
+        // contrast with the bug-prone version (already tested in precedence section)
+        let expr_wrong = parse_expr_from_source("x & 0xFF == 0").unwrap();
+        assert_eq!(format!("{}", expr_wrong), "(& x (== 255 0))");
+    }
+
+    #[test]
+    fn test_grouping_deeply_nested() {
+        let expr = parse_expr_from_source("(((a)))").unwrap();
+        assert_eq!(format!("{}", expr), "(group (group (group a)))");
+    }
+
+    #[test]
+    fn test_grouping_around_unary() {
+        // (-x) + y — grouping around prefix
+        let expr = parse_expr_from_source("(-x) + y").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (group (- x)) y)");
+    }
+
+    // ================================================================
+    // Integration: patterns that combine many features
+    // ================================================================
+
+    #[test]
+    fn test_integration_deref_index_arithmetic() {
+        // *(base + i * stride) — pointer arithmetic then deref
+        let expr = parse_expr_from_source("*(base + i * stride)").unwrap();
+        assert_eq!(format!("{}", expr), "(* (group (+ base (* i stride))))");
+    }
+
+    #[test]
+    fn test_integration_syscall_in_condition() {
+        // syscall(...) < 0 || errno == EAGAIN
+        let expr =
+            parse_expr_from_source("syscall(SYS_READ, fd, buf, n) < 0 || errno == EAGAIN").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(|| (< (syscall SYS_READ fd buf n) 0) (== errno EAGAIN))"
+        );
+    }
+
+    #[test]
+    fn test_integration_double_deref_field() {
+        // **pp->next — deref(deref(pp->next))
+        // Postfix -> binds to pp first, then both derefs wrap
+        let expr = parse_expr_from_source("**pp->next").unwrap();
+        // pp->next is postfix, then ** wraps
+        assert_eq!(format!("{}", expr), "(* (* (-> pp next)))");
+    }
+
+    #[test]
+    fn test_integration_complex_syscall_write() {
+        // Realistic write: check for partial write
+        let expr =
+            parse_expr_from_source("syscall(SYS_WRITE, fd, buf + offset, total - offset) > 0")
+                .unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(> (syscall SYS_WRITE fd (+ buf offset) (- total offset)) 0)"
+        );
+    }
+
+    #[test]
+    fn test_integration_vtable_dispatch() {
+        // obj->vtable[method_idx](obj, arg1, arg2)
+        let expr = parse_expr_from_source("obj->vtable[idx](obj, a, b)").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(call ([] (-> obj vtable) idx) obj a b)"
         );
     }
 }
