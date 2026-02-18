@@ -1984,9 +1984,9 @@ mod tests {
         let expr = parse_expr_from_source("(get_node())->next").unwrap();
         assert_eq!(format!("{}", expr), "(-> (group (call get_node)) next)");
 
-        // (*ptr).field — deref then dot access via grouping
-        let expr = parse_expr_from_source("(*ptr).field").unwrap();
-        assert_eq!(format!("{}", expr), "(. (group (* ptr)) field)");
+        // (*p).field — deref then dot access via grouping
+        let expr = parse_expr_from_source("(*p).field").unwrap();
+        assert_eq!(format!("{}", expr), "(. (group (* p)) field)");
 
         // call through a grouped expression: (fn_table[op])(x, y)
         let expr = parse_expr_from_source("(fn_table[op])(x, y)").unwrap();
