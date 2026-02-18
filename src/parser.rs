@@ -15,6 +15,7 @@ pub enum ParseError {
     UnexpectedToken { expected: String, found: TokenType },
     UnexpectedEof,
     EmptyStruct { name: Rc<[u8]> },
+    MissingSemicolon, // probably common enough to warrant a variant
     Unimplemented { reason: &'static str }, // temporary
 }
 
