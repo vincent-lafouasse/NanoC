@@ -62,7 +62,6 @@ impl LabelName {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct VariableName {
     rc: Rc<[u8]>,
