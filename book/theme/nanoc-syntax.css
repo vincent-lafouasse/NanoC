@@ -40,7 +40,7 @@
 
 /* Storage keywords: var, const */
 .hljs-built_in {
-    color: #c82829;
+    color: var(--keyword, var(--canary));
 }
 
 /* Types: u8, i32, u32, ptr, Point* */
