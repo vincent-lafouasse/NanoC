@@ -555,7 +555,23 @@ enum Expr {
         operand: Box<Expr>,
     },
     Grouping(Box<Expr>),
-    // TODO: field access, array index, function call
+    // Postfix
+    Call {
+        callee: Box<Expr>,
+        args: Box<[Expr]>,
+    },
+    FieldAccess {
+        object: Box<Expr>,
+        field: Rc<[u8]>,
+    },
+    ArrowAccess {
+        object: Box<Expr>,
+        field: Rc<[u8]>,
+    },
+    Index {
+        object: Box<Expr>,
+        index: Box<Expr>,
+    },
 }
 
 impl Parser {
@@ -570,13 +586,7 @@ impl Parser {
             T::Identifier(id) => {
                 let id = id.clone();
                 self.advance()?;
-                if let T::Lparen = self.peek_kind() {
-                    Err(ParseError::Unimplemented {
-                        reason: "function calls aren't implemented yet",
-                    })
-                } else {
-                    Ok(Expr::Identifier(id))
-                }
+                Ok(Expr::Identifier(id))
             }
             T::Number(x) => {
                 let x = *x;
@@ -600,21 +610,95 @@ impl Parser {
         }
     }
 
-    fn parse_prefix_expr_or_atom(&mut self) -> Result<Expr, ParseError> {
-        let expr = match UnaryOp::try_from(self.peek_kind()) {
-            Ok(op) => {
-                self.advance()?;
-                let operand = Box::new(self.parse_prefix_expr_or_atom()?);
-                Expr::Unary { op, operand }
+    fn parse_unary_expression(&mut self) -> Result<Expr, ParseError> {
+        use TokenType as T;
+
+        // Prefix operators: right-recursive
+        if let Ok(op) = UnaryOp::try_from(self.peek_kind()) {
+            self.advance()?;
+            let operand = Box::new(self.parse_unary_expression()?);
+            return Ok(Expr::Unary { op, operand });
+        }
+
+        // Atom
+        let mut expr = self.parse_atom()?;
+
+        // Postfix operators: left-iterative loop
+        // Postfix has higher binding power than any binary operator so we consume
+        // greedily here before returning to the Pratt loop.
+        loop {
+            match self.peek_kind() {
+                // Function call: expr(arg, ...)
+                T::Lparen => {
+                    self.advance()?;
+                    let mut args = Vec::new();
+                    while !matches!(self.peek_kind(), T::Rparen | T::Eof) {
+                        args.push(self.parse_expression()?);
+                        if matches!(self.peek_kind(), T::Comma) {
+                            self.advance()?;
+                        }
+                    }
+                    self.expect(T::Rparen)?;
+                    expr = Expr::Call {
+                        callee: Box::new(expr),
+                        args: args.into(),
+                    };
+                }
+                // Arrow field access: expr->field
+                T::Arrow => {
+                    self.advance()?;
+                    let field = if let T::Identifier(id) = self.peek_kind() {
+                        let field = id.clone();
+                        self.advance()?;
+                        field
+                    } else {
+                        return Err(ParseError::UnexpectedToken {
+                            expected: "field name".into(),
+                            found: self.peek_kind().clone(),
+                        });
+                    };
+                    expr = Expr::ArrowAccess {
+                        object: Box::new(expr),
+                        field,
+                    };
+                }
+                // Dot field access: expr.field
+                T::Dot => {
+                    self.advance()?;
+                    let field = if let T::Identifier(id) = self.peek_kind() {
+                        let field = id.clone();
+                        self.advance()?;
+                        field
+                    } else {
+                        return Err(ParseError::UnexpectedToken {
+                            expected: "field name".into(),
+                            found: self.peek_kind().clone(),
+                        });
+                    };
+                    expr = Expr::FieldAccess {
+                        object: Box::new(expr),
+                        field,
+                    };
+                }
+                // Array index: expr[index]
+                T::Lbracket => {
+                    self.advance()?;
+                    let index = Box::new(self.parse_expression()?);
+                    self.expect(T::Rbracket)?;
+                    expr = Expr::Index {
+                        object: Box::new(expr),
+                        index,
+                    };
+                }
+                _ => break,
             }
-            Err(()) => self.parse_atom()?,
-        };
+        }
 
         Ok(expr)
     }
 
     fn parse_expression_bp(&mut self, min_prec: Precedence) -> Result<Expr, ParseError> {
-        let mut left = self.parse_prefix_expr_or_atom()?;
+        let mut left = self.parse_unary_expression()?;
 
         while let Ok(op) = BinaryOp::try_from(self.peek_kind()) {
             let precedence = Precedence::from(&op);
@@ -732,6 +816,22 @@ impl fmt::Display for Expr {
             }
             Expr::Grouping(expr) => {
                 write!(f, "(group {})", expr)
+            }
+            Expr::Call { callee, args } => {
+                write!(f, "(call {}", callee)?;
+                for arg in args {
+                    write!(f, " {}", arg)?;
+                }
+                write!(f, ")")
+            }
+            Expr::FieldAccess { object, field } => {
+                write!(f, "(. {} {})", object, String::from_utf8_lossy(field))
+            }
+            Expr::ArrowAccess { object, field } => {
+                write!(f, "(-> {} {})", object, String::from_utf8_lossy(field))
+            }
+            Expr::Index { object, index } => {
+                write!(f, "([] {} {})", object, index)
             }
         }
     }
@@ -1178,11 +1278,11 @@ mod tests {
         assert!(matches!(expr, Expr::CharLiteral(0x00)));
     }
 
-    // Helper for testing parse_prefix_expr_or_atom
+    // Helper for testing parse_unary_expression
     fn parse_prefix_from_source(source: &str) -> Result<Expr, ParseError> {
         let source_rc: Rc<[u8]> = source.as_bytes().into();
         let mut parser = Parser::new(source_rc)?;
-        parser.parse_prefix_expr_or_atom()
+        parser.parse_unary_expression()
     }
 
     #[test]
