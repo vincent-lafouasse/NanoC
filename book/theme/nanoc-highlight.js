@@ -3,8 +3,7 @@
 
   function nanoc(hljs) {
     const KEYWORDS = {
-      keyword: 'var const return if else while syscall undefined zeroed goto fn struct inline',
-      type: 'u8 i32 u32 ptr',
+      keyword: 'var const return if else while syscall undefined zeroed goto fn struct inline u8 i32 u32 ptr',
       literal: 'true false'
     };
 
@@ -65,18 +64,24 @@
     // `: Type` — type annotation after a colon.
     // [ \t]* (not \s*) in the lookbehind: prevents matching across newlines,
     // which would wrongly color the first identifier on a line after `label:\n`.
-    // No \** at end: let the operator rule color the stars independently.
+    // Negative lookahead excludes primitive keywords so they fall through to
+    // keyword matching and get mauve instead of type yellow.
     const TYPE_ANNOTATION = {
       className: 'type',
-      begin: /(?<=:[ \t]*)[a-zA-Z_][a-zA-Z0-9_]*/,
+      begin: /(?<=:[ \t]*)(?!u8\b|i32\b|u32\b|ptr\b)[a-zA-Z_][a-zA-Z0-9_]*/,
       relevance: 0
     };
 
-    // `struct Name` — the name after the struct keyword.
-    const STRUCT_NAME = {
-      className: 'type',
-      begin: /(?<=struct[ \t]+)[a-zA-Z_][a-zA-Z0-9_]*/,
-      relevance: 0
+    // `struct Name { ... }` — color the name after `struct` as a type.
+    // Uses beginKeywords (a first-class hljs v9 feature) instead of a
+    // variable-length lookbehind, which hljs may mishandle in its combined regex.
+    const STRUCT_DEF = {
+      beginKeywords: 'struct',
+      end: /\{/,
+      contains: [{
+        className: 'type',
+        begin: /[a-zA-Z_][a-zA-Z0-9_]*/
+      }]
     };
 
     return {
@@ -88,9 +93,9 @@
         hljs.C_BLOCK_COMMENT_MODE,
         STRING,
         NUMBER,
+        STRUCT_DEF,
         LABEL,
         TYPE_ANNOTATION,
-        STRUCT_NAME,
         FUNCTION_CALL,
         {
           className: 'operator',
