@@ -32,10 +32,29 @@ struct Point {
     y: i32,
 }
 
-fn distance_squared(a: Point*, b: Point*) -> i32 {
-    const x: i32 = a.x - b.x;
-    const y: i32 = a.y - b.y;
-    return x * x + y * y;
+// fixed-point square root in Q25.6 format (6 fractional bits).
+fn sqrt_q6(n: i32) -> i32 {
+    const scaled: i32 = n << 12;
+    if (scaled <= 0) {
+        return 0;
+    }
+
+    // newton
+    var x: i32 = scaled;
+    var y: i32 = (scaled >> 1) + 1;
+    while (y < x) {
+        x = y;
+        y = (y + scaled / y) >> 1;
+    }
+
+    return x;
+}
+
+// euclidean distance as Q25.6 fixed-point.
+fn distance(a: Point*, b: Point*) -> i32 {
+    const dx: i32 = a->x - b->x;
+    const dy: i32 = a->y - b->y;
+    return sqrt_q6(dx * dx + dy * dy);
 }
 
 fn main() -> i32 {
@@ -44,12 +63,12 @@ fn main() -> i32 {
     p.x = 67;
     p.y = 420;
 
-    const dist_sq: i32 = distance_squared(&p, &origin);
+    const dist: i32 = distance(&p, &origin);  // 27219 → 425.3
 
     const s: ptr = "yo i'm feinberg\n\x44";
 
     // Syscall to write result
-    const status: i32 = syscall(1, 1, &dist_sq, 4);
+    const status: i32 = syscall(1, 1, &dist, 4);
 
     if (status < 0) {
         goto bad;
