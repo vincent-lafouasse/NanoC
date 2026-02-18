@@ -121,13 +121,9 @@ pub struct Struct {
     fields: Box<[Field]>,
 }
 
-// temporary, no expression parsing
-#[derive(Debug, Clone, PartialEq)]
-pub struct DummyExpression(Rc<[Token]>);
-
 #[derive(Debug, Clone, PartialEq)]
 enum VariableInitializer {
-    Initializer(DummyExpression),
+    Initializer(Expr),
     Undefined,
     Zeroed,
 }
@@ -141,26 +137,23 @@ pub struct VarDecl {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct LValue(());
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
-    DummyExpression(DummyExpression),
+    ExprStatement(Expr),
     VarDecl(VarDecl),
     Assignment {
-        lvalue: LValue,
-        value: DummyExpression,
+        lvalue: Expr,
+        value: Expr,
     },
     ReturnStatement {
-        value: DummyExpression,
+        value: Expr,
     },
     If {
-        condition: DummyExpression,
+        condition: Expr,
         then_branch: Box<Statement>,
         else_branch: Box<Statement>,
     },
     While {
-        condition: DummyExpression,
+        condition: Expr,
         body: Box<Statement>,
     },
     Block {
@@ -321,7 +314,7 @@ impl Parser {
                 VariableInitializer::Zeroed
             }
             _ => {
-                let expr = self.parse_dummy_expression_until(|tok| tok == &TokenType::Semicolon)?;
+                let expr = self.parse_expression()?;
                 VariableInitializer::Initializer(expr)
             }
         };
@@ -334,23 +327,6 @@ impl Parser {
             ty,
             initializer,
         })
-    }
-
-    fn parse_dummy_expression_until<F>(
-        &mut self,
-        should_stop: F,
-    ) -> Result<DummyExpression, ParseError>
-    where
-        F: Fn(&TokenType) -> bool,
-    {
-        let mut contents: Vec<Token> = Vec::new();
-
-        while !should_stop(&self.current.kind) {
-            contents.push(self.current.clone());
-            self.advance()?;
-        }
-
-        Ok(DummyExpression(contents.into()))
     }
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
@@ -458,7 +434,7 @@ impl From<&BinaryOp> for Precedence {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BinaryOp {
+pub enum BinaryOp {
     // Arithmetic
     Add,
     Sub,
@@ -516,7 +492,7 @@ impl TryFrom<&TokenType> for BinaryOp {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum UnaryOp {
+pub enum UnaryOp {
     Negate,     // -
     LogicalNot, // !
     BitwiseNot, // ~
@@ -540,7 +516,7 @@ impl TryFrom<&TokenType> for UnaryOp {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum Expr {
+pub enum Expr {
     Number(i64),
     Identifier(Rc<[u8]>),
     StringLiteral(Rc<[u8]>),
@@ -913,12 +889,6 @@ impl fmt::Display for Struct {
             writeln!(f, "  {},", field)?;
         }
         write!(f, "}}")
-    }
-}
-
-impl fmt::Display for DummyExpression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<expr: {} tokens>", self.0.len())
     }
 }
 
