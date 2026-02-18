@@ -137,38 +137,6 @@ pub struct VarDecl {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement {
-    ExprStatement(Expr),
-    VarDecl(VarDecl),
-    Assignment {
-        lvalue: Expr,
-        value: Expr,
-    },
-    ReturnStatement {
-        value: Expr,
-    },
-    If {
-        condition: Expr,
-        then_branch: Box<Statement>,
-        else_branch: Box<Statement>,
-    },
-    While {
-        condition: Expr,
-        body: Box<Statement>,
-    },
-    Block {
-        statements: Box<[Statement]>,
-    },
-    Goto {
-        label: Box<[u8]>,
-    },
-    Labeled {
-        label: Box<[u8]>,
-        statement: Box<Statement>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum TopLevelStatement {
     GlobalDecl(VarDecl),
     StructDecl(Box<Struct>),
@@ -383,6 +351,44 @@ impl Parser {
                 found: self.current.kind.clone(),
             })
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
+    ExprStatement(Expr),
+    VarDecl(VarDecl),
+    Assignment {
+        lvalue: Expr,
+        value: Expr,
+    },
+    ReturnStatement {
+        value: Expr,
+    },
+    If {
+        condition: Expr,
+        then_branch: Box<Statement>,
+        else_branch: Box<Statement>,
+    },
+    While {
+        condition: Expr,
+        body: Box<Statement>,
+    },
+    Block {
+        statements: Box<[Statement]>,
+    },
+    Goto {
+        label: Box<[u8]>,
+    },
+    Labeled {
+        label: Box<[u8]>,
+        statement: Box<Statement>,
+    },
+}
+
+impl Parser {
+    fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+        todo!("statement parsing isn't implemented yet")
     }
 }
 
