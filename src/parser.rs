@@ -159,8 +159,6 @@ pub enum Statement {
     Block {
         statements: Box<[Statement]>,
     },
-    Break,
-    Continue,
     Goto {
         label: Box<[u8]>,
     },
