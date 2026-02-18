@@ -15,7 +15,7 @@ pub enum ParseError {
     UnexpectedToken { expected: String, found: TokenType },
     UnexpectedEof,
     EmptyStruct { name: Rc<[u8]> },
-    Unimplemented { reason: &'static str },
+    Unimplemented { reason: &'static str }, // temporary
 }
 
 impl From<LexError> for ParseError {
