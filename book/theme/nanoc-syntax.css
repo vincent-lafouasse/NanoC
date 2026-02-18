@@ -1,7 +1,15 @@
 :root {
     --catppuccin-base: #1e1e2e;
+    --catppuccin-text: #cdd6f4;
+    --catppuccin-yellow: #f9e2af;
+    --catppuccin-blue: #89b4fa;
+    --catppuccin-overlay2: #9399b2;
 
     --background: var(--catppuccin-base);
+    --text: var(--catppuccin-text);
+    --type: var(--catppuccin-yellow);
+    --func: var(--catppuccin-blue);
+    --comment: var(--catppuccin-overlay2);
 }
 
 .hljs {
@@ -21,11 +29,13 @@
 
 /* Types: u8, i32, u32, ptr, Point* */
 .hljs-type {
-    color: #4271ae;
+    color: var(--type);
 }
 
-/* Function and struct names */
-.hljs-title.function,
+.hljs-title.function {
+    color: var(--func);
+}
+
 .hljs-title.class {
     color: #c99e00;
 }
