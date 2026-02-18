@@ -46,8 +46,10 @@ fn main() -> i32 {
 
     const dist_sq: i32 = distance_squared(&p, &origin);
 
+    const s: ptr = "yo i'm feinberg\n\x44";
+
     // Syscall to write result
-    const status = syscall(1, 1, &dist_sq, 4);
+    const status: i32 = syscall(1, 1, &dist_sq, 4);
 
     if (status < 0) {
         goto bad;
