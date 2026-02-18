@@ -48,7 +48,10 @@
 
     const FUNCTION_CALL = {
       className: 'title function',
-      begin: /\b[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()/,
+      // Negative lookahead excludes keywords: contains rules fire before keyword
+      // matching, so without this, `syscall(`, `if (`, `while (` etc. would all
+      // be colored as function calls instead of keywords.
+      begin: /\b(?!(?:var|const|return|if|else|while|syscall|undefined|zeroed|goto|fn|struct|inline|u8|i32|u32|ptr)\b)[a-zA-Z_][a-zA-Z0-9_]*(?=\s*\()/,
       relevance: 10
     };
 
