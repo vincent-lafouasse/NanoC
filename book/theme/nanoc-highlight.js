@@ -3,7 +3,7 @@
 
   function nanoc(hljs) {
     const KEYWORDS = {
-      keyword: 'var const return if else while syscall undefined zeroed goto fn struct inline u8 i32 u32 ptr',
+      keyword: 'var const return if else while syscall undefined zeroed goto fn struct inline u8 i32 u32 ptr pub inline foreign extern import',
       literal: 'true false'
     };
 
