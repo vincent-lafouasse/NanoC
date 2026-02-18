@@ -67,8 +67,9 @@ fn main() -> i32 {
 
     const s: ptr = "yo i'm feinberg\n\x44";
 
-    // Syscall to write result
-    const status: i32 = syscall(1, 1, &dist, 4);
+    const SYS_WRITE: i32 = 67;
+    const STDOUT: i32 = 1;
+    const status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
 
     if (status < 0) {
         goto bad;
