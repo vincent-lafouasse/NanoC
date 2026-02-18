@@ -10,6 +10,7 @@
     --catppuccin-mauve: #cba6f7;
     --catppuccin-magenta: #f5c2e7;
     --catppuccin-sky: #89dceb;
+    --catpuccin-sapphire: #74c7ec;
 
     --background: var(--catppuccin-base);
     --text: var(--catppuccin-text);
@@ -22,6 +23,7 @@
     --keyword: var(--catppuccin-mauve);
     --escape: var(--catppuccin-magenta);
     --operator: var(--catppuccin-sky);
+    --label: var(--catppuccin-sapphire);
 }
 
 .hljs {
@@ -80,7 +82,7 @@
 
 /* Labels (for goto) */
 .hljs-symbol {
-    color: #8959a8;
+    color: var(--label);
 }
 
 /* Punctuation */
