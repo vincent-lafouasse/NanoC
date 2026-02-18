@@ -9,6 +9,7 @@
     --catppuccin-lavender: #b4befe;
     --catppuccin-mauve: #cba6f7;
     --catppuccin-magenta: #f5c2e7;
+    --catppuccin-sky: #89dceb;
 
     --background: var(--catppuccin-base);
     --text: var(--catppuccin-text);
@@ -20,6 +21,7 @@
     --number: var(--catppuccin-peach);
     --keyword: var(--catppuccin-mauve);
     --escape: var(--catppuccin-magenta);
+    --operator: var(--catppuccin-sky);
 }
 
 .hljs {
@@ -67,7 +69,7 @@
 
 /* Operators: *, ->, +, =, etc. */
 .hljs-operator {
-    color: #888;
+    color: var(--operator);
 }
 
 /* Comments */
