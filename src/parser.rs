@@ -11,6 +11,7 @@ pub struct Parser {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
+    // those should probably carry source code location information
     LexError(LexError),
     UnexpectedToken { expected: String, found: TokenType },
     UnexpectedEof,
