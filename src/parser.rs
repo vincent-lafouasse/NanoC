@@ -603,6 +603,12 @@ impl Parser {
                 self.advance()?;
                 Ok(Expr::CharLiteral(c))
             }
+            T::Lparen => {
+                self.advance()?;
+                let inner = self.parse_expression()?;
+                self.expect(T::Rparen)?;
+                Ok(Expr::Grouping(Box::new(inner)))
+            }
             _ => Err(ParseError::UnexpectedToken {
                 expected: "literal, variable or function call".into(),
                 found: self.peek_kind().clone(),
