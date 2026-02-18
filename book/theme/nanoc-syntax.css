@@ -1,4 +1,6 @@
 :root {
+    --canary: #ff00ff;
+
     --catppuccin-base: #1e1e2e;
     --catppuccin-text: #cdd6f4;
     --catppuccin-yellow: #f9e2af;
@@ -12,28 +14,28 @@
     --catppuccin-sky: #89dceb;
     --catppuccin-sapphire: #74c7ec;
 
-    --background: var(--catppuccin-base);
-    --text: var(--catppuccin-text);
-    --type: var(--catppuccin-yellow);
-    --func: var(--catppuccin-blue);
-    --comment: var(--catppuccin-overlay2);
-    --delimiter: var(--catppuccin-overlay2);
-    --string: var(--catppuccin-green);
-    --number: var(--catppuccin-peach);
-    --keyword: var(--catppuccin-mauve);
-    --escape: var(--catppuccin-magenta);
-    --operator: var(--catppuccin-sky);
-    --label: var(--catppuccin-sapphire);
+    --background: var(--catppuccin-base, var(--canary));
+    --text: var(--catppuccin-text, var(--canary));
+    --type: var(--catppuccin-yellow, var(--canary));
+    --func: var(--catppuccin-blue, var(--canary));
+    --comment: var(--catppuccin-overlay2, var(--canary));
+    --delimiter: var(--catppuccin-overlay2, var(--canary));
+    --string: var(--catppuccin-green, var(--canary));
+    --number: var(--catppuccin-peach, var(--canary));
+    --keyword: var(--catppuccin-mauve, var(--canary));
+    --escape: var(--catppuccin-magenta, var(--canary));
+    --operator: var(--catppuccin-sky, var(--canary));
+    --label: var(--catppuccin-sapphire, var(--canary));
 }
 
 .hljs {
-    background: var(--background);
-    color: var(--text);
+    background: var(--background, var(--canary));
+    color: var(--text, var(--canary));
 }
 
 /* Keywords: fn, struct, return, if, else, while, goto, inline */
 .hljs-keyword {
-    color: var(--keyword);
+    color: var(--keyword, var(--canary));
 }
 
 /* Storage keywords: var, const */
@@ -43,54 +45,54 @@
 
 /* Types: u8, i32, u32, ptr, Point* */
 .hljs-type {
-    color: var(--type);
+    color: var(--type, var(--canary));
 }
 
 .hljs-title.function {
-    color: var(--func);
+    color: var(--func, var(--canary));
 }
 
 .hljs-title.class {
-    color: var(--type);
+    color: var(--type, var(--canary));
 }
 
 /* String and character literals */
 .hljs-string {
-    color: var(--string);
+    color: var(--string, var(--canary));
 }
 
 /* Numbers */
 .hljs-number {
-    color: var(--number);
+    color: var(--number, var(--canary));
 }
 
 /* Special keywords: undefined, zeroed, syscall */
 .hljs-literal {
-    color: var(--keyword);
+    color: var(--keyword, var(--canary));
 }
 
 /* Escape sequences inside strings: \n \t \x44 etc. */
 .hljs-char-escape {
-    color: var(--escape);
+    color: var(--escape, var(--canary));
 }
 
 /* Operators: *, ->, +, =, etc. */
 .hljs-operator {
-    color: var(--operator);
+    color: var(--operator, var(--canary));
 }
 
 /* Comments */
 .hljs-comment {
-    color: var(--comment);
+    color: var(--comment, var(--canary));
     font-style: italic;
 }
 
 /* Labels (for goto) */
 .hljs-symbol {
-    color: var(--label);
+    color: var(--label, var(--canary));
 }
 
 /* Punctuation */
 .hljs-punctuation {
-    color: var(--delimiter);
+    color: var(--delimiter, var(--canary));
 }
