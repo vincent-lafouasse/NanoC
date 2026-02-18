@@ -59,12 +59,13 @@ Symbol:  std$math$sin
 
 #### Foreign Function Interface (FFI)
 
-**Proposal:** Use `extern` or `foreign` keyword for unmangled symbols
+**Proposal:** Use `extern` keyword to declare unmangled symbols from linked libraries.
 
+**Basic form — no rename:**
 ```nanoc
-// Call C library function without mangling
 extern fn malloc(size: u32) -> ptr;
 extern fn free(p: ptr);
+extern fn write(fd: i32, buf: ptr, count: u32) -> i32;
 
 fn main() -> i32 {
     var buffer: ptr = malloc(1024);
@@ -73,12 +74,35 @@ fn main() -> i32 {
 }
 ```
 
-**Alternative:** Use `foreign` to be more explicit
+The declared name is used verbatim as the linker symbol — no NanoC mangling applied.
+
+**Rename form — import under a different name:**
 ```nanoc
-foreign fn write(fd: i32, buf: ptr, count: u32) -> i32;
+extern "syscall" as fn libc_syscall(number: i32, ...) -> i32;
+extern "write"   as fn posix_write(fd: i32, buf: ptr, n: u32) -> i32;
 ```
 
-Symbol `write` is not mangled, allowing direct calls to C functions.
+The string literal is the actual symbol name in the linked object; the identifier after `as fn` is the NanoC-side name. This is necessary whenever the C symbol name would collide with a NanoC keyword or built-in. The motivating case is libc's `syscall(2)`: NanoC already uses `syscall` as a keyword for the raw `ecall` instruction, so any program that wants to call libc's `syscall` wrapper (e.g. when targeting a hosted environment rather than bare metal) needs to import it under a different name:
+
+```nanoc
+extern "syscall" as fn libc_syscall(number: i32, a0: i32, a1: i32, a2: i32) -> i32;
+
+fn main() -> i32 {
+    // NanoC built-in: emits ecall directly
+    syscall(SYS_WRITE, 1, buf, len);
+
+    // libc wrapper: goes through libc's syscall() C function
+    libc_syscall(SYS_WRITE, 1, buf, len);
+
+    return 0;
+}
+```
+
+**Variadic extern:** Unsure how to interface with variadic C since it's unsure if we'll support variadics at all
+
+**Design note — `extern` vs `foreign`:** `extern` is shorter and more familiar to C/Rust programmers. `foreign` reads more explicitly as "this is not NanoC code". Either could work; decision deferred until FFI is implemented.
+
+**Symbol mangling interaction:** `extern` declarations are never mangled regardless of whether they appear in a `pub` context. Mangling only applies to symbols *defined* in NanoC source.
 
 #### Object File Generation
 
