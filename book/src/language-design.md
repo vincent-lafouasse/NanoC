@@ -163,6 +163,21 @@ Postfix = 13   // -> . [] ()
 
 **No operator overloading.** Each operator has exactly one meaning.
 
+#### Array Indexing
+
+`lhs[rhs]` always means: index the array or pointer `lhs` by `rhs`. The left operand must be the pointer or array type.
+
+**Design Decision:** `int[pointer]` is not allowed.
+
+In C, `a[i]` is defined as `*(a + i)`, so `i[a]` is technically valid since addition is commutative. NanoC does not inherit this — `[]` is an indexing operation, not pointer arithmetic sugar.
+
+```c
+arr[i]   // ✅ pointer/array on the left
+i[arr]   // ❌ compile error: left operand of [] must be a pointer or array
+```
+
+**Rationale:** The symmetry in C is an accidental consequence of the `*(a+i)` expansion, not a deliberate feature. It serves no practical purpose and makes type-checking more complex (both sides must be considered as potential pointer). Requiring the pointer on the left makes intent unambiguous and the type rule simple: the left operand is indexed, the right operand is the index.
+
 ### Defined Behavior (C Undefined Behavior)
 
 NanoC makes several behaviors well-defined that C leaves undefined or implementation-defined. This makes code more predictable and easier to reason about.
