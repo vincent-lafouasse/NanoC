@@ -69,6 +69,11 @@
     color: var(--keyword);
 }
 
+/* Escape sequences inside strings: \n \t \x44 etc. */
+.hljs-char-escape {
+    color: var(--escape);
+}
+
 /* Operators: *, ->, +, =, etc. */
 .hljs-operator {
     color: var(--operator);
