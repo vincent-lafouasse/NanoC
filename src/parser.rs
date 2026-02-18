@@ -545,6 +545,7 @@ enum Expr {
     Identifier(Rc<[u8]>),
     StringLiteral(Rc<[u8]>),
     CharLiteral(u8),
+    Syscall(Box<[Expr]>),
     Binary {
         op: BinaryOp,
         left: Box<Expr>,
@@ -825,6 +826,13 @@ impl fmt::Display for Expr {
             }
             Expr::Call { callee, args } => {
                 write!(f, "(call {}", callee)?;
+                for arg in args {
+                    write!(f, " {}", arg)?;
+                }
+                write!(f, ")")
+            }
+            Expr::Syscall(args) => {
+                write!(f, "(syscall ")?;
                 for arg in args {
                     write!(f, " {}", arg)?;
                 }
@@ -1968,10 +1976,7 @@ mod tests {
 
         // call through a grouped expression: (fn_table[op])(x, y)
         let expr = parse_expr_from_source("(fn_table[op])(x, y)").unwrap();
-        assert_eq!(
-            format!("{}", expr),
-            "(call (group ([] fn_table op)) x y)"
-        );
+        assert_eq!(format!("{}", expr), "(call (group ([] fn_table op)) x y)");
     }
 
     // --- Realistic integration tests (all expression types together) ---
@@ -2055,10 +2060,8 @@ mod tests {
         // table->buckets[hash_fn(key) % table->capacity]->value
         // postfix chains: call inside index, then arrow at the end
         // → (-> ([] (-> table buckets) (% (call hash_fn key) (-> table capacity))) value)
-        let expr = parse_expr_from_source(
-            "table->buckets[hash_fn(key) % table->capacity]->value",
-        )
-        .unwrap();
+        let expr = parse_expr_from_source("table->buckets[hash_fn(key) % table->capacity]->value")
+            .unwrap();
         assert_eq!(
             format!("{}", expr),
             "(-> ([] (-> table buckets) (% (call hash_fn key) (-> table capacity))) value)"
