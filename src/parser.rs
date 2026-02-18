@@ -381,13 +381,13 @@ pub enum Statement {
         lvalue: Expr,
         value: Expr,
     },
-    ReturnStatement {
-        value: Expr,
+    Return {
+        value: Option<Expr>,
     },
     If {
         condition: Expr,
         then_branch: Box<Statement>,
-        else_branch: Box<Statement>,
+        else_branch: Option<Box<Statement>>,
     },
     While {
         condition: Expr,
