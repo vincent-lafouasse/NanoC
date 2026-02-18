@@ -72,6 +72,20 @@ while (x > 0) {
 cleanup:
 ```
 
+#### Expression Statements
+
+Only function calls and syscalls are allowed as expression statements. Arbitrary expressions like `f() + g();` or `x * 2;` are rejected at parse time — the outermost expression of an expression statement must be a `Call` or `Syscall`.
+
+```c
+my_func(a, b);                        // ✅ direct call
+my_interface->vtable[5](args);        // ✅ complex call expression, but outermost is still a call
+syscall(93, 0);                       // ✅ syscall
+f() + g();                            // ❌ parse error: not a call
+x * 2;                                // ❌ parse error: not a call
+```
+
+**Rationale:** An expression statement that isn't a call is almost always a bug — the result is discarded. If two functions have side effects, call them separately: `f(); g();`. This catches mistakes like writing `a == b;` when you meant `a = b;` without needing a separate lint pass.
+
 #### Goto Restrictions
 
 **Open Design Question:** Should we allow backward jumps past variable declarations?
