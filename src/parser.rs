@@ -1915,4 +1915,153 @@ mod tests {
         let expr = parse_expr_from_source("&arr[i] + stride * j").unwrap();
         assert_eq!(format!("{}", expr), "(+ (& ([] arr i)) (* stride j))");
     }
+
+    // --- Grouping expressions ---
+
+    #[test]
+    fn test_grouping_basic() {
+        // (x) → (group x)
+        let expr = parse_expr_from_source("(x)").unwrap();
+        assert_eq!(format!("{}", expr), "(group x)");
+
+        // (42) → (group 42)
+        let expr = parse_expr_from_source("(42)").unwrap();
+        assert_eq!(format!("{}", expr), "(group 42)");
+    }
+
+    #[test]
+    fn test_grouping_overrides_precedence() {
+        // (a + b) * c → (* (group (+ a b)) c)
+        let expr = parse_expr_from_source("(a + b) * c").unwrap();
+        assert_eq!(format!("{}", expr), "(* (group (+ a b)) c)");
+
+        // a * (b + c) → (* a (group (+ b c)))
+        let expr = parse_expr_from_source("a * (b + c)").unwrap();
+        assert_eq!(format!("{}", expr), "(* a (group (+ b c)))");
+
+        // (a || b) && c → (&& (group (|| a b)) c)
+        let expr = parse_expr_from_source("(a || b) && c").unwrap();
+        assert_eq!(format!("{}", expr), "(&& (group (|| a b)) c)");
+    }
+
+    #[test]
+    fn test_grouping_nested() {
+        // ((a + b)) → (group (group (+ a b)))
+        let expr = parse_expr_from_source("((a + b))").unwrap();
+        assert_eq!(format!("{}", expr), "(group (group (+ a b)))");
+
+        // (a + (b * c)) → (group (+ a (group (* b c))))
+        let expr = parse_expr_from_source("(a + (b * c))").unwrap();
+        assert_eq!(format!("{}", expr), "(group (+ a (group (* b c))))");
+    }
+
+    #[test]
+    fn test_grouping_with_postfix() {
+        // (get_node())->next→val: cast-style deref then chain
+        // get_node() already works as postfix; (get_node())->next is grouping + arrow
+        let expr = parse_expr_from_source("(get_node())->next").unwrap();
+        assert_eq!(format!("{}", expr), "(-> (group (call get_node)) next)");
+
+        // (*ptr).field — deref then dot access via grouping
+        let expr = parse_expr_from_source("(*ptr).field").unwrap();
+        assert_eq!(format!("{}", expr), "(. (group (* ptr)) field)");
+
+        // call through a grouped expression: (fn_table[op])(x, y)
+        let expr = parse_expr_from_source("(fn_table[op])(x, y)").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(call (group ([] fn_table op)) x y)"
+        );
+    }
+
+    // --- Realistic integration tests (all expression types together) ---
+
+    #[test]
+    fn test_integration_linked_list_traversal() {
+        // Realistic linked-list condition:
+        //   node->next != 0 && node->val > threshold
+        // → (&& (!= (-> node next) 0) (> (-> node val) threshold))
+        let expr = parse_expr_from_source("node->next != 0 && node->val > threshold").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(&& (!= (-> node next) 0) (> (-> node val) threshold))"
+        );
+
+        // Advance two steps in a list and read a field:
+        //   node->next->next->data[0]
+        // → ([] (-> (-> (-> node next) next) data) 0)
+        let expr = parse_expr_from_source("node->next->next->data[0]").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "([] (-> (-> (-> node next) next) data) 0)"
+        );
+    }
+
+    #[test]
+    fn test_integration_bit_manipulation() {
+        // Mask a register field: (reg >> shift) & mask
+        // → (& (group (>> reg shift)) mask)
+        let expr = parse_expr_from_source("(reg >> shift) & mask").unwrap();
+        assert_eq!(format!("{}", expr), "(& (group (>> reg shift)) mask)");
+
+        // Set a bit: flags | (1 << bit_pos)
+        // → (| flags (group (<< 1 bit_pos)))
+        let expr = parse_expr_from_source("flags | (1 << bit_pos)").unwrap();
+        assert_eq!(format!("{}", expr), "(| flags (group (<< 1 bit_pos)))");
+
+        // Clear a bit: val & ~(1 << n)
+        // → (& val (~ (group (<< 1 n))))
+        let expr = parse_expr_from_source("val & ~(1 << n)").unwrap();
+        assert_eq!(format!("{}", expr), "(& val (~ (group (<< 1 n))))");
+
+        // Pack two bytes: (hi << 8) | lo
+        // → (| (group (<< hi 8)) lo)
+        let expr = parse_expr_from_source("(hi << 8) | lo").unwrap();
+        assert_eq!(format!("{}", expr), "(| (group (<< hi 8)) lo)");
+    }
+
+    #[test]
+    fn test_integration_buffer_bounds_check() {
+        // Guard before writing into a buffer:
+        //   i >= 0 && i < len && buf[i] != '\0'
+        // Precedence: && left-associates, < and != bind tighter
+        // → (&& (&& (>= i 0) (< i len)) (!= ([] buf i) '\0'))
+        let expr = parse_expr_from_source("i >= 0 && i < len && buf[i] != '\\0'").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(&& (&& (>= i 0) (< i len)) (!= ([] buf i) '\\0'))"
+        );
+
+        // Compute a pointer into a buffer and dereference it:
+        //   *(base + offset * stride)
+        // → (* (group (+ base (* offset stride))))
+        let expr = parse_expr_from_source("*(base + offset * stride)").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(* (group (+ base (* offset stride))))"
+        );
+    }
+
+    #[test]
+    fn test_integration_hash_table_lookup() {
+        // hash_fn(key) % table->capacity
+        // → (% (call hash_fn key) (-> table capacity))
+        let expr = parse_expr_from_source("hash_fn(key) % table->capacity").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(% (call hash_fn key) (-> table capacity))"
+        );
+
+        // table->buckets[hash_fn(key) % table->capacity]->value
+        // postfix chains: call inside index, then arrow at the end
+        // → (-> ([] (-> table buckets) (% (call hash_fn key) (-> table capacity))) value)
+        let expr = parse_expr_from_source(
+            "table->buckets[hash_fn(key) % table->capacity]->value",
+        )
+        .unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(-> ([] (-> table buckets) (% (call hash_fn key) (-> table capacity))) value)"
+        );
+    }
 }
