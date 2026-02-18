@@ -53,6 +53,32 @@
       relevance: 10
     };
 
+    // `label:` at the start of a line.
+    // Can't use ^/m: hljs v9 strips flags when compiling patterns.
+    // Use (?<=\n) lookbehind instead — matches after a newline.
+    const LABEL = {
+      className: 'symbol',
+      begin: /(?<=\n)[a-zA-Z_][a-zA-Z0-9_]*\s*:/,
+      relevance: 10
+    };
+
+    // `: Type` — type annotation after a colon.
+    // [ \t]* (not \s*) in the lookbehind: prevents matching across newlines,
+    // which would wrongly color the first identifier on a line after `label:\n`.
+    // No \** at end: let the operator rule color the stars independently.
+    const TYPE_ANNOTATION = {
+      className: 'type',
+      begin: /(?<=:[ \t]*)[a-zA-Z_][a-zA-Z0-9_]*/,
+      relevance: 0
+    };
+
+    // `struct Name` — the name after the struct keyword.
+    const STRUCT_NAME = {
+      className: 'type',
+      begin: /(?<=struct[ \t]+)[a-zA-Z_][a-zA-Z0-9_]*/,
+      relevance: 0
+    };
+
     return {
       name: 'NanoC',
       aliases: ['nanoc', 'nc'],
@@ -62,6 +88,9 @@
         hljs.C_BLOCK_COMMENT_MODE,
         STRING,
         NUMBER,
+        LABEL,
+        TYPE_ANNOTATION,
+        STRUCT_NAME,
         FUNCTION_CALL,
         {
           className: 'operator',
