@@ -15,6 +15,10 @@
     --type: var(--catppuccin-yellow);
     --func: var(--catppuccin-blue);
     --comment: var(--catppuccin-overlay2);
+    --string: var(--catppuccin-green);
+    --number: var(--catppuccin-peach);
+    --keyword: var(--catppuccin-mauve);
+    --escape: var(--catppuccin-magenta);
 }
 
 .hljs {
@@ -23,7 +27,7 @@
 
 /* Keywords: fn, struct, return, if, else, while, goto, inline */
 .hljs-keyword {
-    color: #8959a8;
+    color: var(--keyword);
     font-weight: 600;
 }
 
@@ -42,22 +46,22 @@
 }
 
 .hljs-title.class {
-    color: #c99e00;
+    color: var(--type);
 }
 
 /* String and character literals */
 .hljs-string {
-    color: #718c00;
+    color: var(--string);
 }
 
 /* Numbers */
 .hljs-number {
-    color: #f5871f;
+    color: var(--number);
 }
 
 /* Special keywords: undefined, zeroed, syscall */
 .hljs-literal {
-    color: #c82829;
+    color: var(--keyword);
 }
 
 /* Operators: *, ->, +, =, etc. */
@@ -67,7 +71,7 @@
 
 /* Comments */
 .hljs-comment {
-    color: #969896;
+    color: var(--comment);
     font-style: italic;
 }
 
