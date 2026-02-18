@@ -610,6 +610,20 @@ impl Parser {
                 self.expect(T::Rparen)?;
                 Ok(Expr::Grouping(Box::new(inner)))
             }
+            T::Syscall => {
+                self.advance()?;
+                self.expect(T::Lparen)?;
+
+                let mut args: Vec<Expr> = Vec::new();
+                args.push(self.parse_expression()?);
+                while let &T::Comma = self.peek_kind() {
+                    self.advance()?;
+                    args.push(self.parse_expression()?);
+                }
+
+                self.expect(T::Rparen)?;
+                Ok(Expr::Syscall(args.into()))
+            }
             _ => Err(ParseError::UnexpectedToken {
                 expected: "literal, variable or function call".into(),
                 found: self.peek_kind().clone(),
