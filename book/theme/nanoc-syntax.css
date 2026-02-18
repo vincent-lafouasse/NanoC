@@ -23,12 +23,12 @@
 
 .hljs {
     background: var(--background);
+    color: var(--text);
 }
 
 /* Keywords: fn, struct, return, if, else, while, goto, inline */
 .hljs-keyword {
     color: var(--keyword);
-    font-weight: 600;
 }
 
 /* Storage keywords: var, const */
