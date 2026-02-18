@@ -57,7 +57,10 @@
     // Use (?<=\n) lookbehind instead — matches after a newline.
     const LABEL = {
       className: 'symbol',
-      begin: /(?<=\n)[a-zA-Z_][a-zA-Z0-9_]*\s*:/,
+      // Include the \n in the match rather than using a lookbehind — hljs v9
+      // may drop lookbehind assertions when building its combined regex.
+      // A newline inside a color span is invisible, so this is safe.
+      begin: /\n[a-zA-Z_][a-zA-Z0-9_]*\s*:/,
       relevance: 10
     };
 
