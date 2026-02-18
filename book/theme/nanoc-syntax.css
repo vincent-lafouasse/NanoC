@@ -13,8 +13,8 @@
     --catppuccin-sky: #89dceb;
     --catppuccin-sapphire: #74c7ec;
 
-    /* bright pink as a fallback for calls to var. makes misuse very easy to
-* detect*/
+    /* bright pink as a fallback for calls to var()
+     * makes misuse very easy to detect */
     --canary: #ff00ff;
 
     --background: var(--catppuccin-base, var(--canary));
