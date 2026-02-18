@@ -1,3 +1,13 @@
+:root {
+    --catppuccin-base: #1e1e2e;
+
+    --background: var(--catppuccin-base);
+}
+
+.hljs {
+    background: var(--background);
+}
+
 /* Keywords: fn, struct, return, if, else, while, goto, inline */
 .hljs-keyword {
     color: #8959a8;
