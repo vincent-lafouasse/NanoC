@@ -159,7 +159,7 @@ pub struct VarDecl {
 pub enum TopLevelStatement {
     GlobalDecl(VarDecl),
     StructDecl(Box<Struct>),
-    // TODO: functions as well
+    // TODO: functions
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -2663,5 +2663,680 @@ mod tests {
             format!("{}", expr),
             "(call ([] (-> obj vtable) idx) obj a b)"
         );
+    }
+
+    // --- Statements ---
+
+    fn parse_stmt(source: &str) -> Result<Statement, ParseError> {
+        let source_rc: Rc<[u8]> = source.as_bytes().into();
+        let mut parser = Parser::new(source_rc)?;
+        parser.parse_statement()
+    }
+
+    // --- Expression statements ---
+
+    #[test]
+    fn test_stmt_expr_call() {
+        let stmt = parse_stmt("foo(x, y);").unwrap();
+        assert!(matches!(stmt, Statement::ExprStatement(Expr::Call { .. })));
+    }
+
+    #[test]
+    fn test_stmt_expr_syscall() {
+        let stmt = parse_stmt("syscall(SYS_EXIT, 0);").unwrap();
+        assert!(matches!(stmt, Statement::ExprStatement(Expr::Syscall(_))));
+    }
+
+    #[test]
+    fn test_stmt_expr_bare_call_no_semicolon_is_error() {
+        let result = parse_stmt("foo(x)");
+        assert!(result.is_err());
+    }
+
+    // --- Assignment statements ---
+
+    #[test]
+    fn test_stmt_assign_simple() {
+        let stmt = parse_stmt("x = 42;").unwrap();
+        match stmt {
+            Statement::Assignment { lvalue, value } => {
+                assert!(matches!(lvalue, Expr::Identifier(_)));
+                assert!(matches!(value, Expr::Number(42)));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_assign_deref() {
+        // *p = 10;
+        let stmt = parse_stmt("*p = 10;").unwrap();
+        match stmt {
+            Statement::Assignment { lvalue, .. } => {
+                assert!(matches!(
+                    lvalue,
+                    Expr::Unary {
+                        op: UnaryOp::Deref,
+                        ..
+                    }
+                ));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_assign_arrow_field() {
+        // p->x = a + b;
+        let stmt = parse_stmt("p->x = a + b;").unwrap();
+        match stmt {
+            Statement::Assignment { lvalue, value } => {
+                assert!(matches!(lvalue, Expr::ArrowAccess { .. }));
+                assert!(matches!(
+                    value,
+                    Expr::Binary {
+                        op: BinaryOp::Add,
+                        ..
+                    }
+                ));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_assign_dot_field() {
+        // s.x = 0;
+        let stmt = parse_stmt("s.x = 0;").unwrap();
+        match stmt {
+            Statement::Assignment { lvalue, .. } => {
+                assert!(matches!(lvalue, Expr::FieldAccess { .. }));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_assign_index() {
+        // arr[i] = val;
+        let stmt = parse_stmt("arr[i] = val;").unwrap();
+        match stmt {
+            Statement::Assignment { lvalue, .. } => {
+                assert!(matches!(lvalue, Expr::Index { .. }));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_assign_complex_lvalue() {
+        // p->data[i] = 0xFF;
+        let stmt = parse_stmt("p->data[i] = 0xFF;").unwrap();
+        match stmt {
+            Statement::Assignment { lvalue, value } => {
+                assert!(matches!(lvalue, Expr::Index { .. }));
+                assert!(matches!(value, Expr::Number(0xFF)));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_assign_no_chained() {
+        // a = b = 0; is NOT valid — assignment is a statement, not an expression
+        let result = parse_stmt("a = b = 0;");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_assign_missing_semicolon() {
+        let result = parse_stmt("x = 42");
+        assert!(result.is_err());
+    }
+
+    // --- Variable declarations (inside function bodies) ---
+
+    #[test]
+    fn test_stmt_var_decl() {
+        let stmt = parse_stmt("var x: i32 = 10;").unwrap();
+        match stmt {
+            Statement::VarDecl(decl) => {
+                assert!(!decl.is_const);
+                assert_eq!(decl.name.as_bytes(), b"x");
+            }
+            other => panic!("expected VarDecl, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_const_decl() {
+        let stmt = parse_stmt("const MAX: u32 = 100;").unwrap();
+        match stmt {
+            Statement::VarDecl(decl) => {
+                assert!(decl.is_const);
+                assert_eq!(decl.name.as_bytes(), b"MAX");
+            }
+            other => panic!("expected VarDecl, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_var_zeroed() {
+        let stmt = parse_stmt("var buf: u8* = zeroed;").unwrap();
+        match stmt {
+            Statement::VarDecl(decl) => {
+                assert!(matches!(decl.initializer, VariableInitializer::Zeroed));
+            }
+            other => panic!("expected VarDecl, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_var_undefined() {
+        let stmt = parse_stmt("var temp: i32 = undefined;").unwrap();
+        match stmt {
+            Statement::VarDecl(decl) => {
+                assert!(matches!(decl.initializer, VariableInitializer::Undefined));
+            }
+            other => panic!("expected VarDecl, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_var_with_expr_init() {
+        let stmt = parse_stmt("var dist: i32 = dx * dx + dy * dy;").unwrap();
+        match stmt {
+            Statement::VarDecl(decl) => {
+                assert!(matches!(
+                    decl.initializer,
+                    VariableInitializer::Initializer(_)
+                ));
+            }
+            other => panic!("expected VarDecl, got {:?}", other),
+        }
+    }
+
+    // --- Return ---
+
+    #[test]
+    fn test_stmt_return_expr() {
+        let stmt = parse_stmt("return 0;").unwrap();
+        match stmt {
+            Statement::Return {
+                value: Some(Expr::Number(0)),
+            } => {}
+            other => panic!("expected Return with value, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_return_complex_expr() {
+        let stmt = parse_stmt("return a + b * c;").unwrap();
+        match stmt {
+            Statement::Return { value: Some(_) } => {}
+            other => panic!("expected Return with value, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_return_void() {
+        // return; — no expression, valid for void functions
+        let stmt = parse_stmt("return;").unwrap();
+        match stmt {
+            Statement::Return { value: None } => {}
+            other => panic!("expected Return with no value, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_return_missing_semicolon() {
+        let result = parse_stmt("return 0");
+        assert!(result.is_err());
+    }
+
+    // --- If/else ---
+
+    #[test]
+    fn test_stmt_if_simple() {
+        let stmt = parse_stmt("if (x > 0) return x;").unwrap();
+        match stmt {
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(*then_branch, Statement::Return { .. }));
+                assert!(else_branch.is_none());
+            }
+            other => panic!("expected If, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_if_else() {
+        let stmt = parse_stmt("if (x > 0) return 1; else return 0;").unwrap();
+        match stmt {
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(*then_branch, Statement::Return { .. }));
+                assert!(matches!(
+                    else_branch.as_deref(),
+                    Some(Statement::Return { .. })
+                ));
+            }
+            other => panic!("expected If/else, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_if_block_body() {
+        let stmt = parse_stmt("if (flag) { x = 1; y = 2; }").unwrap();
+        match stmt {
+            Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                assert!(matches!(*then_branch, Statement::Block { .. }));
+                assert!(else_branch.is_none());
+            }
+            other => panic!("expected If with block body, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_if_else_if_chain() {
+        // else-if is just else followed by an if statement — no special syntax
+        let stmt = parse_stmt("if (x == 1) return 10; else if (x == 2) return 20; else return 30;")
+            .unwrap();
+        match stmt {
+            Statement::If { else_branch, .. } => {
+                // the else branch is itself an If
+                match else_branch.as_deref() {
+                    Some(Statement::If {
+                        else_branch: inner_else,
+                        ..
+                    }) => {
+                        assert!(matches!(
+                            inner_else.as_deref(),
+                            Some(Statement::Return { .. })
+                        ));
+                    }
+                    other => panic!("expected nested If in else, got {:?}", other),
+                }
+            }
+            other => panic!("expected If, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_if_missing_parens_is_error() {
+        let result = parse_stmt("if x > 0 return 1;");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_if_missing_condition_is_error() {
+        let result = parse_stmt("if () return 1;");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_dangling_else_binds_to_innermost() {
+        // if (a) if (b) x = 1; else x = 2;
+        // the else binds to the inner if, not the outer
+        let stmt = parse_stmt("if (a) if (b) x = 1; else x = 2;").unwrap();
+        match stmt {
+            Statement::If {
+                else_branch: outer_else,
+                then_branch: outer_then,
+                ..
+            } => {
+                // outer if has NO else
+                assert!(outer_else.is_none());
+                // outer then IS an if with an else
+                match *outer_then {
+                    Statement::If {
+                        else_branch: inner_else,
+                        ..
+                    } => {
+                        assert!(inner_else.is_some());
+                    }
+                    other => panic!("expected inner If, got {:?}", other),
+                }
+            }
+            other => panic!("expected outer If, got {:?}", other),
+        }
+    }
+
+    // --- While ---
+
+    #[test]
+    fn test_stmt_while_simple() {
+        let stmt = parse_stmt("while (x > 0) x = x - 1;").unwrap();
+        match stmt {
+            Statement::While { body, .. } => {
+                assert!(matches!(*body, Statement::Assignment { .. }));
+            }
+            other => panic!("expected While, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_while_block_body() {
+        let stmt = parse_stmt("while (i < n) { sum = sum + arr[i]; i = i + 1; }").unwrap();
+        match stmt {
+            Statement::While { body, .. } => match *body {
+                Statement::Block { ref statements } => {
+                    assert_eq!(statements.len(), 2);
+                }
+                other => panic!("expected Block, got {:?}", other),
+            },
+            other => panic!("expected While, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_while_missing_parens_is_error() {
+        let result = parse_stmt("while x > 0 { x = x - 1; }");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_while_empty_block() {
+        // while (flag) {} — spin loop
+        let stmt = parse_stmt("while (flag) {}").unwrap();
+        match stmt {
+            Statement::While { body, .. } => match *body {
+                Statement::Block { ref statements } => {
+                    assert_eq!(statements.len(), 0);
+                }
+                other => panic!("expected empty Block, got {:?}", other),
+            },
+            other => panic!("expected While, got {:?}", other),
+        }
+    }
+
+    // --- Blocks ---
+
+    #[test]
+    fn test_stmt_block_empty() {
+        let stmt = parse_stmt("{}").unwrap();
+        match stmt {
+            Statement::Block { statements } => {
+                assert_eq!(statements.len(), 0);
+            }
+            other => panic!("expected empty Block, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_block_multiple() {
+        let stmt = parse_stmt("{ var x: i32 = 0; x = x + 1; return x; }").unwrap();
+        match stmt {
+            Statement::Block { statements } => {
+                assert_eq!(statements.len(), 3);
+                assert!(matches!(statements[0], Statement::VarDecl(_)));
+                assert!(matches!(statements[1], Statement::Assignment { .. }));
+                assert!(matches!(statements[2], Statement::Return { .. }));
+            }
+            other => panic!("expected Block, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_block_nested() {
+        let stmt = parse_stmt("{ { x = 1; } { y = 2; } }").unwrap();
+        match stmt {
+            Statement::Block { statements } => {
+                assert_eq!(statements.len(), 2);
+                assert!(matches!(statements[0], Statement::Block { .. }));
+                assert!(matches!(statements[1], Statement::Block { .. }));
+            }
+            other => panic!("expected nested Blocks, got {:?}", other),
+        }
+    }
+
+    // --- Goto and labels ---
+
+    #[test]
+    fn test_stmt_goto() {
+        let stmt = parse_stmt("goto cleanup;").unwrap();
+        match stmt {
+            Statement::Goto { label } => {
+                assert_eq!(label.as_bytes(), b"cleanup");
+            }
+            other => panic!("expected Goto, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_goto_missing_semicolon() {
+        let result = parse_stmt("goto cleanup");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_label_with_statement() {
+        // label must be followed by a statement per the grammar
+        let stmt = parse_stmt("cleanup: return 0;").unwrap();
+        match stmt {
+            Statement::Labeled { label, statement } => {
+                assert_eq!(label.as_bytes(), b"cleanup");
+                assert!(matches!(*statement, Statement::Return { .. }));
+            }
+            other => panic!("expected Labeled, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_label_with_assignment() {
+        let stmt = parse_stmt("retry: x = x + 1;").unwrap();
+        match stmt {
+            Statement::Labeled { label, statement } => {
+                assert_eq!(label.as_bytes(), b"retry");
+                assert!(matches!(*statement, Statement::Assignment { .. }));
+            }
+            other => panic!("expected Labeled, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_label_with_block() {
+        let stmt = parse_stmt("done: { return 0; }").unwrap();
+        match stmt {
+            Statement::Labeled { label, statement } => {
+                assert_eq!(label.as_bytes(), b"done");
+                assert!(matches!(*statement, Statement::Block { .. }));
+            }
+            other => panic!("expected Labeled, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_label_before_empty_block() {
+        // label: {} — label followed by empty block (valid)
+        let stmt = parse_stmt("end: {}").unwrap();
+        match stmt {
+            Statement::Labeled { statement, .. } => {
+                assert!(matches!(*statement, Statement::Block { .. }));
+            }
+            other => panic!("expected Labeled, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_consecutive_labels() {
+        // label: label: stmt — second label is the "statement" of the first
+        let stmt = parse_stmt("outer: inner: x = 1;").unwrap();
+        match stmt {
+            Statement::Labeled { label, statement } => {
+                assert_eq!(label.as_bytes(), b"outer");
+                match *statement {
+                    Statement::Labeled {
+                        label: ref inner, ..
+                    } => {
+                        assert_eq!(inner.as_bytes(), b"inner");
+                    }
+                    other => panic!("expected inner Labeled, got {:?}", other),
+                }
+            }
+            other => panic!("expected outer Labeled, got {:?}", other),
+        }
+    }
+
+    // --- Disambiguation: labels vs expression statements ---
+    //
+    // Both `label: statement` and `expr;` start with an identifier.
+    // The parser needs one token of lookahead past the identifier:
+    //   identifier ":" → label
+    //   identifier ... ";" → expression statement (or assignment)
+
+    #[test]
+    fn test_stmt_identifier_then_colon_is_label() {
+        let stmt = parse_stmt("loop: x = x + 1;").unwrap();
+        assert!(matches!(stmt, Statement::Labeled { .. }));
+    }
+
+    #[test]
+    fn test_stmt_identifier_then_semicolon_is_expr() {
+        // bare identifier as expression statement (e.g. calling a variable
+        // that's a function pointer, or just a no-op — sema can reject)
+        let stmt = parse_stmt("x;").unwrap();
+        assert!(matches!(stmt, Statement::ExprStatement(_)));
+    }
+
+    #[test]
+    fn test_stmt_identifier_then_assign_is_assignment() {
+        let stmt = parse_stmt("x = 10;").unwrap();
+        assert!(matches!(stmt, Statement::Assignment { .. }));
+    }
+
+    #[test]
+    fn test_stmt_identifier_call_then_semicolon_is_expr() {
+        let stmt = parse_stmt("foo();").unwrap();
+        assert!(matches!(stmt, Statement::ExprStatement(_)));
+    }
+
+    // --- Complex / integration ---
+
+    #[test]
+    fn test_stmt_if_with_goto() {
+        let stmt = parse_stmt("if (err != 0) goto fail;").unwrap();
+        match stmt {
+            Statement::If { then_branch, .. } => {
+                assert!(matches!(*then_branch, Statement::Goto { .. }));
+            }
+            other => panic!("expected If, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_while_with_goto_exit() {
+        // idiomatic NanoC: goto instead of break
+        let stmt = parse_stmt("while (1) { if (done) goto exit; x = x + 1; }").unwrap();
+        match stmt {
+            Statement::While { body, .. } => match *body {
+                Statement::Block { ref statements } => {
+                    assert_eq!(statements.len(), 2);
+                    assert!(matches!(statements[0], Statement::If { .. }));
+                    assert!(matches!(statements[1], Statement::Assignment { .. }));
+                }
+                other => panic!("expected Block, got {:?}", other),
+            },
+            other => panic!("expected While, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_labeled_goto_pattern() {
+        // goto-based loop
+        let stmt = parse_stmt("top: { x = x - 1; if (x > 0) goto top; }").unwrap();
+        match stmt {
+            Statement::Labeled { label, statement } => {
+                assert_eq!(label.as_bytes(), b"top");
+                assert!(matches!(*statement, Statement::Block { .. }));
+            }
+            other => panic!("expected Labeled, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_nested_if_in_block() {
+        let stmt = parse_stmt("{ if (a) { if (b) { x = 1; } } }").unwrap();
+        match stmt {
+            Statement::Block { statements } => {
+                assert_eq!(statements.len(), 1);
+                assert!(matches!(statements[0], Statement::If { .. }));
+            }
+            other => panic!("expected Block, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_var_decl_then_use() {
+        let stmt = parse_stmt("{ var x: i32 = 0; x = x + 1; }").unwrap();
+        match stmt {
+            Statement::Block { statements } => {
+                assert_eq!(statements.len(), 2);
+            }
+            other => panic!("expected Block, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_stmt_syscall_as_expr_statement() {
+        let stmt = parse_stmt("syscall(SYS_EXIT, 0);").unwrap();
+        assert!(matches!(stmt, Statement::ExprStatement(Expr::Syscall(_))));
+    }
+
+    #[test]
+    fn test_stmt_assign_from_syscall() {
+        let stmt = parse_stmt("status = syscall(SYS_WRITE, 1, buf, len);").unwrap();
+        match stmt {
+            Statement::Assignment { value, .. } => {
+                assert!(matches!(value, Expr::Syscall(_)));
+            }
+            other => panic!("expected Assignment, got {:?}", other),
+        }
+    }
+
+    // --- Error cases ---
+
+    #[test]
+    fn test_stmt_bare_number_no_semicolon() {
+        let result = parse_stmt("42");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_empty_is_error() {
+        // empty string — no statement to parse
+        let result = parse_stmt("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_lone_semicolon_is_error() {
+        // NanoC has no empty statement — semicolons aren't statements
+        let result = parse_stmt(";");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_struct_inside_body_is_error() {
+        // struct declarations are top-level only
+        let result = parse_stmt("struct Foo { x: i32, }");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stmt_fn_inside_body_is_error() {
+        // no nested functions
+        let result = parse_stmt("fn inner() -> i32 { return 0; }");
+        assert!(result.is_err());
     }
 }
