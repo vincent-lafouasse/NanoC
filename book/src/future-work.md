@@ -64,7 +64,7 @@ Symbol:  std$math$sin
 ```nanoc
 // Call C library function without mangling
 extern fn malloc(size: u32) -> ptr;
-extern fn free(ptr: ptr);
+extern fn free(p: ptr);
 
 fn main() -> i32 {
     var buffer: ptr = malloc(1024);
