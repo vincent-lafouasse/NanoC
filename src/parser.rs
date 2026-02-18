@@ -365,6 +365,8 @@ impl Parser {
     fn expect(&mut self, expected: TokenType) -> Result<(), ParseError> {
         if self.current.kind == expected {
             self.advance()
+        } else if expected == TokenType::Semicolon {
+            Err(ParseError::MissingSemicolon)
         } else {
             Err(ParseError::UnexpectedToken {
                 expected: format!("{:?}", expected),
