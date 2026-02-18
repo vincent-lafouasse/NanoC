@@ -44,6 +44,26 @@ impl TypeName {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct LabelName {
+    rc: Rc<[u8]>,
+}
+
+impl LabelName {
+    pub fn new(name: Rc<[u8]>) -> Self {
+        Self { rc: name }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.rc
+    }
+
+    pub fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.rc).unwrap_or("")
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct VariableName {
     rc: Rc<[u8]>,
 }
@@ -378,10 +398,10 @@ pub enum Statement {
         statements: Box<[Statement]>,
     },
     Goto {
-        label: Box<[u8]>,
+        label: LabelName,
     },
     Labeled {
-        label: Box<[u8]>,
+        label: LabelName,
         statement: Box<Statement>,
     },
 }
