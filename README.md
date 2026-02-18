@@ -12,7 +12,7 @@ A minimal systems programming language targeting RISC-V.
 
 ## Documentation
 
-The comprehensive design documentation is available as an mdBook:
+The design documentation is available as an mdBook:
 
 ```bash
 cd book
