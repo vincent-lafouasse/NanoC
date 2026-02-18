@@ -7,7 +7,7 @@
 #### Import Mechanism
 
 **Shallow parsing on import:**
-```c
+```nanoc
 // math.nc
 pub fn sin(x: i32) -> i32 { ... }
 pub fn cos(x: i32) -> i32 { ... }
@@ -35,13 +35,13 @@ When the compiler encounters `import math`, it performs a **shallow pass** of `m
 #### Namespace and Mangling
 
 **Public symbols:** Use `pub` keyword to export
-```c
+```nanoc
 pub fn add(a: i32, b: i32) -> i32 { ... }  // Exported
 fn helper() -> i32 { ... }                  // Private
 ```
 
 **Namespace access:** Use `::` for qualified names
-```c
+```nanoc
 math::sin(x)
 io::write(fd, buffer)
 ```
@@ -61,7 +61,7 @@ Symbol:  std$math$sin
 
 **Proposal:** Use `extern` or `foreign` keyword for unmangled symbols
 
-```c
+```nanoc
 // Call C library function without mangling
 extern fn malloc(size: u32) -> ptr;
 extern fn free(ptr: ptr);
@@ -74,7 +74,7 @@ fn main() -> i32 {
 ```
 
 **Alternative:** Use `foreign` to be more explicit
-```c
+```nanoc
 foreign fn write(fd: i32, buf: ptr, count: u32) -> i32;
 ```
 
@@ -113,7 +113,7 @@ nanoc file.nc -> file.o -> (ld) -> binary
 4. `NANOC_PATH` environment variable
 
 **Module naming:**
-```c
+```nanoc
 import std::math;     // Looks for std/math.nc
 import io::file;      // Looks for io/file.nc
 import mylib;         // Looks for mylib.nc

@@ -14,7 +14,7 @@
 Syntax: `i32*`, `Point**`, `u8***`
 
 #### Structs
-```c
+```nanoc
 struct Point {
     x: i32,
     y: i32,
@@ -30,7 +30,7 @@ Structs define aggregate types. Fields must end with commas (even the last one) 
 - Avoids hidden copies
 - Eliminates ABI complexity
 
-```c
+```nanoc
 fn process(p: Point*) { ... }  // ✅ Correct
 fn process(p: Point) { ... }   // ❌ Compile error
 ```
@@ -40,7 +40,7 @@ fn process(p: Point) { ... }   // ❌ Compile error
 #### Mandatory Initialization
 Every variable MUST have an initializer:
 
-```c
+```nanoc
 var x: i32 = 10;           // Expression initializer
 var buffer: u8* = zeroed;  // Zero initialization
 var temp: i32 = undefined; // Uninitialized (danger!)
@@ -50,7 +50,7 @@ var temp: i32 = undefined; // Uninitialized (danger!)
 
 The `undefined` keyword makes undefined behavior explicit rather than accidental.
 
-**Rule:** `const` variables cannot use `undefined` (checked at compile time).
+**Rule:** `nanoconst` variables cannot use `undefined` (checked at compile time).
 
 ### Control Flow
 
@@ -59,11 +59,11 @@ The `undefined` keyword makes undefined behavior explicit rather than accidental
 - `while` - loops
 - `goto`/labels - arbitrary jumps
 
-**No `break` or `continue` keywords.**
+**No `break` or `nanocontinue` keywords.**
 
 **Rationale:** These are redundant with `goto`. In nested loops, `break` is ambiguous about which loop to exit. `goto` is explicit:
 
-```c
+```nanoc
 while (x > 0) {
     while (y > 0) {
         if (done) goto cleanup;  // Clear intent
@@ -74,9 +74,9 @@ cleanup:
 
 #### Expression Statements
 
-Only function calls and syscalls are allowed as expression statements. Arbitrary expressions like `f() + g();` or `x * 2;` are rejected at parse time — the outermost expression of an expression statement must be a `Call` or `Syscall`.
+Only function calls and syscalls are allowed as expression statements. Arbitrary expressions like `f() + g();` or `x * 2;` are rejected at parse time — the outermost expression of an expression statement must be a `nanocall` or `Syscall`.
 
-```c
+```nanoc
 my_func(a, b);                        // ✅ direct call
 my_interface->vtable[5](args);        // ✅ complex call expression, but outermost is still a call
 syscall(93, 0);                       // ✅ syscall
@@ -90,7 +90,7 @@ x * 2;                                // ❌ parse error: not a call
 
 **Open Design Question:** Should we allow backward jumps past variable declarations?
 
-```c
+```nanoc
 here:
     var x: i32 = 3;  // What happens on second iteration?
     goto here;
@@ -106,7 +106,7 @@ C allows this (re-executes initialization). We should either:
 ### Functions
 
 #### Signature Restrictions
-```c
+```nanoc
 fn add(a: i32, b: i32) -> i32 { ... }
 ```
 
@@ -124,7 +124,7 @@ fn add(a: i32, b: i32) -> i32 { ... }
 **Open Design Question:** How to use both return registers (a0, a1)?
 
 **Option 1: Tuple returns** (simple, minimal)
-```c
+```nanoc
 fn divmod(a: i32, b: i32) -> (i32, i32) {
     return (a / b, a % b);
 }
@@ -135,7 +135,7 @@ var rem: i32;
 ```
 
 **Option 2: Some kind of zig style error ** (could be cool but useless without some kind of `try` mechanics)
-```c
+```nanoc
 fn can_fail() -> (x: i32, Error) {
     try can_also_fail(x);
 
@@ -185,7 +185,7 @@ Postfix = 13   // -> . [] ()
 
 In C, `a[i]` is defined as `*(a + i)`, so `i[a]` is technically valid since addition is commutative. NanoC does not inherit this — `[]` is an indexing operation, not pointer arithmetic sugar.
 
-```c
+```nanoc
 arr[i]   // ✅ pointer/array on the left
 i[arr]   // ❌ compile error: left operand of [] must be a pointer or array
 ```
@@ -217,7 +217,7 @@ US: Unspecified
 **C behavior:** Undefined behavior
 **NanoC behavior:** Two's complement wrapping (defined)
 
-```c
+```nanoc
 const MAX: i32 = 2147483647;
 var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
 ```
@@ -228,14 +228,14 @@ var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
 **C behavior:** Undefined behavior
 **NanoC behavior:** Undefined behavior (same as C)
 
-```c
+```nanoc
 var x: i32 = 10 / 0;  // UB
 var y: i32 = 10 % 0;  // UB
 ```
 
 **Rationale:** Integer division by zero is trivially detectable before the operation. Defining a return value would mask bugs rather than expose them. Users should guard explicitly:
 
-```c
+```nanoc
 if (b != 0) {
     var result: i32 = a / b;
 }
@@ -245,7 +245,7 @@ if (b != 0) {
 **C behavior:** Implementation-defined (arithmetic or logical shift)
 **NanoC behavior:** Arithmetic shift (sign-extends)
 
-```c
+```nanoc
 var x: i32 = -8 >> 1;  // x = -4 (arithmetic shift, defined)
 ```
 
@@ -255,7 +255,7 @@ var x: i32 = -8 >> 1;  // x = -4 (arithmetic shift, defined)
 **C behavior:** Undefined behavior
 **NanoC behavior:** Bitwise operation (defined)
 
-```c
+```nanoc
 var x: i32 = -1 << 2;  // x = -4 (defined)
 ```
 
@@ -265,7 +265,7 @@ var x: i32 = -1 << 2;  // x = -4 (defined)
 **C behavior:** Unspecified for most operators
 **NanoC behavior:** Left-to-right (defined)
 
-```c
+```nanoc
 fn side_effect() -> i32 { ... }
 var x: i32 = side_effect() + side_effect();  // left call happens first
 ```
@@ -293,7 +293,7 @@ var x: i32 = side_effect() + side_effect();  // left call happens first
 **C behavior:** Undefined behavior (implicit)
 **NanoC behavior:** Explicit with `undefined` keyword
 
-```c
+```nanoc
 var x: i32 = undefined;  // Explicitly undefined (not implicit!)
 ```
 

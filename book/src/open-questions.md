@@ -12,7 +12,7 @@
    **Background:** RISC-V calling convention provides two return registers (a0 and a1). Most functions only use a0. We could use both registers for richer return semantics.
 
    **Proposal A: Simple tuples (minimal)**
-   ```c
+   ```nanoc
    fn divmod(a: i32, b: i32) -> (i32, i32) {
        return (a / b, a % b);
    }
@@ -25,7 +25,7 @@
    - Con: Doesn't address error handling ergonomics
 
    **Proposal B: Tuple-based Result pattern (convention)**
-   ```c
+   ```nanoc
    // Convention: (value, error_code)
    // a0 = value (or garbage if error)
    // a1 = error code (0 = success)
@@ -48,7 +48,7 @@
    - Con: Very verbose for error propagation
 
    **Proposal C: Zig-style `try` (ergonomic)**
-   ```c
+   ```nanoc
    fn process_file() -> (i32, i32) {
        const fd = try open_file("data.txt");  // Auto-propagate on error
        const data = try read_data(fd);
@@ -78,7 +78,7 @@
    In C, assignment is an expression that returns the assigned value, enabling chained assignment (`a = b = 0`) and assignment in conditions (`while ((n = read()) > 0)`).
 
    **Option A: Statement only (current leaning)**
-   ```c
+   ```nanoc
    x = value;          // ✅ valid as a statement
    var y = x = 0;      // ❌ compile error
    if (x = read()) {}  // ❌ compile error (also: warning d) would catch this)
@@ -88,7 +88,7 @@
    - The `Precedence::Assignment` slot in the Pratt table is still useful as a floor when parsing the RHS of assignment statements
 
    **Option B: Expression (C-style)**
-   ```c
+   ```nanoc
    a = b = 0;           // ✅ right-associative, both set to 0
    while ((n = read()) > 0) {}  // ✅ assign and test in one
    ```
@@ -117,7 +117,7 @@
 6. **`inline` keyword:** Force function inlining at call sites
 
    **Proposal:**
-   ```c
+   ```nanoc
    inline fn square(x: i32) -> i32 {
        return x * x;
    }
@@ -180,7 +180,7 @@
 
    Warn about potentially confusing operator precedence, especially where bitwise operators mix with comparison/equality operators.
 
-   ```c
+   ```nanoc
    // Warning: '&' has lower precedence than '=='; '==' will be evaluated first
    if (x & 0xFF == 0) { ... }
    //    ^~~~~~~~~~~
@@ -198,23 +198,23 @@
    - `a < b & mask` → suggest `a < (b & mask)` or `(a < b) & mask`
 
    **b) Unused variable warnings**
-   ```c
+   ```nanoc
    var temp: i32 = compute();  // Warning: variable 'temp' is unused
    ```
 
    **c) Const variable never read**
-   ```c
+   ```nanoc
    const MAX: i32 = 100;  // Warning: constant 'MAX' is never used
    ```
 
    **d) Suspicious assignment in condition**
-   ```c
+   ```nanoc
    if (x = 5) { ... }  // Warning: using assignment in condition (did you mean '=='?)
    ```
    Note: NanoC doesn't support this syntax in conditions, but if we add it, warn about it.
 
    **e) Unreachable code**
-   ```c
+   ```nanoc
    fn example() -> i32 {
        return 42;
        var x: i32 = 0;  // Warning: unreachable code
@@ -222,7 +222,7 @@
    ```
 
    **f) Function declared but never called** (for non-exported functions)
-   ```c
+   ```nanoc
    fn helper() -> i32 {  // Warning: function 'helper' is never used
        return 5;
    }
@@ -232,7 +232,7 @@
 
    Division by zero is UB in NanoC. When the divisor is a literal `0`, the compiler can catch it statically.
 
-   ```c
+   ```nanoc
    var x: i32 = a / 0;   // Error: division by zero
    var y: i32 = a % 0;   // Error: division by zero
    ```
