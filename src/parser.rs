@@ -2081,4 +2081,68 @@ mod tests {
             "(-> ([] (-> table buckets) (% (call hash_fn key) (-> table capacity))) value)"
         );
     }
+
+    // --- syscall ---
+
+    // no need to test syscall with no args since at least the sycall number must be passed
+    // no arg syscall is caught at semantic analysis
+
+    #[test]
+    fn test_syscall_one_arg() {
+        // syscall number only
+        let expr = parse_expr_from_source("syscall(60)").unwrap();
+        assert_eq!(format!("{}", expr), "(syscall 60)");
+    }
+
+    #[test]
+    fn test_syscall_multiple_args() {
+        // write(1, buf, len): number + three args
+        let expr = parse_expr_from_source("syscall(1, 1, buf, len)").unwrap();
+        assert_eq!(format!("{}", expr), "(syscall 1 1 buf len)");
+    }
+
+    #[test]
+    fn test_syscall_expr_args() {
+        // args can be arbitrary expressions
+        let expr = parse_expr_from_source("syscall(SYS_WRITE, STDOUT, &msg, n * 4)").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(syscall SYS_WRITE STDOUT (& msg) (* n 4))"
+        );
+    }
+
+    #[test]
+    fn test_syscall_is_atom() {
+        // syscall() is an atom: postfix and binary ops bind around it normally
+        // syscall(60, 0) + 1  →  (+ (syscall 60 0) 1)
+        let expr = parse_expr_from_source("syscall(60, 0) + 1").unwrap();
+        assert_eq!(format!("{}", expr), "(+ (syscall 60 0) 1)");
+
+        // !syscall(1, fd, buf, len)  →  (! (syscall 1 fd buf len))
+        let expr = parse_expr_from_source("!syscall(1, fd, buf, len)").unwrap();
+        assert_eq!(format!("{}", expr), "(! (syscall 1 fd buf len))");
+
+        // result compared against 0
+        let expr = parse_expr_from_source("syscall(1, 1, s, 16) < 0").unwrap();
+        assert_eq!(format!("{}", expr), "(< (syscall 1 1 s 16) 0)");
+    }
+
+    #[test]
+    fn test_syscall_realistic() {
+        // exit(0): syscall(SYS_EXIT, 0)
+        let expr = parse_expr_from_source("syscall(SYS_EXIT, 0)").unwrap();
+        assert_eq!(format!("{}", expr), "(syscall SYS_EXIT 0)");
+
+        // write to stdout: syscall(SYS_WRITE, STDOUT, &dist, 4)
+        let expr = parse_expr_from_source("syscall(SYS_WRITE, STDOUT, &dist, 4)").unwrap();
+        assert_eq!(format!("{}", expr), "(syscall SYS_WRITE STDOUT (& dist) 4)");
+
+        // check return value in a condition
+        let expr =
+            parse_expr_from_source("syscall(SYS_WRITE, STDOUT, s, 16) < 0 && errno != 0").unwrap();
+        assert_eq!(
+            format!("{}", expr),
+            "(&& (< (syscall SYS_WRITE STDOUT s 16) 0) (!= errno 0))"
+        );
+    }
 }
