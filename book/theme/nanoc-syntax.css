@@ -15,6 +15,7 @@
     --type: var(--catppuccin-yellow);
     --func: var(--catppuccin-blue);
     --comment: var(--catppuccin-overlay2);
+    --delimiter: var(--catppuccin-overlay2);
     --string: var(--catppuccin-green);
     --number: var(--catppuccin-peach);
     --keyword: var(--catppuccin-mauve);
@@ -82,5 +83,5 @@
 
 /* Punctuation */
 .hljs-punctuation {
-    color: #555;
+    color: var(--delimiter);
 }
