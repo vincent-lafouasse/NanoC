@@ -846,7 +846,7 @@ impl fmt::Display for Expr {
                 write!(f, ")")
             }
             Expr::Syscall(args) => {
-                write!(f, "(syscall ")?;
+                write!(f, "(syscall")?;
                 for arg in args {
                     write!(f, " {}", arg)?;
                 }
