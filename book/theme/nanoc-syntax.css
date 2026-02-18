@@ -1,5 +1,4 @@
 :root {
-    --canary: #ff00ff;
 
     --catppuccin-base: #1e1e2e;
     --catppuccin-text: #cdd6f4;
@@ -13,6 +12,10 @@
     --catppuccin-magenta: #f5c2e7;
     --catppuccin-sky: #89dceb;
     --catppuccin-sapphire: #74c7ec;
+
+    /* bright pink as a fallback for calls to var. makes misuse very easy to
+* detect*/
+    --canary: #ff00ff;
 
     --background: var(--catppuccin-base, var(--canary));
     --text: var(--catppuccin-text, var(--canary));
