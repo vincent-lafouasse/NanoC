@@ -73,7 +73,32 @@
 
    **Key insight:** Without `try` semantics, the Result pattern is too verbose to be practical. Either commit to `try` or stick with traditional C error codes.
 
-3. **Array syntax:** Static arrays in grammar but not implemented
+3. **Assignment as expression:** Should `x = value` be an expression or a statement?
+
+   In C, assignment is an expression that returns the assigned value, enabling chained assignment (`a = b = 0`) and assignment in conditions (`while ((n = read()) > 0)`).
+
+   **Option A: Statement only (current leaning)**
+   ```c
+   x = value;          // ✅ valid as a statement
+   var y = x = 0;      // ❌ compile error
+   if (x = read()) {}  // ❌ compile error (also: warning d) would catch this)
+   ```
+   - Eliminates the classic `if (x = 0)` bug class entirely
+   - Simpler grammar: assignment is its own statement form, not an operator
+   - The `Precedence::Assignment` slot in the Pratt table is still useful as a floor when parsing the RHS of assignment statements
+
+   **Option B: Expression (C-style)**
+   ```c
+   a = b = 0;           // ✅ right-associative, both set to 0
+   while ((n = read()) > 0) {}  // ✅ assign and test in one
+   ```
+   - More expressive, familiar to C programmers
+   - `a = b = 0` maps naturally to the Pratt parser (right-associative, same precedence for recursive call)
+   - Risk: assignment in condition is a common source of bugs
+
+   **Current leaning:** Statement only. The bug prevention outweighs the expressiveness, and NanoC already uses `goto` for the patterns that would otherwise motivate assignment-as-expression.
+
+4. **Array syntax:** Static arrays in grammar but not implemented
    - Should be `i32[10]` or `[10]i32`?
    - Stack allocated only?
    - **Proposal:** `i32[10]` (postfix, matches pointers)
