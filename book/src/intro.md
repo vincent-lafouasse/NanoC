@@ -32,19 +32,32 @@ struct Point {
     y: i32,
 }
 
-fn distance_squared(p: Point*) -> i32 {
-    return p->x * p->x + p->y * p->y;
+fn distance_squared(a: Point*, b: Point*) -> i32 {
+    const x: i32 = a.x - b.x;
+    const y: i32 = a.y - b.y;
+    return x * x + y * y;
 }
 
 fn main() -> i32 {
     var origin: Point = zeroed;
-    var p: Point = Point { x: 3, y: 4, };
+    var p: Point = undefined;
+    p.x = 67;
+    p.y = 420;
 
-    const dist_sq: i32 = distance_squared(&p);
+    const dist_sq: i32 = distance_squared(&p, &origin);
 
     // Syscall to write result
-    syscall(1, 1, &dist_sq, 4);
+    const status = syscall(1, 1, &dist_sq, 4);
 
+    if (status < 0) {
+        goto bad;
+    } else {
+        goto good;
+    }
+
+good:
     return 0;
+bad:
+    return 1;
 }
 ```
