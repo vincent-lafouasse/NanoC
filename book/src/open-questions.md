@@ -266,14 +266,36 @@
      //                         exits the function, not just the if-branch
      ```
 
-   #### Current leaning
+   #### Current leaning — uniform expressions everywhere
 
-   Proposal A (blocks as initializers) is the conservative win — it handles the most common
-   need (complex initialisation) with minimal new rules and no grammar ambiguity. Proposal B
-   adds expressiveness at the cost of `if` being both a statement and an expression.
+   Make all blocks and all `if/else` expressions unconditionally, not just in initializer
+   position. Reasoning:
 
-   Decision deferred. Implement statements first; revisit when the cost of mutable accumulators
-   becomes concrete.
+   - The rule is uniform and simple to specify: every block produces a value (or unit).
+   - `const` must always have an initializer — `const x: i32 = undefined` becomes a parse
+     error, which is correct. Only `var` may use `= undefined` or `= zeroed`.
+   - No special initializer-only position to track in the grammar or semantic analysis.
+   - Semantic analysis for expression typing is more work than the current nothing, but less
+     work than dataflow analysis for "was this `const` assigned exactly once across branches".
+
+   **Type system implications this requires:**
+
+   `if` without `else` in expression position: a bare `if (cond) { expr }` has type `unit`
+   and may only appear in statement position (value discarded). The type checker enforces this.
+   `if/else` with matching branch types produces that type as a value.
+
+   A **never/bottom type** for diverging branches — `return`, `goto`, `unreachable` inside an
+   expression branch never produce a value and must unify with any type:
+   ```nanoc
+   const x: i32 = if (cond) { 42 } else { return -1; };
+   //                                      ^^^^^^^^^^
+   //                                      type: never — unifies with i32, accepted
+   ```
+   The never type need not be user-facing syntax; it is an internal type checker concept.
+
+   **The semicolon rule becomes universal:** `{ stmts; expr }` produces `expr` as the block
+   value; `{ stmts; expr; }` produces unit. Applies everywhere, not just in special positions.
+   More consistent, though the implicit nature of the rule remains.
 
 ### Implementation
 
