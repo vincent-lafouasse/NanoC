@@ -154,6 +154,63 @@ import mylib;         // Looks for mylib.nc
 
 ---
 
-**Document Status:** Living document, updated as design evolves.
+### Compile-Time Conditionals (Post-MVP)
 
-**Next Review:** After Pratt parser implementation.
+**Not currently implemented.** Needed for portable code that targets multiple platforms (RISC-V vs ARM, bare-metal vs Linux, debug vs release).
+
+#### The need
+
+Without some form of compile-time branching, any program that must behave differently per target is forced to either maintain separate source files or hardcode one platform. The canonical example is platform-specific intrinsics:
+
+```nanoc
+// want this on riscv64:
+fn flush_icache() { fence_i(); }
+
+// want this on aarch64:
+fn flush_icache() { isb(); }
+```
+
+#### Design constraints
+
+Two existing language decisions make this harder than it looks:
+
+**`if` is a statement, not an expression.** The natural syntax for a compile-time conditional value:
+```nanoc
+const PAGE_SIZE: i32 = comptime if (ARCH == "riscv64") { 4096 } else { 65536 };
+//                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//                     doesn't work — if blocks aren't expressions
+```
+doesn't work in NanoC. `comptime if` can only be used at statement level.
+
+**`const` semantics are unresolved.** Whether `const` is a runtime-immutable binding or a compile-time constant is an open question (see Open Questions §7). Until that is settled, the interaction between `const` and `comptime` can't be fully specified.
+
+#### Proposed design
+
+**Compiler-provided target constants** — a fixed set of built-in compile-time values the compiler defines, not user-declared:
+
+```
+ARCH    "riscv64" | "aarch64"
+OS      "linux" | "bare"
+OPT     "debug" | "release"
+```
+
+**Statement-level `comptime if`** — selects between blocks of declarations or statements at compile time. Dead branches are still parsed and type-checked (unlike the C preprocessor):
+
+```nanoc
+comptime if (ARCH == "riscv64") {
+    fn flush_icache() { fence_i(); }
+} else {
+    fn flush_icache() { isb(); }
+}
+```
+
+**No comptime expressions** (for now). Compile-time constant *values* are handled only by the compiler-provided constants above. There is no `comptime(expr)` expression form. If a compile-time conditional constant is needed, a `comptime if` block can define it — but scoping rules for symbols declared inside a `comptime if` are an unresolved sub-question.
+
+#### Open sub-questions
+
+- Do symbols declared inside a `comptime if` block escape into the enclosing scope?
+- Can `comptime if` nest? Can it appear inside a function body, or only at top level?
+- Is `comptime` a keyword, a sigil (`@if`), or something else?
+- How does this interact with the module system — can imported modules carry comptime conditions?
+
+**Current status:** Not implemented. Blocked on resolving `const` semantics first.
