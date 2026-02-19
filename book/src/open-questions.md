@@ -186,7 +186,13 @@
 
    **Current leaning:** Option A — keep `const` as runtime-immutable, introduce explicit `comptime` only when conditional compilation is actually implemented, and rely on compiler-provided built-in constants for target discrimination in the meantime.
 
-8. **Blocks as initializer expressions, and/or `if/else` as expressions?**
+8. ~~**Blocks as initializer expressions, and/or `if/else` as expressions?**~~ **SETTLED**
+
+   **Decision:** All blocks and all `if/else` are expressions unconditionally.
+   Bodies of `if`, `else`, and `while` must always be blocks (mandatory braces).
+   See Language Design for rationale and Grammar Summary for productions.
+
+   Historical discussion preserved below.
 
    Two distinct proposals, often conflated. Worth separating.
 

@@ -1,63 +1,172 @@
-(* this document is only informative
- * the parser is not generated from this
- * document and may change independantly from it
+(* NanoC grammar — informative reference
+ * The parser is hand-written and is the authoritative source.
+ * This document may lag behind the parser on fine details.
  *)
 
-program = top_level_statement* ;
+(* ─── Top-level ─────────────────────────────────────────────────────────── *)
 
-top_level_statement = struct_decl
-                    | var_decl
-                    | function_decl
-                    ;
+program        = top_level_item* ;
 
-struct_name = IDENTIFIER ;
+top_level_item = struct_decl
+               | const_decl
+               | var_decl
+               | function_decl
+               | extern_decl
+               ;
+
+(* ─── Names ─────────────────────────────────────────────────────────────── *)
+
+(* All three are syntactically IDENTIFIER; the distinction is semantic. *)
+struct_name   = IDENTIFIER ;
 variable_name = IDENTIFIER ;
-function_name = INDENTIFIER ;
-label = IDENTIFIER ;
+label_name    = IDENTIFIER ;
 
-type = primitive_type | struct_name | pointer ;
+(* ─── Types ─────────────────────────────────────────────────────────────── *)
 
-primitive_type = "u8" | "i32" | "u32" | "ptr" ;
+type       = base_type "*"* ;
+base_type  = primitive | struct_name ;
+primitive  = "u8" | "i32" | "u32" | "ptr" ;
 
-base_type = primitive_type | struct_name ;
-pointer = base_type "*"+ ;
+(* register-sized: permitted as function parameters and return values *)
+reg_type   = primitive | base_type "*"+ ;
 
-(* yes mandated trailing comma even on last field *)
-struct_field = variable_name ":" type "," ;
-struct_decl = "struct" struct_name "{" struct_field+ "}" ;
+(* ─── Struct declarations ────────────────────────────────────────────────── *)
 
-register_sized = primitive_type | pointer ;
-fn_arg = variable_name ":" register_sized ;
-fn_args = (* empty *)
-        | fn_arg ("," fn_arg)*
-        ;
+struct_decl  = "struct" struct_name "{" struct_field* "}" ;
+struct_field = variable_name ":" type "," ;   (* trailing comma mandatory on every field *)
 
-fn_decl = "fn" function_name ("->" type)? "{" statement* "}" ;
+(* ─── Function declarations ─────────────────────────────────────────────── *)
 
-(* always an initalizer, with keywords `zeroed` and `undefined` *)
-var_initializer = expression | "zeroed" | "undefined" ;
-var_decl = ("var" | "const") variable_name ":" type "=" var_initializer ";" ;
+function_decl = fn_modifier* "fn" variable_name
+                "(" fn_params? ")"
+                ("->" reg_type)?
+                block ;
 
-statement = var_decl
-          | expression ";"
+fn_modifier = "pub" | "inline" ;
+fn_params   = fn_param ("," fn_param)* ;
+fn_param    = variable_name ":" reg_type ;
+
+(* ─── Extern declarations ────────────────────────────────────────────────── *)
+
+(* Declares an external symbol without a body.
+ * The optional string literal + "as" imports under a different local name,
+ * used to avoid collisions with NanoC keywords (e.g. libc's syscall(2)).  *)
+extern_decl = "extern" (STRING_LITERAL "as")? "fn" variable_name
+              "(" fn_params? ")"
+              ("->" reg_type)?
+              ";" ;
+
+(* ─── Variable declarations ─────────────────────────────────────────────── *)
+
+(* const: expression initializer only.
+ * "zeroed" and "undefined" are semantic errors on const — use var instead. *)
+const_decl = "const" variable_name ":" type "=" expression ";" ;
+
+(* var: may use expression, zeroed, or undefined *)
+var_decl   = "var" variable_name ":" type "=" var_init ";" ;
+var_init   = expression | "zeroed" | "undefined" ;
+
+(* ─── Statements ─────────────────────────────────────────────────────────── *)
+
+statement = const_decl
+          | var_decl
+          | lvalue "=" expression ";"        (* assignment is a statement, not an expression *)
+          | call_expr ";"                    (* expression statement: calls and syscalls only *)
           | "return" expression? ";"
-          | "if" "(" expression ")" statement ("else" statement)?
-          | "while" "(" expression ")" statement
-          | "{" statement* "}"
-          | "goto" label ";"
-          | label ":" statement
+          | if_expr                          (* if is an expression; used as statement here — no trailing ";" *)
+          | "while" "(" expression ")" block
+          | "goto" label_name ";"
+          | label_name ":" statement
           ;
 
-lvalue = (* hmmmmmm *)
+(* ─── Blocks ─────────────────────────────────────────────────────────────── *)
 
-literal = NUMBER | IDENTIFIER | (* others *)
-atom = literal | (* others *)
+(* A block is always an expression.
+ * Its value is the final expression if present (no trailing ";"), else unit.
+ *
+ *   { stmt; stmt; expr }    -- type is typeof(expr)
+ *   { stmt; stmt; expr; }   -- type is unit (the trailing ";" discards the value)
+ *   { stmt; stmt; }         -- type is unit
+ *   { }                     -- type is unit                                     *)
+block = "{" statement* expression? "}" ;
 
-bin_op = "+" | "-"
-bin_op_expr = expression bin_op expression
+(* ─── if expressions ─────────────────────────────────────────────────────── *)
 
-(* pratt parsed, precedence TBD *)
-expression = atom
-           | bin_op_expr
-           | unary_op_expr
+(* if/else is always an expression.
+ * Bodies MUST be blocks — bare expressions as bodies are a parse error.
+ * "else if" is naturally "else" followed by a new if_expr: no special syntax.
+ *
+ * Type rules (enforced by sema):
+ *   if without else            -- type is unit; error in value position
+ *   if/else, branches agree    -- type is the shared branch type
+ *   if/else, one branch never  -- type is the other branch's type            *)
+if_expr = "if" "(" expression ")" block ("else" (if_expr | block))? ;
+
+(* ─── Lvalues ────────────────────────────────────────────────────────────── *)
+
+(* Lvalue-ness is checked by sema, not enforced syntactically.
+ * The parser accepts any expression on the LHS of "="; sema rejects non-lvalues.
+ * Valid lvalues: variable_name, *expr, expr->field, expr[index].
+ * Invalid lvalues: literals, arithmetic results, call results.               *)
+lvalue = expression ;
+
+(* ─── Expressions ────────────────────────────────────────────────────────── *)
+
+(* All of the following are expressions and may appear wherever a value is needed. *)
+expression = block
+           | if_expr
+           | pratt_expr
            ;
+
+(* Pratt-parsed sub-expressions.
+ * Precedence table, low to high:
+ *   (1  assignment — floor only; assignment is a statement, this slot
+ *                    is used when parsing the RHS to avoid over-consuming)
+ *    2  ||
+ *    3  &&
+ *    4  |
+ *    5  ^
+ *    6  &
+ *    7  == !=
+ *    8  < <= > >=
+ *    9  << >>
+ *   10  + -
+ *   11  * / %
+ *   12  unary prefix:  ! ~ - (negate)  & (address-of)  * (deref)
+ *   13  postfix:       -> .  []  ()                                          *)
+pratt_expr = atom
+           | pratt_expr bin_op pratt_expr
+           | prefix_op pratt_expr
+           | pratt_expr postfix
+           ;
+
+atom = INTEGER_LITERAL
+     | STRING_LITERAL
+     | "true"
+     | "false"
+     | variable_name
+     | "(" expression ")"
+     | call_expr
+     | syscall_expr
+     ;
+
+call_expr   = expression "(" (expression ("," expression)*)? ")" ;
+syscall_expr = "syscall" "(" expression ("," expression)* ")" ;
+
+bin_op = "||" | "&&"
+       | "|" | "^" | "&"
+       | "==" | "!=" | "<" | "<=" | ">" | ">="
+       | "<<" | ">>"
+       | "+" | "-"
+       | "*" | "/" | "%"
+       ;
+
+prefix_op = "!" | "~" | "-" | "&" | "*" ;
+
+(* Note: expr[expr] — left operand must be pointer/array (sema check).
+ * i[arr] is rejected by sema even though the grammar accepts it.            *)
+postfix = "->" variable_name
+        | "." variable_name
+        | "[" expression "]"
+        | "(" (expression ("," expression)*)? ")"
+        ;

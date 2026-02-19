@@ -172,17 +172,18 @@ fn flush_icache() { isb(); }
 
 #### Design constraints
 
-Two existing language decisions make this harder than it looks:
+One remaining constraint:
 
-**`if` is a statement, not an expression.** The natural syntax for a compile-time conditional value:
+**`const` semantics are unresolved.** Whether `const` is a runtime-immutable binding or a
+compile-time constant is an open question (see Open Questions §7). Until that is settled,
+the interaction between `const` and `comptime` can't be fully specified.
+
+~~`if` is a statement, not an expression~~ — resolved. `if/else` and blocks are now
+expressions (Open Questions §8, settled). `comptime if` as an expression works naturally:
+
 ```nanoc
 const PAGE_SIZE: i32 = comptime if (ARCH == "riscv64") { 4096 } else { 65536 };
-//                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-//                     doesn't work — if blocks aren't expressions
 ```
-doesn't work in NanoC. `comptime if` can only be used at statement level.
-
-**`const` semantics are unresolved.** Whether `const` is a runtime-immutable binding or a compile-time constant is an open question (see Open Questions §7). Until that is settled, the interaction between `const` and `comptime` can't be fully specified.
 
 #### Proposed design
 
@@ -194,17 +195,25 @@ OS      "linux" | "bare"
 OPT     "debug" | "release"
 ```
 
-**Statement-level `comptime if`** — selects between blocks of declarations or statements at compile time. Dead branches are still parsed and type-checked (unlike the C preprocessor):
+**`comptime if`** — follows the same grammar as `if_expr` (mandatory blocks, `else if` chains
+natural). Dead branches are still parsed and type-checked, unlike the C preprocessor.
+May appear at statement level (selecting between declarations) or in expression position
+(selecting between values):
 
 ```nanoc
+(* statement level — selects between function definitions *)
 comptime if (ARCH == "riscv64") {
     fn flush_icache() { fence_i(); }
 } else {
     fn flush_icache() { isb(); }
 }
+
+(* expression level — selects a constant value *)
+const PAGE_SIZE: i32 = comptime if (ARCH == "riscv64") { 4096 } else { 65536 };
 ```
 
-**No comptime expressions** (for now). Compile-time constant *values* are handled only by the compiler-provided constants above. There is no `comptime(expr)` expression form. If a compile-time conditional constant is needed, a `comptime if` block can define it — but scoping rules for symbols declared inside a `comptime if` are an unresolved sub-question.
+Scoping rules for symbols declared inside a `comptime if` block (statement level) are an
+unresolved sub-question.
 
 #### Open sub-questions
 

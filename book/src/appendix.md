@@ -2,31 +2,32 @@
 
 ### Grammar Summary
 
-See `spec/grammar.ebnf` for full grammar.
+Full grammar: `spec/grammar.ebnf`. Key productions:
 
-Key productions:
 ```ebnf
-program = top_level_statement* ;
+(* const requires an expression initializer — zeroed/undefined are sema errors *)
+const_decl = "const" variable_name ":" type "=" expression ";" ;
+var_decl   = "var"   variable_name ":" type "=" var_init ";" ;
+var_init   = expression | "zeroed" | "undefined" ;
 
-top_level_statement = struct_decl
-                    | var_decl
-                    | function_decl
-                    ;
+(* blocks and if/else are expressions; their type is their final expression's type,
+ * or unit if the block ends with ";" or is empty                               *)
+block   = "{" statement* expression? "}" ;
+if_expr = "if" "(" expression ")" block ("else" (if_expr | block))? ;
 
-register_sized = primitive_type | pointer ;
-
-var_decl = ("var" | "const") variable_name ":" type "=" var_initializer ";" ;
-var_initializer = expression | "zeroed" | "undefined" ;
-
-statement = var_decl
-          | expression ";"
+(* bodies of if/while MUST be blocks — bare expressions are a parse error        *)
+statement = const_decl
+          | var_decl
+          | lvalue "=" expression ";"    (* assignment: statement only *)
+          | call_expr ";"               (* expression statement: calls/syscalls only *)
           | "return" expression? ";"
-          | "if" "(" expression ")" statement ("else" statement)?
-          | "while" "(" expression ")" statement
-          | "{" statement* "}"
-          | "goto" label ";"
-          | label ":" statement
+          | if_expr                     (* no trailing ";" needed *)
+          | "while" "(" expression ")" block
+          | "goto" label_name ";"
+          | label_name ":" statement
           ;
+
+expression = block | if_expr | pratt_expr ;
 ```
 
 ### References

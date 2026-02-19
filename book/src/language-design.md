@@ -61,6 +61,34 @@ The `undefined` keyword makes undefined behavior explicit rather than accidental
 
 **No `break` or `nanocontinue` keywords.**
 
+#### Mandatory braces
+
+The body of `if`, `else`, and `while` must always be a block — bare expressions are not
+allowed as bodies:
+
+```nanoc
+if (cond) { x }        // ✅
+if (cond) x            // ❌ parse error — body must be a block
+while (cond) { ... }   // ✅
+while (cond) stmt;     // ❌ parse error
+```
+
+**Rationale:** This is a language rule, not a style preference. It eliminates the dangling
+`else` ambiguity that requires a special grammar rule in C (`else` binds to the nearest
+unbraced `if`). With mandatory braces the ambiguity cannot arise — the parser never has to
+choose. `else if` chains are naturally expressed as `else` followed by a new `if` expression,
+with no special syntax required:
+
+```nanoc
+if (x > 0) {
+    positive
+} else if (x < 0) {
+    negative
+} else {
+    zero
+}
+```
+
 **Rationale:** These are redundant with `goto`. In nested loops, `break` is ambiguous about which loop to exit. `goto` is explicit:
 
 ```nanoc
