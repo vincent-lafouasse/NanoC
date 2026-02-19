@@ -11,6 +11,7 @@
 # Implementation
 
 - [Implementation Details](implementation-details.md)
+- [Semantic Analysis](semantic-analysis.md)
 
 # Planning
 
