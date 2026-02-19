@@ -186,6 +186,95 @@
 
    **Current leaning:** Option A — keep `const` as runtime-immutable, introduce explicit `comptime` only when conditional compilation is actually implemented, and rely on compiler-provided built-in constants for target discrimination in the meantime.
 
+8. **Blocks as initializer expressions, and/or `if/else` as expressions?**
+
+   Two distinct proposals, often conflated. Worth separating.
+
+   #### Proposal A — blocks as const/var initializers
+
+   Allow a `{ }` block on the right-hand side of a declaration only. The block can contain
+   statements and produces a value via its last expression:
+
+   ```nanoc
+   const x: i32 = {
+       const allocation: MyStruct = make_a_big_object();
+       const out: i32 = compute_something_else(&allocation);
+       dealloc_thing(&allocation);
+       out         // last expression, no semicolon → value of the block
+   };
+   ```
+
+   **What this solves:**
+   - `const` bindings that require multi-step initialisation or intermediate scratch values.
+   - Scoped temporaries that don't leak into the outer block.
+   - Cleanup before yielding a value (e.g. freeing a scratch allocation).
+
+   **What this does not solve:**
+   - Conditional values — `if/else` is still a statement so you can't branch to produce a value.
+     The workaround inside the block is a mutable accumulator:
+     ```nanoc
+     const x: i32 = {
+         var result: i32 = undefined;
+         if (cond) { result = a; } else { result = b; }
+         result
+     };
+     ```
+     Not as terse as an if-expression, but the intent is explicit.
+
+   **The implicit semicolon rule is contained:**
+   The "last expression without a semicolon is the value" rule only applies in one syntactic
+   position — the right-hand side of a declaration. It cannot be triggered accidentally inside
+   an arbitrary expression context.
+
+   **Alternative — explicit `yield` instead of implicit last-expression:**
+   ```nanoc
+   const x: i32 = {
+       const allocation: MyStruct = make_a_big_object();
+       const out: i32 = compute_something_else(&allocation);
+       dealloc_thing(&allocation);
+       yield out;    // explicit — unambiguous, greppable
+   };
+   ```
+   More verbose for simple cases but removes the semicolon footgun entirely.
+
+   **Checking that `const` is written once:** verifying single-assignment for a `const` that is
+   conditionally assigned across branches is complex (requires dataflow). Initializer blocks
+   sidestep this entirely — a `const` either has an initializer expression (including a block)
+   or it doesn't. No post-declaration assignment is ever valid.
+
+   #### Proposal B — `if/else` as an expression everywhere
+
+   Allow `if (cond) { ... } else { ... }` to appear anywhere a value is expected:
+
+   ```nanoc
+   const x: i32 = if (cond) { a } else { b };
+   fn_call(if (flag) { x } else { y });
+   ```
+
+   **What this adds over Proposal A:**
+   - Conditional values without a mutable accumulator.
+   - Eliminates the need for a ternary `?:` operator.
+   - Makes `comptime if` work as an expression (unblocks the Future Work constraint).
+
+   **Additional cost over Proposal A:**
+   - `if` now has two roles (statement and expression); context determines which.
+   - `return` inside an if-expression branch unambiguously returns from the *function*, not the
+     if — correct but surprising:
+     ```nanoc
+     const x: i32 = if (cond) { return -1; } else { 42 };
+     //                         ^^^^^^^^^^
+     //                         exits the function, not just the if-branch
+     ```
+
+   #### Current leaning
+
+   Proposal A (blocks as initializers) is the conservative win — it handles the most common
+   need (complex initialisation) with minimal new rules and no grammar ambiguity. Proposal B
+   adds expressiveness at the cost of `if` being both a statement and an expression.
+
+   Decision deferred. Implement statements first; revisit when the cost of mutable accumulators
+   becomes concrete.
+
 ### Implementation
 
 1. **Error recovery:** Should parser attempt to continue after errors?
