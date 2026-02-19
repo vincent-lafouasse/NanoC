@@ -303,6 +303,47 @@
    value; `{ stmts; expr; }` produces unit. Applies everywhere, not just in special positions.
    More consistent, though the implicit nature of the rule remains.
 
+9. **Function and `while` body blocks — expressions or unit/never only?**
+
+   Blocks and `if/else` are now unconditionally expressions (§8, settled). The question is
+   whether this applies to function bodies and `while` bodies, or whether these are special
+   contexts that must always produce `unit` or `never`.
+
+   **`while` body — unit/never only (no real choice)**
+
+   A `while` loop runs its body zero or more times. There is no coherent value to produce from
+   a block that might execute N times. Yielding a value from a `while` body would require
+   `break value` semantics, which NanoC doesn't have. The while body's last expression is
+   always discarded. If a non-unit, non-never value appears in tail position without a trailing
+   `";"`, it is either silently discarded or a type warning.
+
+   **Function body — two options**
+
+   *Option A — explicit `return` only (current leaning):*
+   ```nanoc
+   fn square(x: i32) -> i32 {
+       return x * x;   // return is the only way to exit with a value
+   }
+   ```
+   The function body block must end in `return`, `goto`, or `unreachable` (all `never`), or
+   the declared return type must be unit. A non-unit, non-never tail expression is a type
+   error. This makes `return` the single unambiguous, greppable exit point — every place the
+   function produces a value is spelled `return`.
+
+   *Option B — implicit return (uniform rule):*
+   ```nanoc
+   fn square(x: i32) -> i32 {
+       x * x   // last expression without ";" is the return value
+   }
+   ```
+   The block's type must match the declared return type. Explicit `return` is still valid
+   (type `never`) and can be mixed with implicit return in the same function. Consistent with
+   "all blocks are expressions" but introduces a second way to exit a function.
+
+   **Current leaning:** Option A. In a systems language where tracing control flow matters,
+   `return` being the sole exit point is worth more than the uniformity gain. Implicit return
+   mainly benefits short functions where `return` is already low overhead.
+
 ### Implementation
 
 1. **Error recovery:** Should parser attempt to continue after errors?
