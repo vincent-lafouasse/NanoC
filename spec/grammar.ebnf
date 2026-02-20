@@ -8,8 +8,9 @@
 program        = top_level_item* ;
 
 top_level_item = struct_decl
-               | const_decl
                | var_decl
+               | const_decl
+               | constexpr_decl
                | function_decl
                | extern_decl
                ;
@@ -42,7 +43,7 @@ function_decl = fn_modifier* "fn" variable_name
                 ("->" reg_type)?
                 block ;
 
-fn_modifier = "pub" | "inline" ;
+fn_modifier = "pub" | "inline" | "comptime" ;
 fn_params   = fn_param ("," fn_param)* ;
 fn_param    = variable_name ":" reg_type ;
 
@@ -58,22 +59,28 @@ extern_decl = "extern" (STRING_LITERAL "as")? "fn" variable_name
 
 (* ─── Variable declarations ─────────────────────────────────────────────── *)
 
-(* const: expression initializer only.
- * "zeroed" and "undefined" are semantic errors on const — use var instead. *)
-const_decl = "const" variable_name ":" type "=" expression ";" ;
-
-(* var: may use expression, zeroed, or undefined *)
+(* var: mutable, stored, addressable *)
 var_decl   = "var" variable_name ":" type "=" var_init ";" ;
 var_init   = expression | "zeroed" | "undefined" ;
 
+(* const: immutable, stored, addressable — runtime value, never folded.
+ * "zeroed" and "undefined" are sema errors on const.                         *)
+const_decl = "const" variable_name ":" type "=" expression ";" ;
+
+(* constexpr: immutable, NOT stored, NOT addressable — compile-time only.
+ * The initialiser must be a constexpr expression (sema-checked, not grammar). *)
+constexpr_decl = "constexpr" variable_name ":" type "=" expression ";" ;
+
 (* ─── Statements ─────────────────────────────────────────────────────────── *)
 
-statement = const_decl
-          | var_decl
+statement = var_decl
+          | const_decl
+          | constexpr_decl
           | lvalue "=" expression ";"        (* assignment is a statement, not an expression *)
           | call_expr ";"                    (* expression statement: calls and syscalls only *)
           | "return" expression? ";"
           | if_expr                          (* if is an expression; used as statement here — no trailing ";" *)
+          | comptime_if                      (* compile-time conditional — condition must be constexpr *)
           | "while" "(" expression ")" block
           | "goto" label_name ";"
           | label_name ":" statement
@@ -101,6 +108,14 @@ block = "{" statement* expression? "}" ;
  *   if/else, branches agree    -- type is the shared branch type
  *   if/else, one branch never  -- type is the other branch's type            *)
 if_expr = "if" "(" expression ")" block ("else" (if_expr | block))? ;
+
+(* ─── comptime if ───────────────────────────────────────────────────────── *)
+
+(* comptime if follows the same shape as if_expr but the condition must be a
+ * constexpr expression (sema check, not grammar).
+ * Dead branches are parsed and type-checked; only the live branch is emitted.
+ * comptime does NOT apply to arbitrary expressions — only to if.             *)
+comptime_if = "comptime" if_expr ;
 
 (* ─── Lvalues ────────────────────────────────────────────────────────────── *)
 
@@ -148,7 +163,25 @@ atom = INTEGER_LITERAL
      | "(" expression ")"
      | call_expr
      | syscall_expr
+     | "unreachable"           (* type: never — traps in debug builds, UB in release *)
      ;
+
+(* DIVERGING EXPRESSIONS — type: never
+ *
+ * "unreachable" is the only diverging atom. Its never type unifies with any branch type:
+ *
+ *   const x: i32 = if (cond) { 42 } else { unreachable };  -- ✅
+ *
+ * "return" is a STATEMENT (see above), not an expression atom. However, the type checker
+ * treats a block whose last statement is "return" as having type "never", producing the
+ * same effect:
+ *
+ *   const x: i32 = if (cond) { 42 } else { return -1; };   -- ✅ block type is never
+ *
+ * "goto" is also a statement only and is additionally forbidden inside initializer
+ * expressions. Unlike return/unreachable, goto jumps to a label within the same function,
+ * and the label target may be in a scope where the partially-initialized binding is
+ * visible. This is the classic "goto past declaration" hazard, but from the inside.     *)
 
 call_expr   = expression "(" (expression ("," expression)*)? ")" ;
 syscall_expr = "syscall" "(" expression ("," expression)* ")" ;

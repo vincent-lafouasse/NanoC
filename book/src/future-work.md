@@ -170,24 +170,44 @@ fn flush_icache() { fence_i(); }
 fn flush_icache() { isb(); }
 ```
 
-#### Design constraints
+#### Design
 
-One remaining constraint:
-
-**`const` semantics are unresolved.** Whether `const` is a runtime-immutable binding or a
-compile-time constant is an open question (see Open Questions §7). Until that is settled,
-the interaction between `const` and `comptime` can't be fully specified.
-
-~~`if` is a statement, not an expression~~ — resolved. `if/else` and blocks are now
-expressions (Open Questions §8, settled). `comptime if` as an expression works naturally:
+Three keywords, resolved (see Open Questions §7):
 
 ```nanoc
-const PAGE_SIZE: i32 = comptime if (ARCH == "riscv64") { 4096 } else { 65536 };
+var   x: i32 = expr;      // mutable, stored
+const x: i32 = expr;      // immutable, stored, runtime value — NOT folded
+constexpr x: i32 = expr;  // immutable, folded, compile-time only — not addressable
 ```
 
-#### Proposed design
+**`comptime fn`** — marks a function as evaluable at compile time. Must satisfy additional
+sema restrictions (see below). Called normally at runtime; evaluated by the compiler when
+appearing in a `constexpr` initialiser or `comptime if` condition:
 
-**Compiler-provided target constants** — a fixed set of built-in compile-time values the compiler defines, not user-declared:
+```nanoc
+comptime fn page_count(size: i32, page: i32) -> i32 {
+    return (size + page - 1) / page;
+}
+
+constexpr PAGES: i32 = page_count(65536, 4096);  // evaluated at compile time → 16
+var buf: ptr = malloc(page_count(n, 4096));        // called normally at runtime
+```
+
+`comptime` and `inline` are orthogonal: `comptime inline fn` is evaluated at compile time
+in constexpr/comptime-if contexts and always inlined at runtime call sites.
+
+**`comptime fn` sema restrictions:**
+- May only call other `comptime` functions — no runtime-only calls, no `syscall`
+- Parameters must be `constexpr`-typed when called from a comptime context
+- No `undefined` or `zeroed` local initialisers — every value must be statically known
+- No `while` loops initially — termination cannot be proved; relax later if needed
+- No global mutable state access
+
+**`constexpr` initialiser rule:** must be a *constexpr expression* — a literal, a
+`constexpr` binding, or a call to a `comptime fn` with `constexpr` arguments. Sema error
+otherwise. `&constexpr_binding` is always a sema error (no storage exists to point at).
+
+**Compiler-provided target constants** — always `constexpr`, defined by the compiler:
 
 ```
 ARCH    "riscv64" | "aarch64"
@@ -195,31 +215,31 @@ OS      "linux" | "bare"
 OPT     "debug" | "release"
 ```
 
-**`comptime if`** — follows the same grammar as `if_expr` (mandatory blocks, `else if` chains
-natural). Dead branches are still parsed and type-checked, unlike the C preprocessor.
-May appear at statement level (selecting between declarations) or in expression position
-(selecting between values):
+**`comptime if`** — `comptime` keyword preceding an `if_expr`. The condition must be a
+constexpr expression. Dead branches are still parsed and type-checked (unlike the C
+preprocessor). May appear at statement level or in expression position:
 
 ```nanoc
-(* statement level — selects between function definitions *)
+// statement level — selects between function definitions
 comptime if (ARCH == "riscv64") {
     fn flush_icache() { fence_i(); }
 } else {
     fn flush_icache() { isb(); }
 }
 
-(* expression level — selects a constant value *)
-const PAGE_SIZE: i32 = comptime if (ARCH == "riscv64") { 4096 } else { 65536 };
+// expression level — selects a compile-time value
+constexpr PAGE_SIZE: i32 = comptime if (ARCH == "riscv64") { 4096 } else { 65536 };
 ```
 
-Scoping rules for symbols declared inside a `comptime if` block (statement level) are an
-unresolved sub-question.
+`comptime` does not apply to arbitrary expressions (unlike Zig). Compile-time evaluation
+only occurs in `constexpr` initialisers and `comptime if` conditions.
 
 #### Open sub-questions
 
-- Do symbols declared inside a `comptime if` block escape into the enclosing scope?
-- Can `comptime if` nest? Can it appear inside a function body, or only at top level?
-- Is `comptime` a keyword, a sigil (`@if`), or something else?
-- How does this interact with the module system — can imported modules carry comptime conditions?
+- Do symbols declared inside a `comptime if` block (statement level) escape into the
+  enclosing scope?
+- Can `comptime if` appear inside a function body, or only at top level?
+- Can `comptime fn` contain `if/else` expressions? (Yes, probably — they are pure.)
+- How does this interact with the module system?
 
-**Current status:** Not implemented. Blocked on resolving `const` semantics first.
+**Current status:** Not implemented. Design settled; implementation deferred post-MVP.

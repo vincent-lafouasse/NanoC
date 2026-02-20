@@ -5,10 +5,14 @@
 Full grammar: `spec/grammar.ebnf`. Key productions:
 
 ```ebnf
-(* const requires an expression initializer — zeroed/undefined are sema errors *)
-const_decl = "const" variable_name ":" type "=" expression ";" ;
-var_decl   = "var"   variable_name ":" type "=" var_init ";" ;
-var_init   = expression | "zeroed" | "undefined" ;
+var_decl       = "var"       variable_name ":" type "=" var_init   ";" ;
+const_decl     = "const"     variable_name ":" type "=" expression ";" ;
+constexpr_decl = "constexpr" variable_name ":" type "=" expression ";" ;
+var_init       = expression | "zeroed" | "undefined" ;
+(* const:     immutable, stored, runtime — zeroed/undefined are sema errors  *)
+(* constexpr: folded, not stored, not addressable — initialiser must be      *)
+(*            a constexpr expression (literal / constexpr binding / comptime  *)
+(*            fn call with constexpr args) — sema-checked, not grammar       *)
 
 (* blocks and if/else are expressions; their type is their final expression's type,
  * or unit if the block ends with ";" or is empty                               *)

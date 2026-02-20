@@ -153,38 +153,36 @@
 
    **Status:** Proposed, not yet implemented
 
-7. **`const` semantics: runtime-immutable or compile-time constant?**
+7. ~~**`const` semantics: runtime-immutable or compile-time constant?**~~ **SETTLED**
 
-   NanoC currently uses `const` for local immutable bindings whose values are determined at runtime:
+   **Decision:** Three distinct binding keywords, three distinct semantics:
 
    ```nanoc
-   fn sqrt_q6(n: i32) -> i32 {
-       const scaled: i32 = n << 12;  // depends on argument — clearly runtime
-       ...
-   }
+   var   x: i32 = compute();    // mutable, stored, addressable
+   const x: i32 = compute();    // immutable, stored, addressable — runtime value, never folded
+   constexpr x: i32 = 67;       // immutable, folded, NOT addressable — must be compile-time known
    ```
 
-   But `const` is also the natural keyword for values the compiler must know at compile time (array sizes, `comptime if` conditions, target constants). These are fundamentally different things.
+   `const` is a storage qualifier — an immutable binding with a runtime value. It lives in a
+   register or stack slot like `var`, the compiler just rejects writes after initialisation.
+   It is never folded or inlined.
 
-   **Option A: `const` = runtime-immutable only**
-   - Current behaviour. Simple, consistent.
-   - Compile-time constants need a separate mechanism (`comptime`, `static`, or built-in magic constants).
-   - `var` = mutable, `const` = immutable, `comptime` = known at compile time.
+   `constexpr` is a value property — the compiler evaluates the initialiser at compile time
+   and substitutes the result at every use site. No storage is emitted. Taking the address of
+   a `constexpr` binding is a sema error (nothing to point at).
 
-   **Option B: `const` = compile-time constant only**
-   - Requires a different keyword for runtime-immutable bindings (`let`, `val`, `imm`…).
-   - Breaks the current feel of `const scaled: i32 = n << 12`.
-   - Rust uses this split: `const` is comptime, `let` is runtime (with no mutability by default).
+   A `constexpr` initialiser must be a *constexpr expression*: a literal, another `constexpr`
+   binding, or a call to a `comptime fn` with `constexpr` arguments. Verified by sema.
 
-   **Option C: `const` is context-sensitive**
-   - Compiler infers comptime vs runtime from the initialiser.
-   - If the initialiser is a comptime expression → comptime constant.
-   - Otherwise → runtime-immutable binding.
-   - Same keyword, different semantics depending on context. Simpler syntax, harder to reason about.
+   `comptime` is a function specifier (see §future-work/comptime). A `comptime fn` can be
+   evaluated by the compiler when its call site is a constexpr context; it is called normally
+   at runtime otherwise. `comptime` and `inline` are orthogonal:
 
-   **Interaction with `comptime if`:** if `const` stays runtime-immutable, then platform-conditional constants can't use `const` directly and need either a new keyword or magic compiler-provided values (`ARCH`, `OS`, `DEBUG`).
-
-   **Current leaning:** Option A — keep `const` as runtime-immutable, introduce explicit `comptime` only when conditional compilation is actually implemented, and rely on compiler-provided built-in constants for target discrimination in the meantime.
+   | specifier | compile-time | runtime |
+   |---|---|---|
+   | `comptime fn` | evaluated by compiler | regular call |
+   | `inline fn` | — | always inlined |
+   | `comptime inline fn` | evaluated by compiler | always inlined |
 
 8. ~~**Blocks as initializer expressions, and/or `if/else` as expressions?**~~ **SETTLED**
 
@@ -290,13 +288,17 @@
    and may only appear in statement position (value discarded). The type checker enforces this.
    `if/else` with matching branch types produces that type as a value.
 
-   A **never/bottom type** for diverging branches — `return`, `goto`, `unreachable` inside an
-   expression branch never produce a value and must unify with any type:
+   A **never/bottom type** for diverging expressions — `return` and `unreachable` in
+   expression context have type `never`, which unifies with any type:
    ```nanoc
    const x: i32 = if (cond) { 42 } else { return -1; };
    //                                      ^^^^^^^^^^
    //                                      type: never — unifies with i32, accepted
    ```
+   `goto` is excluded from expression position (statement only) — allowing `goto` inside an
+   initializer expression is a footgun since the label target may be in a scope where the
+   partially-initialized binding is visible. `return` and `unreachable` are safe because they
+   exit the function entirely.
    The never type need not be user-facing syntax; it is an internal type checker concept.
 
    **The semicolon rule becomes universal:** `{ stmts; expr }` produces `expr` as the block

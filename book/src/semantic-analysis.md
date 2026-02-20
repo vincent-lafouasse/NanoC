@@ -131,9 +131,7 @@ Not lvalues:
 These depend on open design questions or design decisions not yet made. Noted here so they
 are not forgotten.
 
-#### Depends on open question §8 — blocks and `if/else` as expressions
-
-If `if/else` and blocks become expressions (current leaning: yes):
+#### Blocks and `if/else` as expressions (open question §8, settled)
 
 - **Branch type agreement:** both branches of an `if/else` expression must produce the same
   type. A mismatch is a type error.
@@ -149,12 +147,18 @@ If `if/else` and blocks become expressions (current leaning: yes):
   ending with a statement (semicoloned expression or any other statement) has type `unit`.
 - **Unit in value position:** using a `unit`-typed expression where a concrete type is
   expected is a type error.
-- **Never type:** `return`, `goto`, and `unreachable` inside an expression context have type
-  `never` (bottom type). `never` unifies with any type, allowing:
+- **Never type:** `unreachable` is an expression of type `never`. `return` is a statement,
+  but a block whose last statement is `return` also has type `never`. Both unify with any
+  type, enabling early exits from within initializer expressions:
   ```nanoc
-  const x: i32 = if (cond) { 42 } else { return -1; };  // ✅ never unifies with i32
+  const x: i32 = if (cond) { 42 } else { return -1; };   // ✅ block type is never
+  const y: i32 = if (cond) { 42 } else { unreachable };  // ✅ unreachable type is never
   ```
-  This type is internal to the checker and need not be writable by users.
+  `goto` is **statement-only** and is additionally forbidden as the diverging branch of an
+  initializer expression. Unlike `return` and `unreachable`, `goto` jumps to a label within
+  the same function — the label target may be in a scope where the partially-initialized
+  binding is visible, which is the "goto past declaration" hazard triggered from the inside.
+  The never type is internal to the checker and need not be writable by users.
 
 #### Depends on unit-returning function syntax
 
