@@ -3,3 +3,4 @@ local*
 
 # mdbook generated output
 /book/book/
+.DS_Store
