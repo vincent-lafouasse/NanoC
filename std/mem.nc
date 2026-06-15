@@ -10,7 +10,6 @@ fn memcpy(dest: u8*, src: u8*, n: u32) {
 }
 
 fn memcmp(a: u8*, b: u8*, n: u32) -> i32 {
-{
     var i: u32 = 0;
     var diff: i32 = undefined;
 
