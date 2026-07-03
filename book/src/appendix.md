@@ -6,32 +6,35 @@ Full grammar: `spec/grammar.ebnf`. Key productions:
 
 ```ebnf
 var_decl       = "var"       variable_name ":" type "=" var_init   ";" ;
-const_decl     = "const"     variable_name ":" type "=" expression ";" ;
 constexpr_decl = "constexpr" variable_name ":" type "=" expression ";" ;
 var_init       = expression | "zeroed" | "undefined" ;
-(* const:     immutable, stored, runtime — zeroed/undefined are sema errors  *)
-(* constexpr: folded, not stored, not addressable — initialiser must be      *)
-(*            a constexpr expression (literal / constexpr binding / comptime  *)
-(*            fn call with constexpr args) — sema-checked, not grammar       *)
+(* no runtime const — var is the only runtime binding                         *)
+(* constexpr: folded, not stored, not addressable, initialiser must be a      *)
+(*            constexpr expression — sema-checked, not grammar                *)
 
-(* blocks and if/else are expressions; their type is their final expression's type,
- * or unit if the block ends with ";" or is empty                               *)
-block   = "{" statement* expression? "}" ;
-if_expr = "if" "(" expression ")" block ("else" (if_expr | block))? ;
+(* all var/constexpr declarations precede all statements within a block *)
+block = "{" (var_decl | constexpr_decl)* statement* "}" ;
+
+(* blocks are statement containers — no value, no trailing expression *)
+block   = "{" statement* "}" ;
+if_stmt = "if" "(" expression ")" block ("else" (if_stmt | block))? ;
 
 (* bodies of if/while MUST be blocks — bare expressions are a parse error        *)
 statement = const_decl
           | var_decl
-          | lvalue "=" expression ";"    (* assignment: statement only *)
+          | constexpr_decl
+          | lvalue "=" expression ";"    (* assignment *)
           | call_expr ";"               (* expression statement: calls/syscalls only *)
           | "return" expression? ";"
-          | if_expr                     (* no trailing ";" needed *)
+          | if_stmt
           | "while" "(" expression ")" block
           | "goto" label_name ";"
+          | "unreachable" ";"
           | label_name ":" statement
           ;
 
-expression = block | if_expr | pratt_expr ;
+(* expressions compute values — blocks and if/else are NOT expressions *)
+expression = pratt_expr ;
 ```
 
 ### References

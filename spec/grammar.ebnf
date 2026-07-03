@@ -9,7 +9,6 @@ program        = top_level_item* ;
 
 top_level_item = struct_decl
                | var_decl
-               | const_decl
                | constexpr_decl
                | function_decl
                | extern_decl
@@ -59,63 +58,51 @@ extern_decl = "extern" (STRING_LITERAL "as")? "fn" variable_name
 
 (* ─── Variable declarations ─────────────────────────────────────────────── *)
 
-(* var: mutable, stored, addressable *)
+(* var: the only runtime variable. mutable, stored, addressable.
+ * Must appear at the top of its enclosing block, before any statements.      *)
 var_decl   = "var" variable_name ":" type "=" var_init ";" ;
 var_init   = expression | "zeroed" | "undefined" ;
 
-(* const: immutable, stored, addressable — runtime value, never folded.
- * "zeroed" and "undefined" are sema errors on const.                         *)
-const_decl = "const" variable_name ":" type "=" expression ";" ;
-
-(* constexpr: immutable, NOT stored, NOT addressable — compile-time only.
- * The initialiser must be a constexpr expression (sema-checked, not grammar). *)
+(* constexpr: compile-time constant. NOT stored, NOT addressable.
+ * Folded at every use site. Initialiser must be a constexpr expression.
+ * May appear at top-level or at the top of a block (before statements).      *)
 constexpr_decl = "constexpr" variable_name ":" type "=" expression ";" ;
 
 (* ─── Statements ─────────────────────────────────────────────────────────── *)
 
-statement = var_decl
-          | const_decl
-          | constexpr_decl
-          | lvalue "=" expression ";"        (* assignment is a statement, not an expression *)
-          | call_expr ";"                    (* expression statement: calls and syscalls only *)
+(* Statements follow all declarations in a block. var/constexpr are NOT valid
+ * mid-block — they belong in the declaration section at the top.              *)
+statement = lvalue "=" expression ";"        (* assignment *)
+          | call_expr ";"                    (* calls and syscalls only *)
           | "return" expression? ";"
-          | if_expr                          (* if is an expression; used as statement here — no trailing ";" *)
-          | comptime_if                      (* compile-time conditional — condition must be constexpr *)
+          | if_stmt
+          | comptime_if
           | "while" "(" expression ")" block
           | "goto" label_name ";"
+          | "unreachable" ";"
           | label_name ":" statement
           ;
 
 (* ─── Blocks ─────────────────────────────────────────────────────────────── *)
 
-(* A block is always an expression.
- * Its value is the final expression if present (no trailing ";"), else unit.
- *
- *   { stmt; stmt; expr }    -- type is typeof(expr)
- *   { stmt; stmt; expr; }   -- type is unit (the trailing ";" discards the value)
- *   { stmt; stmt; }         -- type is unit
- *   { }                     -- type is unit                                     *)
-block = "{" statement* expression? "}" ;
+(* A block is a scoped sequence of declarations followed by statements.
+ * All var/constexpr declarations MUST precede all statements within a block.
+ * This rule ensures goto can never jump past an initialisation.               *)
+block = "{" (var_decl | constexpr_decl)* statement* "}" ;
 
-(* ─── if expressions ─────────────────────────────────────────────────────── *)
+(* ─── if statement ───────────────────────────────────────────────────────── *)
 
-(* if/else is always an expression.
- * Bodies MUST be blocks — bare expressions as bodies are a parse error.
- * "else if" is naturally "else" followed by a new if_expr: no special syntax.
- *
- * Type rules (enforced by sema):
- *   if without else            -- type is unit; error in value position
- *   if/else, branches agree    -- type is the shared branch type
- *   if/else, one branch never  -- type is the other branch's type            *)
-if_expr = "if" "(" expression ")" block ("else" (if_expr | block))? ;
+(* if/else is a statement, not an expression. Bodies MUST be blocks.
+ * "else if" is naturally "else" followed by a new if_stmt: no special syntax. *)
+if_stmt = "if" "(" expression ")" block ("else" (if_stmt | block))? ;
 
 (* ─── comptime if ───────────────────────────────────────────────────────── *)
 
-(* comptime if follows the same shape as if_expr but the condition must be a
+(* comptime if follows the same shape as if_stmt but the condition must be a
  * constexpr expression (sema check, not grammar).
  * Dead branches are parsed and type-checked; only the live branch is emitted.
  * comptime does NOT apply to arbitrary expressions — only to if.             *)
-comptime_if = "comptime" if_expr ;
+comptime_if = "comptime" if_stmt ;
 
 (* ─── Lvalues ────────────────────────────────────────────────────────────── *)
 
@@ -127,11 +114,8 @@ lvalue = expression ;
 
 (* ─── Expressions ────────────────────────────────────────────────────────── *)
 
-(* All of the following are expressions and may appear wherever a value is needed. *)
-expression = block
-           | if_expr
-           | pratt_expr
-           ;
+(* Expressions compute values. Blocks and if/else are statements, not expressions. *)
+expression = pratt_expr ;
 
 (* Pratt-parsed sub-expressions.
  * Precedence table, low to high:
@@ -163,25 +147,11 @@ atom = INTEGER_LITERAL
      | "(" expression ")"
      | call_expr
      | syscall_expr
-     | "unreachable"           (* type: never — traps in debug builds, UB in release *)
      ;
 
-(* DIVERGING EXPRESSIONS — type: never
- *
- * "unreachable" is the only diverging atom. Its never type unifies with any branch type:
- *
- *   const x: i32 = if (cond) { 42 } else { unreachable };  -- ✅
- *
- * "return" is a STATEMENT (see above), not an expression atom. However, the type checker
- * treats a block whose last statement is "return" as having type "never", producing the
- * same effect:
- *
- *   const x: i32 = if (cond) { 42 } else { return -1; };   -- ✅ block type is never
- *
- * "goto" is also a statement only and is additionally forbidden inside initializer
- * expressions. Unlike return/unreachable, goto jumps to a label within the same function,
- * and the label target may be in a scope where the partially-initialized binding is
- * visible. This is the classic "goto past declaration" hazard, but from the inside.     *)
+(* NanoC is statement-oriented. Blocks and if/else are statements, not expressions.
+ * return, goto, and unreachable are statements. There is no "never" type in expression
+ * context. Expressions compute values; control flow is handled by statements.           *)
 
 call_expr   = expression "(" (expression ("," expression)*)? ")" ;
 syscall_expr = "syscall" "(" expression ("," expression)* ")" ;
