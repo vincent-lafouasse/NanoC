@@ -1,5 +1,6 @@
 /target
 local*
+**/_build
 
 # mdbook generated output
 /book/book/
