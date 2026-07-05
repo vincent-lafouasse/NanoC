@@ -35,10 +35,6 @@ These are required regardless of any open design questions.
   enclosing function.
 
 #### Declaration checks
-
-- **`const` with `undefined` initializer:** `const x: i32 = undefined` is a semantic error.
-  `const` always requires a proper expression initializer. Only `var` may use `undefined` or
-  `zeroed`.
 - **Struct passed by value:** a function parameter or return type that is a bare struct type
   (not a pointer) is an error. All struct access must go through pointers.
   ```nanoc
@@ -90,8 +86,13 @@ These are required regardless of any open design questions.
 - `return expr` in a unit-returning function is an error.
 
 **`if`/`while` condition:**
-- The condition expression must be an integer type. (Pointers in conditions are not
-  implicitly converted — compare explicitly against `zeroed` or a sentinel.)
+- The condition must have a register-sized type: `u8`, `i32`, `u32`, or any pointer.
+  Structs are not valid conditions — they don't fit in a register.
+- The value is loaded into a register and the branch tests it against zero (`BEQ`/`BNE`
+  with `x0`). This is not a type conversion — it is what the load instruction does.
+  `u8` is zero-extended; `i32`/`u32` fill the register directly; pointers are
+  register-sized natively.
+- `if (ptr)` is a valid null check at zero cost — no explicit `!= zeroed` required.
 
 **`syscall` arguments:**
 - The syscall number (first argument) must be an integer type.
@@ -114,13 +115,18 @@ Not lvalues:
 
 #### Control flow checks
 
-- **`goto` past a declaration:** a `goto` whose target label appears before a variable
-  declaration in the same scope is an error. (Open question §1 — current leaning: static
-  error rather than re-execution.)
+- **`goto` into a nested block:** a `goto` whose target label is inside a nested block
+  (inner `{ }`) is an error. Since all declarations precede all statements within every
+  block, a `goto` within the same scope or to an outer scope can never skip an
+  initialisation. Only jumping *into* a nested scope is hazardous (it bypasses that
+  scope's declaration section).
   ```nanoc
-  here:
-      var x: i32 = 3;
-      goto here;   // ❌ jumps backward past declaration of x
+  goto inner;         // ❌ jumps into nested block, skipping its declarations
+  if (cond) {
+      var x: i32 = 0;
+  inner:
+      return x;
+  }
   ```
 - **`return` type mismatch:** covered under type checks above.
 
@@ -131,34 +137,13 @@ Not lvalues:
 These depend on open design questions or design decisions not yet made. Noted here so they
 are not forgotten.
 
-#### Blocks and `if/else` as expressions (open question §8, settled)
+#### Statement orientation (open question §8, settled)
 
-- **Branch type agreement:** both branches of an `if/else` expression must produce the same
-  type. A mismatch is a type error.
-  ```nanoc
-  const x: i32 = if (cond) { 42 } else { some_ptr };  // ❌ i32 vs ptr
-  ```
-- **`if` without `else` in value position:** a bare `if` has type `unit` and cannot appear
-  where a value is required.
-  ```nanoc
-  const x: i32 = if (cond) { 42 };  // ❌ unit where i32 expected
-  ```
-- **Block type:** a block's type is the type of its last expression (no semicolon). A block
-  ending with a statement (semicoloned expression or any other statement) has type `unit`.
-- **Unit in value position:** using a `unit`-typed expression where a concrete type is
-  expected is a type error.
-- **Never type:** `unreachable` is an expression of type `never`. `return` is a statement,
-  but a block whose last statement is `return` also has type `never`. Both unify with any
-  type, enabling early exits from within initializer expressions:
-  ```nanoc
-  const x: i32 = if (cond) { 42 } else { return -1; };   // ✅ block type is never
-  const y: i32 = if (cond) { 42 } else { unreachable };  // ✅ unreachable type is never
-  ```
-  `goto` is **statement-only** and is additionally forbidden as the diverging branch of an
-  initializer expression. Unlike `return` and `unreachable`, `goto` jumps to a label within
-  the same function — the label target may be in a scope where the partially-initialized
-  binding is visible, which is the "goto past declaration" hazard triggered from the inside.
-  The never type is internal to the checker and need not be writable by users.
+NanoC is statement-oriented. Blocks are statement containers with no value. `if/else` and
+`while` are statements. Expressions compute values; they do not contain control flow.
+
+No `unit` or `never` types are needed in expression context. `return`, `goto`, and
+`unreachable` are statements only — they cannot appear inside an expression.
 
 #### Depends on unit-returning function syntax
 

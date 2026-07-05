@@ -37,20 +37,46 @@ fn process(p: Point) { ... }   // ❌ Compile error
 
 ### Variables and Initialization
 
+#### One binding keyword: `var`
+
+There is no `const` keyword for runtime bindings. `var` is the only way to declare a
+variable. Immutability is a convention enforced by the programmer, not the compiler — the
+same way C was before `const` existed. There is no compile-time enforcement of read-only
+access to runtime variables.
+
+Compile-time constants use `constexpr` and are a separate concept (see Future Work).
+
 #### Mandatory Initialization
 Every variable MUST have an initializer:
 
 ```nanoc
-var x: i32 = 10;           // Expression initializer
-var buffer: u8* = zeroed;  // Zero initialization
-var temp: i32 = undefined; // Uninitialized (danger!)
+var x: i32 = 10;           // expression initializer
+var buffer: u8* = zeroed;  // zero-initialised
+var temp: i32 = undefined; // explicitly uninitialised (danger!)
 ```
 
-**Design Decision:** No uninitialized-by-default variables. Forces programmers to think about initialization.
+**Design Decision:** No uninitialized-by-default variables. Forces explicit acknowledgement
+of uninitialized state. The `undefined` keyword makes the hazard visible rather than silent.
 
-The `undefined` keyword makes undefined behavior explicit rather than accidental.
+#### Declarations at the top of scope
 
-**Rule:** `nanoconst` variables cannot use `undefined` (checked at compile time).
+All `var` (and `constexpr`) declarations in a block must precede all statements. Interleaving
+declarations and statements is a parse error:
+
+```nanoc
+fn example() {
+    var x: i32 = 10;    // ✅ declaration section
+    var y: i32 = 20;    // ✅
+    x = x + y;          // ✅ statement section
+    var z: i32 = 0;     // ❌ parse error — declaration after statement
+}
+```
+
+**Rationale:** This rule eliminates the `goto`-past-declaration hazard entirely. If all
+declarations are at the top of a scope and all labels are in the statement section, no
+`goto` within that scope can ever skip an initialisation. The `goto` analysis simplifies
+from "did this jump cross a declaration?" to "does this jump target a label inside a nested
+block?" — a much cheaper check.
 
 ### Control Flow
 
@@ -59,25 +85,43 @@ The `undefined` keyword makes undefined behavior explicit rather than accidental
 - `while` - loops
 - `goto`/labels - arbitrary jumps
 
-**No `break` or `nanocontinue` keywords.**
+**No `break` or `continue` keywords.**
+
+#### Condition types
+
+An `if` or `while` condition must be a register-sized expression: `u8`, `i32`, `u32`, or
+any pointer. Structs are not valid conditions.
+
+The condition compiles to a register load followed by a branch-if-zero or
+branch-if-not-zero instruction (`BEQ`/`BNE` against `x0`). No separate boolean type or
+implicit boolean conversion exists — the hardware already does it. Smaller types (`u8`)
+are zero-extended by the load; pointers are register-sized natively.
+
+```nanoc
+if (x)    { ... }  // ✅ i32 — non-zero is true
+if (ptr)  { ... }  // ✅ pointer — non-null is true
+if (node) { ... }  // ✅ pointer — non-null check, zero cost
+```
 
 #### Mandatory braces
 
-The body of `if`, `else`, and `while` must always be a block — bare expressions are not
-allowed as bodies:
+The then-clause of `if` and the body of `while` must always be a block. The else-clause
+may be either a block or another `if` statement — the minimal exception needed for
+`else if` chains:
 
 ```nanoc
-if (cond) { x }        // ✅
-if (cond) x            // ❌ parse error — body must be a block
-while (cond) { ... }   // ✅
-while (cond) stmt;     // ❌ parse error
+if (cond) { x = 1; }         // ✅ then-clause is a block
+if (cond) x = 1;             // ❌ parse error — then-clause must be a block
+while (cond) { ... }         // ✅
+while (cond) stmt;           // ❌ parse error
+if (a) { } else { }         // ✅ else-clause is a block
+if (a) { } else if (b) { }  // ✅ else-clause is another if — chaining
+if (a) { } else x = 1;      // ❌ parse error — else-clause must be block or if
 ```
 
-**Rationale:** This is a language rule, not a style preference. It eliminates the dangling
-`else` ambiguity that requires a special grammar rule in C (`else` binds to the nearest
-unbraced `if`). With mandatory braces the ambiguity cannot arise — the parser never has to
-choose. `else if` chains are naturally expressed as `else` followed by a new `if` expression,
-with no special syntax required:
+**Rationale:** This eliminates the dangling `else` ambiguity entirely. After `else` the
+parser sees either `{` (block) or `if` (chained if) — nothing else is valid, so there is
+nothing to be ambiguous about. `else if` chains require no special syntax:
 
 ```nanoc
 if (x > 0) {
