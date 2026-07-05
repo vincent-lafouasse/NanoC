@@ -1,0 +1,455 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Language Design - NanoC Design Document</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/nanoc-syntax.css">
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html" class="active"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">NanoC Design Document</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/vincent-lafouasse/NanoC" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h2 id="language-design"><a class="header" href="#language-design">Language Design</a></h2>
+<h3 id="type-system"><a class="header" href="#type-system">Type System</a></h3>
+<h4 id="primitive-types"><a class="header" href="#primitive-types">Primitive Types</a></h4>
+<ul>
+<li><code>u8</code> - unsigned 8-bit integer</li>
+<li><code>i32</code> - signed 32-bit integer</li>
+<li><code>u32</code> - unsigned 32-bit integer</li>
+<li><code>ptr</code> - opaque pointer (raw address)</li>
+</ul>
+<p><strong>Design Decision:</strong> No floating point. NanoC targets systems programming where explicit integer operations are preferred.</p>
+<h4 id="pointers"><a class="header" href="#pointers">Pointers</a></h4>
+<p>Syntax: <code>i32*</code>, <code>Point**</code>, <code>u8***</code></p>
+<h4 id="structs"><a class="header" href="#structs">Structs</a></h4>
+<pre><code class="language-nanoc">struct Point {
+    x: i32,
+    y: i32,
+}
+</code></pre>
+<p>Structs define aggregate types. Fields must end with commas (even the last one) for grammar simplicity.</p>
+<p><strong>Critical Rule: Structs are NEVER passed by value.</strong></p>
+<ul>
+<li>Keeps calling convention simple</li>
+<li>Makes memory semantics visible</li>
+<li>Avoids hidden copies</li>
+<li>Eliminates ABI complexity</li>
+</ul>
+<pre><code class="language-nanoc">fn process(p: Point*) { ... }  // ✅ Correct
+fn process(p: Point) { ... }   // ❌ Compile error
+</code></pre>
+<h3 id="variables-and-initialization"><a class="header" href="#variables-and-initialization">Variables and Initialization</a></h3>
+<h4 id="mandatory-initialization"><a class="header" href="#mandatory-initialization">Mandatory Initialization</a></h4>
+<p>Every variable MUST have an initializer:</p>
+<pre><code class="language-nanoc">var x: i32 = 10;           // Expression initializer
+var buffer: u8* = zeroed;  // Zero initialization
+var temp: i32 = undefined; // Uninitialized (danger!)
+</code></pre>
+<p><strong>Design Decision:</strong> No uninitialized-by-default variables. Forces programmers to think about initialization.</p>
+<p>The <code>undefined</code> keyword makes undefined behavior explicit rather than accidental.</p>
+<p><strong>Rule:</strong> <code>nanoconst</code> variables cannot use <code>undefined</code> (checked at compile time).</p>
+<h3 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h3>
+<h4 id="structured-control"><a class="header" href="#structured-control">Structured Control</a></h4>
+<ul>
+<li><code>if</code>/<code>else</code> - conditional execution</li>
+<li><code>while</code> - loops</li>
+<li><code>goto</code>/labels - arbitrary jumps</li>
+</ul>
+<p><strong>No <code>break</code> or <code>nanocontinue</code> keywords.</strong></p>
+<p><strong>Rationale:</strong> These are redundant with <code>goto</code>. In nested loops, <code>break</code> is ambiguous about which loop to exit. <code>goto</code> is explicit:</p>
+<pre><code class="language-nanoc">while (x &gt; 0) {
+    while (y &gt; 0) {
+        if (done) goto cleanup;  // Clear intent
+    }
+}
+cleanup:
+</code></pre>
+<h4 id="expression-statements"><a class="header" href="#expression-statements">Expression Statements</a></h4>
+<p>Only function calls and syscalls are allowed as expression statements. Arbitrary expressions like <code>f() + g();</code> or <code>x * 2;</code> are rejected at parse time — the outermost expression of an expression statement must be a <code>nanocall</code> or <code>Syscall</code>.</p>
+<pre><code class="language-nanoc">my_func(a, b);                        // ✅ direct call
+my_interface-&gt;vtable[5](args);        // ✅ complex call expression, but outermost is still a call
+syscall(93, 0);                       // ✅ syscall
+f() + g();                            // ❌ parse error: not a call
+x * 2;                                // ❌ parse error: not a call
+</code></pre>
+<p><strong>Rationale:</strong> An expression statement that isn't a call is almost always a bug — the result is discarded. If two functions have side effects, call them separately: <code>f(); g();</code>. This catches mistakes like writing <code>a == b;</code> when you meant <code>a = b;</code> without needing a separate lint pass.</p>
+<h4 id="goto-restrictions"><a class="header" href="#goto-restrictions">Goto Restrictions</a></h4>
+<p><strong>Open Design Question:</strong> Should we allow backward jumps past variable declarations?</p>
+<pre><code class="language-nanoc">here:
+    var x: i32 = 3;  // What happens on second iteration?
+    goto here;
+</code></pre>
+<p>C allows this (re-executes initialization). We should either:</p>
+<ol>
+<li>Allow it (match C behavior)</li>
+<li>Static error (prevent confusion)</li>
+<li>Require declarations before labels in each scope</li>
+</ol>
+<p><strong>Current leaning:</strong> Static error for backward jumps past declarations.</p>
+<h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
+<h4 id="signature-restrictions"><a class="header" href="#signature-restrictions">Signature Restrictions</a></h4>
+<pre><code class="language-nanoc">fn add(a: i32, b: i32) -&gt; i32 { ... }
+</code></pre>
+<p><strong>Arguments:</strong> Must be <code>register_sized</code> (primitives or pointers)
+<strong>Return values:</strong> Currently allows any <code>type</code>, but should be restricted to <code>register_sized</code> for consistency</p>
+<p><strong>Why register-sized only?</strong></p>
+<ul>
+<li>Simple calling convention</li>
+<li>Predictable register usage (a0-a7 for args, a0-a1 for return)</li>
+<li>No stack-spilling complexity</li>
+<li>Makes ABI trivial</li>
+</ul>
+<h4 id="multi-value-returns"><a class="header" href="#multi-value-returns">Multi-Value Returns</a></h4>
+<p><strong>Open Design Question:</strong> How to use both return registers (a0, a1)?</p>
+<p><strong>Option 1: Tuple returns</strong> (simple, minimal)</p>
+<pre><code class="language-nanoc">fn divmod(a: i32, b: i32) -&gt; (i32, i32) {
+    return (a / b, a % b);
+}
+
+var quot: i32;
+var rem: i32;
+(quot, rem) = divmod(10, 3);
+</code></pre>
+<p>**Option 2: Some kind of zig style error ** (could be cool but useless without some kind of <code>try</code> mechanics)</p>
+<pre><code class="language-nanoc">fn can_fail() -&gt; (x: i32, Error) {
+    try can_also_fail(x);
+
+    if (x == 0) {
+        return Err(my_error(x));
+    }
+
+    return Ok(x);
+}
+</code></pre>
+<p><strong>Current status:</strong> Not yet decided. Tuple syntax is cleaner and maps directly to registers.</p>
+<h3 id="operators"><a class="header" href="#operators">Operators</a></h3>
+<p>All standard C operators with standard precedence:</p>
+<ul>
+<li>Arithmetic: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code></li>
+<li>Bitwise: <code>&amp;</code>, <code>|</code>, <code>^</code>, <code>~</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code></li>
+<li>Comparison: <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code></li>
+<li>Logical: <code>&amp;&amp;</code>, <code>||</code>, <code>!</code></li>
+<li>Pointer: <code>&amp;</code> (address-of), <code>*</code> (deref), <code>-&gt;</code> (field access)</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>None = 0       // Entry point
+Assignment = 1 // =
+LogicalOr = 2  // ||
+LogicalAnd = 3 // &amp;&amp;
+BitwiseOr = 4  // |
+BitwiseXor = 5 // ^
+BitwiseAnd = 6 // &amp;
+Equality = 7   // == !=
+Comparison = 8 // &lt; &gt; &lt;= &gt;=
+Shift = 9      // &lt;&lt; &gt;&gt;
+Term = 10      // + -
+Factor = 11    // * / %
+Unary = 12     // ! ~ - &amp;
+Postfix = 13   // -&gt; . [] ()
+<span class="boring">}</span></code></pre></pre>
+<p><strong>No operator overloading.</strong> Each operator has exactly one meaning.</p>
+<h4 id="array-indexing"><a class="header" href="#array-indexing">Array Indexing</a></h4>
+<p><code>lhs[rhs]</code> always means: index the array or pointer <code>lhs</code> by <code>rhs</code>. The left operand must be the pointer or array type.</p>
+<p><strong>Design Decision:</strong> <code>int[pointer]</code> is not allowed.</p>
+<p>In C, <code>a[i]</code> is defined as <code>*(a + i)</code>, so <code>i[a]</code> is technically valid since addition is commutative. NanoC does not inherit this — <code>[]</code> is an indexing operation, not pointer arithmetic sugar.</p>
+<pre><code class="language-nanoc">arr[i]   // ✅ pointer/array on the left
+i[arr]   // ❌ compile error: left operand of [] must be a pointer or array
+</code></pre>
+<p><strong>Rationale:</strong> The symmetry in C is an accidental consequence of the <code>*(a+i)</code> expansion, not a deliberate feature. It serves no practical purpose and makes type-checking more complex (both sides must be considered as potential pointer). Requiring the pointer on the left makes intent unambiguous and the type rule simple: the left operand is indexed, the right operand is the index.</p>
+<h3 id="defined-behavior-c-undefined-behavior"><a class="header" href="#defined-behavior-c-undefined-behavior">Defined Behavior (C Undefined Behavior)</a></h3>
+<p>NanoC makes several behaviors well-defined that C leaves undefined or implementation-defined. This makes code more predictable and easier to reason about.</p>
+<p><strong>Quick Reference:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Behavior</th><th>C</th><th>NanoC</th></tr></thead><tbody>
+<tr><td>Signed overflow</td><td>UB</td><td>Two's complement wrap</td></tr>
+<tr><td>Division by zero</td><td>UB</td><td>UB (same as C)</td></tr>
+<tr><td>Signed right shift</td><td>ID</td><td>Arithmetic shift</td></tr>
+<tr><td>Left shift negative</td><td>UB</td><td>Bitwise operation</td></tr>
+<tr><td>Evaluation order</td><td>US</td><td>Left-to-right</td></tr>
+<tr><td>Uninitialized vars</td><td>UB</td><td>UB (explicit with <code>undefined</code>)</td></tr>
+<tr><td>Array out-of-bounds</td><td>UB</td><td>UB (same as C)</td></tr>
+<tr><td>Null dereference</td><td>UB</td><td>UB (same as C)</td></tr>
+</tbody></table>
+</div>
+<p>UB: Undefined Behavior
+ID: Implementation-Defined
+US: Unspecified</p>
+<h4 id="signed-integer-overflow"><a class="header" href="#signed-integer-overflow">Signed Integer Overflow</a></h4>
+<p><strong>C behavior:</strong> Undefined behavior
+<strong>NanoC behavior:</strong> Two's complement wrapping (defined)</p>
+<pre><code class="language-nanoc">const MAX: i32 = 2147483647;
+var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
+</code></pre>
+<p><strong>Rationale:</strong> RISC-V integers are two's complement. Undefined behavior here serves no optimization purpose and makes overflow bugs harder to reason about.</p>
+<h4 id="division-by-zero"><a class="header" href="#division-by-zero">Division by Zero</a></h4>
+<p><strong>C behavior:</strong> Undefined behavior
+<strong>NanoC behavior:</strong> Undefined behavior (same as C)</p>
+<pre><code class="language-nanoc">var x: i32 = 10 / 0;  // UB
+var y: i32 = 10 % 0;  // UB
+</code></pre>
+<p><strong>Rationale:</strong> Integer division by zero is trivially detectable before the operation. Defining a return value would mask bugs rather than expose them. Users should guard explicitly:</p>
+<pre><code class="language-nanoc">if (b != 0) {
+    var result: i32 = a / b;
+}
+</code></pre>
+<h4 id="signed-right-shift"><a class="header" href="#signed-right-shift">Signed Right Shift</a></h4>
+<p><strong>C behavior:</strong> Implementation-defined (arithmetic or logical shift)
+<strong>NanoC behavior:</strong> Arithmetic shift (sign-extends)</p>
+<pre><code class="language-nanoc">var x: i32 = -8 &gt;&gt; 1;  // x = -4 (arithmetic shift, defined)
+</code></pre>
+<p><strong>Rationale:</strong> RISC-V has distinct arithmetic (<code>sra</code>) and logical (<code>srl</code>) shift instructions. We always use arithmetic shift for signed types, logical for unsigned.</p>
+<h4 id="left-shift-of-negative-numbers"><a class="header" href="#left-shift-of-negative-numbers">Left Shift of Negative Numbers</a></h4>
+<p><strong>C behavior:</strong> Undefined behavior
+<strong>NanoC behavior:</strong> Bitwise operation (defined)</p>
+<pre><code class="language-nanoc">var x: i32 = -1 &lt;&lt; 2;  // x = -4 (defined)
+</code></pre>
+<p><strong>Rationale:</strong> Shifts are bitwise operations. The bit pattern shifts left regardless of sign interpretation. Two's complement makes this well-defined.</p>
+<h4 id="evaluation-order"><a class="header" href="#evaluation-order">Evaluation Order</a></h4>
+<p><strong>C behavior:</strong> Unspecified for most operators
+<strong>NanoC behavior:</strong> Left-to-right (defined)</p>
+<pre><code class="language-nanoc">fn side_effect() -&gt; i32 { ... }
+var x: i32 = side_effect() + side_effect();  // left call happens first
+</code></pre>
+<p><strong>Rationale:</strong> Predictable evaluation order makes debugging easier and removes subtle bugs. We always evaluate left operand before right operand.</p>
+<h4 id="out-of-bounds-array-access"><a class="header" href="#out-of-bounds-array-access">Out-of-Bounds Array Access</a></h4>
+<p><strong>C behavior:</strong> Undefined behavior
+<strong>NanoC behavior:</strong> Still undefined behavior (for now)</p>
+<p><strong>Open question:</strong> Should we define this? Options:</p>
+<ol>
+<li>Keep as UB (performance)</li>
+<li>Trap/panic (safety)</li>
+<li>Return zero (defined but dangerous)</li>
+</ol>
+<p><strong>Current decision:</strong> UB (same as C). May add optional bounds checking later.</p>
+<h4 id="null-pointer-dereference"><a class="header" href="#null-pointer-dereference">Null Pointer Dereference</a></h4>
+<p><strong>C behavior:</strong> Undefined behavior
+<strong>NanoC behavior:</strong> Undefined behavior</p>
+<p><strong>Rationale:</strong> Null dereferences cause page faults in hardware. We don't add overhead to check every pointer access. Use explicit checks if needed.</p>
+<h4 id="uninitialized-memory"><a class="header" href="#uninitialized-memory">Uninitialized Memory</a></h4>
+<p><strong>C behavior:</strong> Undefined behavior (implicit)
+<strong>NanoC behavior:</strong> Explicit with <code>undefined</code> keyword</p>
+<pre><code class="language-nanoc">var x: i32 = undefined;  // Explicitly undefined (not implicit!)
+</code></pre>
+<p><strong>Rationale:</strong> While the behavior is still undefined, making it explicit prevents <em>accidental</em> undefined behavior. You must write <code>undefined</code> to opt into UB.</p>
+<hr />
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="philosophy.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="compiler-architecture.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="philosophy.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="compiler-architecture.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/nanoc-highlight.js"></script>
+
+
+    </div>
+    </body>
+</html>

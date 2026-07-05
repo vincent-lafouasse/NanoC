@@ -1,0 +1,377 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Compiler Architecture - NanoC Design Document</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/nanoc-syntax.css">
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "rust";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html" class="active"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">NanoC Design Document</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/vincent-lafouasse/NanoC" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h2 id="compiler-architecture"><a class="header" href="#compiler-architecture">Compiler Architecture</a></h2>
+<h3 id="pipeline-overview"><a class="header" href="#pipeline-overview">Pipeline Overview</a></h3>
+<pre><code>Source (.nc file)
+    ↓
+┌───────────────┐
+│ Lexer         │  ← Tokens with spans (fully implemented)
+└───────────────┘
+    ↓
+┌───────────────┐
+│ Parser        │  ← AST with spans (partially implemented)
+└───────────────┘     - Structs: ✅ done
+    ↓                 - Variables: ✅ done
+┌───────────────┐     - Expressions: 🚧 Pratt parsing TODO
+│ Semantic      │     - Functions: ❌ not started
+│ Analysis      │  ← Type checking, name resolution (not started)
+└───────────────┘
+    ↓
+┌───────────────┐
+│ Code          │  ← RISC-V assembly (not started)
+│ Generation    │
+└───────────────┘
+    ↓
+Assembly (.s file)
+</code></pre>
+<h3 id="error-handling-philosophy"><a class="header" href="#error-handling-philosophy">Error Handling Philosophy</a></h3>
+<p><strong>Errors by stage:</strong></p>
+<ol>
+<li><strong>Lexer:</strong> Fallible - reports character-level errors with spans</li>
+<li><strong>Parser:</strong> Fallible - reports syntax errors with spans</li>
+<li><strong>Semantic Analysis:</strong> Fallible - reports type/scope/flow errors with spans</li>
+<li><strong>Codegen:</strong> Infallible - panics on bugs (ICEs)</li>
+</ol>
+<p>Codegen should NEVER produce user-facing errors.</p>
+<p>If semantic analysis passes, codegen is deterministic translation. Any codegen failure is a compiler bug, not a user error.</p>
+<p><strong>Source Metadata:</strong> Spans (line/column info) are kept through semantic analysis for error reporting, then dropped before/during codegen.</p>
+<h3 id="lexer-details"><a class="header" href="#lexer-details">Lexer Details</a></h3>
+<p><strong>File:</strong> <code>src/lexer.rs</code></p>
+<p>The lexer is complete and well-tested:</p>
+<ul>
+<li>Scans source bytes into tokens</li>
+<li>Tracks spans (position, line, column)</li>
+<li>Binary-search keyword lookup</li>
+<li>Comprehensive error handling</li>
+<li>40+ unit tests</li>
+</ul>
+<p><strong>Invariant:</strong> The <code>KEYWORDS</code> array must be sorted (checked at runtime in constructor).</p>
+<h3 id="parser-details"><a class="header" href="#parser-details">Parser Details</a></h3>
+<p><strong>File:</strong> <code>src/parser.rs</code></p>
+<p><strong>Architecture:</strong> Hybrid approach</p>
+<ul>
+<li><strong>Top-level &amp; statements:</strong> Ad-hoc recursive descent parser</li>
+<li><strong>Expressions:</strong> Pratt parser (operator precedence climbing)</li>
+</ul>
+<p><strong>Rationale:</strong> NanoC's dirt-simple context-free grammar makes recursive descent trivial for most constructs. Only expressions need the sophistication of Pratt parsing to handle precedence and associativity elegantly. No need for a full parser generator when the grammar is this straightforward.</p>
+<p><strong>Current status:</strong></p>
+<ul>
+<li>✅ Type parsing (primitives, pointers, structs)</li>
+<li>✅ Struct declarations</li>
+<li>✅ Variable declarations with <code>zeroed</code>/<code>undefined</code></li>
+<li>🚧 Expression parsing (Pratt algorithm - partial implementation)</li>
+<li>❌ Function declarations</li>
+<li>❌ Statements (if/while/blocks)</li>
+</ul>
+<p><strong>Type Wrappers:</strong></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct TypeName { rc: Rc&lt;[u8]&gt; }
+pub struct VariableName { rc: Rc&lt;[u8]&gt; }
+<span class="boring">}</span></code></pre></pre>
+<p>These provide type safety (can't confuse a type name with a variable name) and convenience methods (<code>as_bytes()</code>, <code>as_str()</code>).</p>
+<h3 id="expression-parsing-pratt-algorithm"><a class="header" href="#expression-parsing-pratt-algorithm">Expression Parsing (Pratt Algorithm)</a></h3>
+<p><strong>Status:</strong> Prepared but not implemented</p>
+<p><strong>Precedence levels:</strong></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>None = 0       // Entry point
+Assignment = 1 // =
+LogicalOr = 2  // ||
+LogicalAnd = 3 // &amp;&amp;
+BitwiseOr = 4  // |
+BitwiseXor = 5 // ^
+BitwiseAnd = 6 // &amp;
+Equality = 7   // == !=
+Comparison = 8 // &lt; &gt; &lt;= &gt;=
+Shift = 9      // &lt;&lt; &gt;&gt;
+Term = 10      // + -
+Factor = 11    // * / %
+Unary = 12     // ! ~ - &amp;
+Postfix = 13   // -&gt; . [] ()
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Associativity:</strong> Implicit in Pratt parsing</p>
+<ul>
+<li>Left-associative: recurse with <code>precedence + 1</code></li>
+<li>Right-associative (assignment): recurse with <code>precedence</code></li>
+</ul>
+<p><strong>Testing:</strong> S-expression output format for parse trees</p>
+<pre><code>3 + 4 * 5  →  (+ 3 (* 4 5))
+-x + y     →  (+ (- x) y)
+a &amp;&amp; b || c → (|| (&amp;&amp; a b) c)
+</code></pre>
+<h3 id="semantic-analysis-not-started"><a class="header" href="#semantic-analysis-not-started">Semantic Analysis (Not Started)</a></h3>
+<p><strong>Responsibilities:</strong></p>
+<ul>
+<li>Type checking (type compatibility, no implicit conversions)</li>
+<li>Name resolution (undefined variables, duplicate names)</li>
+<li>Scope tracking (variable shadowing, goto targets)</li>
+<li>Control flow analysis (unreachable code, backward jumps past decls)</li>
+<li>Function signature validation (register-sized params)</li>
+<li>Const validation (no <code>undefined</code> initializer)</li>
+</ul>
+<p><strong>Output:</strong> Typed AST ready for codegen</p>
+<p><strong>Error reporting:</strong> Use spans from AST nodes for detailed diagnostics</p>
+<h3 id="code-generation-not-started"><a class="header" href="#code-generation-not-started">Code Generation (Not Started)</a></h3>
+<p><strong>Target:</strong> RISC-V RV32I or RV64I</p>
+<p><strong>Calling Convention:</strong></p>
+<ul>
+<li>Arguments: a0-a7 (first 8 register-sized values)</li>
+<li>Return: a0 (or a0+a1 if tuples are added)</li>
+<li>Callee-saved: s0-s11</li>
+<li>Caller-saved: t0-t6</li>
+</ul>
+<p><strong>Stack Layout:</strong></p>
+<pre><code>High addresses
+    ┌─────────────┐
+    │ Return addr │  ← ra saved here
+    ├─────────────┤
+    │ Saved regs  │  ← s0-s11 if used
+    ├─────────────┤
+    │ Local vars  │  ← sp points here
+    └─────────────┘
+Low addresses
+</code></pre>
+<p><strong>Struct handling:</strong></p>
+<ul>
+<li>Structs never passed by value</li>
+<li>All struct access via pointers</li>
+<li>Field access: base + offset calculation</li>
+</ul>
+<p><strong>Codegen strategy:</strong></p>
+<ul>
+<li>Single pass (no optimization initially)</li>
+<li>Naive register allocation (spill often)</li>
+<li>Predictable output (readability over efficiency)</li>
+</ul>
+<hr />
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="language-design.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="implementation-details.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="language-design.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="implementation-details.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="theme/nanoc-highlight.js"></script>
+
+
+    </div>
+    </body>
+</html>
