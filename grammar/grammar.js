@@ -35,7 +35,7 @@ export default grammar({
       "struct",
       $.identifier,
       "{",
-      repeat(seq($.identifier, ":", $.type)),
+      repeat(seq($.identifier, ":", $.type, ",")),
       "}",
       ";",
     ),
