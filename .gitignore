@@ -2,6 +2,8 @@
 local*
 **/_build
 
+grammar/src
+
 **/*.o
 **/*.a
 **/*.dylib
