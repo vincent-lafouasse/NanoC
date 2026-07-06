@@ -23,12 +23,12 @@ export default grammar({
     fn_def: $ => seq("fn", $.todo),
     struct_def: $ => seq("struct", $.todo),
 
+    // TODO: consider escape sequences
     string_literal: $ => token(seq(
       '"',
       repeat(choice(/[^"\\]/, /\\./)),
       '"',
     )),
-
     char_literal: $ => token(seq(
       "'",
       choice(/[^'\\]/, /\\./),
