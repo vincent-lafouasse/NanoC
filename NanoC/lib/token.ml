@@ -6,3 +6,4 @@ type t =
   | RParen
   | LBrace
   | RBrace
+[@@deriving show]
