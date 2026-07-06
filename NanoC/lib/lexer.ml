@@ -25,22 +25,8 @@ let get_unsafe lexer = at lexer lexer.position
 let get lexer : char option = if eof lexer then None else Some (get_unsafe lexer)
 
 let advance lexer : t =
-  let pos_advance_naive (pos : Position.t) : Position.t =
-    let absolute = pos.absolute + 1 in
-    { pos with absolute }
-  in
-  let pos_advance_break (pos : Position.t) : Position.t =
-    let absolute = pos.absolute + 1 in
-    let line = pos.line + 1 in
-    let column = 0 in
-    { absolute; line; column }
-  in
   match get lexer with
   | None -> lexer
-  | Some '\n' ->
-    let position = pos_advance_break lexer.position in
-    { lexer with position }
-  | Some _ ->
-    let position = pos_advance_naive lexer.position in
-    { lexer with position }
+  | Some '\n' -> { lexer with position = Position.newline lexer.position }
+  | Some _ -> { lexer with position = Position.advance lexer.position }
 ;;
