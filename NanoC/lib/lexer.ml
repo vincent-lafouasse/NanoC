@@ -34,6 +34,6 @@ let advance lexer : t =
 let rec skip_whitespace lexer =
   match get lexer with
   | None -> lexer
-  | Some c when Char.Ascii.is_white c -> advance lexer
+  | Some c when Char.Ascii.is_white c -> skip_whitespace (advance lexer)
   | Some _ -> lexer
 ;;
