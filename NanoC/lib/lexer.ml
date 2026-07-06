@@ -17,3 +17,5 @@ let init (input : string) : t =
 let len lexer = String.length lexer.input
 
 let eof lexer = lexer.position.absolute >= len lexer
+
+let at lexer (position: Position.t) = String.get lexer.input position.absolute
