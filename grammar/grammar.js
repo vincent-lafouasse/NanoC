@@ -34,6 +34,9 @@ export default grammar({
     fn_def: $ => seq("fn", $.todo),
     struct_def: $ => seq("struct", $.todo),
 
+    // TODO: what even is a statement?
+    statement: $ => "TODO: STATEMENTS"
+
     // TODO: what even is a type?
     type: $ => "TODO: TYPES",
 
