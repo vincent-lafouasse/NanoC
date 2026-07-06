@@ -23,6 +23,23 @@ export default grammar({
     fn_def: $ => seq("fn", $.todo),
     struct_def: $ => seq("struct", $.todo),
 
+    string_literal: $ => token(seq(
+      '"',
+      repeat(choice(/[^"\\]/, /\\./)),
+      '"',
+    )),
+
+    char_literal: $ => token(seq(
+      "'",
+      choice(/[^'\\]/, /\\./),
+      "'",
+    )),
+
+    int_literal: $ => token(/\d+/),
+    bool_literal: $ => choice('true', 'false'),
+
+    identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+
     todo: $ => "todo",
   }
 });
