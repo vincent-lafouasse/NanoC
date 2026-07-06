@@ -29,5 +29,11 @@ let advance lexer : t =
     let absolute = pos.absolute + 1 in
     { pos with absolute }
   in
+  let pos_advance_break (pos : Position.t) : Position.t =
+    let absolute = pos.absolute + 1 in
+    let line = pos.line + 1 in
+    let column = 0 in
+    { absolute; line; column }
+  in
   failwith "todo"
 ;;
