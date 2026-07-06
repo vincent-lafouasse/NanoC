@@ -43,6 +43,7 @@ export default grammar({
     fn_def: $ => seq("fn", $.todo),
 
     // TODO: what even is a statement?
+    // NOTE: a statement cannot be a variable definition
     statement: $ => "TODO: STATEMENTS",
 
     // TODO: what even is a type?
