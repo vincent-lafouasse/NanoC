@@ -35,5 +35,12 @@ let advance lexer : t =
     let column = 0 in
     { absolute; line; column }
   in
-  failwith "todo"
+  match get lexer with
+  | None -> lexer
+  | Some '\n' ->
+    let position = pos_advance_break lexer.position in
+    { lexer with position }
+  | Some _ ->
+    let position = pos_advance_naive lexer.position in
+    { lexer with position }
 ;;
