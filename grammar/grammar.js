@@ -19,9 +19,26 @@ export default grammar({
       $.struct_def,
     ),
 
-    var_def: $ => seq("var", $.todo),
+    var_def: $ => seq(
+      "var",
+      $.identifier,
+      ":",
+      $.type,
+      "=",
+      $.var_initializer,
+      ";"
+    ),
+
+    var_initializer: $ => choice($.expression, "undefined", "zeroed"),
+
     fn_def: $ => seq("fn", $.todo),
     struct_def: $ => seq("struct", $.todo),
+
+    // TODO: what even is a type?
+    type: $ => "TODO: TYPES",
+
+    // TODO: what even is an expression?
+    expression: $ => "TODO: EXPRESSIONS",
 
     // TODO: consider escape sequences
     string_literal: $ => token(seq(
