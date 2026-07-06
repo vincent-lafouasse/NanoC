@@ -3,6 +3,7 @@ open NanoC
 let show_char_option = function
   | Some c -> Printf.sprintf "Some '%c'" c
   | None -> "None"
+;;
 
 let () =
   let lexer : Lexer.t = Lexer.init "   a   b  \n c   d" in
