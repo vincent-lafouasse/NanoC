@@ -2,6 +2,7 @@
 local*
 **/_build
 
+**/*.o
 **/*.a
 **/*.dylib
 
