@@ -30,3 +30,10 @@ let advance lexer : t =
   | Some '\n' -> { lexer with position = Position.newline lexer.position }
   | Some _ -> { lexer with position = Position.advance lexer.position }
 ;;
+
+let rec skip_whitespace lexer =
+  match get lexer with
+  | None -> lexer
+  | Some c when Char.Ascii.is_white c -> advance lexer
+  | Some _ -> lexer
+;;
