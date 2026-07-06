@@ -1,0 +1,41 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "nanoc",
+      "camelcase": "NanoC",
+      "title": "NanoC",
+      "scope": "source.nanoc",
+      "file-types": [
+        "nc"
+      ],
+      "injection-regex": "^nanoc$",
+      "class-name": "TreeSitterNanoc"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "WTFPL",
+    "description": "a simple systems PL targeting RISC-V and xv6",
+    "authors": [
+      {
+        "name": "Vincent Lafouasse",
+        "url": "github.com/vincent-lafouasse"
+      }
+    ],
+    "links": {
+      "repository": "github.com/vincent-lafouasse/NanoC",
+      "funding": ""
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "java": false,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": false
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "name": "tree-sitter-nanoc",
+  "version": "0.1.0",
+  "description": "a simple systems PL targeting RISC-V and xv6",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+github.com/vincent-lafouasse/nanoc.git"
+  },
+  "funding": "",
+  "license": "WTFPL",
+  "author": {
+    "name": "Vincent Lafouasse",
+    "url": "github.com/vincent-lafouasse"
+  },
+  "main": "bindings/node",
+  "types": "bindings/node",
+  "keywords": [
+    "incremental",
+    "parsing",
+    "tree-sitter",
+    "nanoc"
+  ],
+  "files": [
+    "grammar.js",
+    "tree-sitter.json",
+    "binding.gyp",
+    "prebuilds/**",
+    "bindings/node/*",
+    "queries/*",
+    "src/**",
+    "*.wasm"
+  ],
+  "dependencies": {
+    "node-addon-api": "^8.5.0",
+    "node-gyp-build": "^4.8.4"
+  },
+  "devDependencies": {
+    "prebuildify": "^6.0.1",
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-cli": "^0.26.10"
+  },
+  "peerDependencies": {
+    "tree-sitter": "^0.25.0"
+  },
+  "peerDependenciesMeta": {
+    "tree-sitter": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "install": "node-gyp-build",
+    "prestart": "tree-sitter build --wasm",
+    "start": "tree-sitter playground",
+    "test": "node --test bindings/node/*_test.js"
+  }
+}

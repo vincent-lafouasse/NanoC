@@ -1,0 +1,10 @@
+prefix=/usr/local
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: tree-sitter-nanoc
+Description: a simple systems PL targeting RISC-V and xv6
+URL: github.com/vincent-lafouasse/nanoc
+Version: 0.1.0
+Libs: -L${libdir} -ltree-sitter-nanoc
+Cflags: -I${includedir}
