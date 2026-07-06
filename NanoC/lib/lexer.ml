@@ -14,4 +14,4 @@ let init (input : string) : t =
   { input; position }
 ;;
 
-let eof parser = parser.position.absolute >= String.length parser.input
+let eof lexer = lexer.position.absolute >= String.length lexer.input
