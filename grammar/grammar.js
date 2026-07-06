@@ -31,11 +31,19 @@ export default grammar({
 
     var_initializer: $ => choice($.expression, "undefined", "zeroed"),
 
+    struct_def: $ => seq(
+      "struct",
+      $.identifier,
+      "{",
+      repeat(seq($.identifier, ":", $.type)),
+      "}",
+      ";",
+    ),
+
     fn_def: $ => seq("fn", $.todo),
-    struct_def: $ => seq("struct", $.todo),
 
     // TODO: what even is a statement?
-    statement: $ => "TODO: STATEMENTS"
+    statement: $ => "TODO: STATEMENTS",
 
     // TODO: what even is a type?
     type: $ => "TODO: TYPES",
