@@ -2,6 +2,9 @@
 local*
 **/_build
 
+**/*.a
+**/*.dylib
+
 # mdbook generated output
 /book/book/
 .DS_Store
