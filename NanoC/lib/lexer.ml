@@ -31,6 +31,8 @@ let advance lexer : t =
   | Some _ -> { lexer with position = Position.advance lexer.position }
 ;;
 
+let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
+
 let rec skip_whitespace lexer =
   match get lexer with
   | None -> lexer
