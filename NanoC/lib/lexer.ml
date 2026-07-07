@@ -37,3 +37,9 @@ let rec skip_whitespace lexer =
   | Some c when Char.Ascii.is_white c -> skip_whitespace (advance lexer)
   | Some _ -> lexer
 ;;
+
+let next_token lexer : char option * t =
+  match get lexer with
+  | None -> None, lexer
+  | Some _ -> None, lexer
+;;
