@@ -6,5 +6,6 @@ type t =
   | RParen
   | LBrace
   | RBrace
+  | Identifier of string
   | Eof
 [@@deriving show]
