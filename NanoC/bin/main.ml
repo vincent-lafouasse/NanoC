@@ -8,6 +8,7 @@ let show_char_option = function
 let show_lexer_char l = show_char_option (Lexer.get l)
 
 let () =
-  let source = " \t { aaa   { _420  \n } bbb   }" in
+  let source = "fn aaa bbb _420" in
+  let () = print_endline ("source:\n" ^ source ^ "\n") in
   Lexer.dump_all_tokens source
 ;;
