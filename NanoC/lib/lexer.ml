@@ -24,14 +24,14 @@ let get_unsafe lexer = at lexer lexer.position
 
 let get lexer : char option = if eof lexer then None else Some (get_unsafe lexer)
 
-let peek lexer = get (advance lexer)
-
 let advance lexer : t =
   match get lexer with
   | None -> lexer
   | Some '\n' -> { lexer with position = Position.newline lexer.position }
   | Some _ -> { lexer with position = Position.advance lexer.position }
 ;;
+
+let peek lexer = get (advance lexer)
 
 let rec advance_while char_predicate lexer =
   match get lexer with
