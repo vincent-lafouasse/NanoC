@@ -101,3 +101,13 @@ let tokenize input =
   in
   iter (init input) []
 ;;
+
+let format_error (err : error) : string =
+  match err with
+  | UnterminatedString -> "Unterminated string"
+  | UnrecognizedCharacter c ->
+    let char_repr : string =
+      if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
+    in
+    Printf.sprintf "Unrecognized character %s" char_repr
+;;
