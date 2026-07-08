@@ -50,3 +50,22 @@ let next_token lexer : (Token.t, error) result * t =
   | Some '}' -> Ok Token.RBrace, advance lexer
   | Some c -> Error (UnrecognizedCharacter c), lexer
 ;;
+
+let dump_all_tokens source =
+  let lexer = init source in
+  let rec iter lexer : t =
+    let maybe_tok, lexer = next_token lexer in
+    match maybe_tok with
+    | Error err ->
+      let () = print_endline (show_error err) in
+      lexer
+    | Ok Token.Eof ->
+      let () = print_endline "EOF" in
+      lexer
+    | Ok tok ->
+      let () = print_endline (Token.show tok) in
+      iter lexer
+  in
+  let _ = iter lexer in
+  ()
+;;

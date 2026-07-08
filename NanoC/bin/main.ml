@@ -8,14 +8,6 @@ let show_char_option = function
 let show_lexer_char l = show_char_option (Lexer.get l)
 
 let () =
-  let lexer : Lexer.t = Lexer.init " \t a   b  \n c   d" in
-  let _ = print_endline (show_lexer_char lexer) in
-  let lexer = Lexer.skip_whitespace lexer in
-  let _ = print_endline (show_lexer_char lexer) in
-  let lexer = Lexer.skip_whitespace lexer in
-  let _ = print_endline (show_lexer_char lexer) in
-  let lexer = Lexer.skip_whitespace lexer in
-  let _ = print_endline (show_lexer_char lexer) in
-  let lexer = Lexer.skip_whitespace lexer in
-  print_endline (show_lexer_char lexer)
+  let source = " \t {   {  \n }   }" in
+  Lexer.dump_all_tokens source
 ;;
