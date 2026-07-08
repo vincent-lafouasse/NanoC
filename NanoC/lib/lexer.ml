@@ -31,10 +31,10 @@ let advance lexer : t =
   | Some _ -> { lexer with position = Position.advance lexer.position }
 ;;
 
-let rec advance_while lexer char_predicate =
+let rec advance_while char_predicate lexer =
   match get lexer with
   | None -> lexer
-  | Some c when char_predicate c -> advance_while (advance lexer) char_predicate
+  | Some c when char_predicate c -> advance_while char_predicate (advance lexer)
   | Some _ -> lexer
 ;;
 
