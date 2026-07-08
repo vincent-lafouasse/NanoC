@@ -70,7 +70,7 @@ let next_token lexer : (Token.t, error) result * t =
   | Some '}' -> Ok Token.RBrace, advance lexer
   | Some c when char_is_ident_start c ->
     let tok, lexer = scan_identifier_or_keyword lexer in
-    Some tok, lexer
+    Ok tok, lexer
   | None -> Ok Token.Eof, lexer
   | Some c -> Error (UnrecognizedCharacter c), lexer
 ;;
