@@ -10,6 +10,8 @@ grammar/src
 
 conjure-log-*
 
+.claude
+
 # mdbook generated output
 /book/book/
 .DS_Store
