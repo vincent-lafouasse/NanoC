@@ -54,6 +54,18 @@ let recognize_keyword = function
   | "fn" -> Some Token.Fn
   | "struct" -> Some Token.Struct
   | "var" -> Some Token.Var
+  | "if" -> Some Token.If
+  | "else" -> Some Token.Else
+  | "return" -> Some Token.Return
+  | "goto" -> Some Token.Goto
+  | "syscall" -> Some Token.Syscall
+  | "undefined" -> Some Token.Undefined
+  | "zeroed" -> Some Token.Zeroed
+  | "while" -> Some Token.While
+  | "u8" -> Some Token.U8
+  | "u32" -> Some Token.U32
+  | "i32" -> Some Token.I32
+  | "ptr" -> Some Token.Ptr
   | _ -> None
 ;;
 
