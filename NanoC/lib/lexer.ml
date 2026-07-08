@@ -31,6 +31,13 @@ let advance lexer : t =
   | Some _ -> { lexer with position = Position.advance lexer.position }
 ;;
 
+let rec advance_while lexer char_predicate =
+  match get lexer with
+  | None -> lexer
+  | Some c when char_predicate c -> advance_while (advance lexer) char_predicate
+  | Some _ -> lexer
+;;
+
 let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
 
 let rec skip_whitespace lexer =
