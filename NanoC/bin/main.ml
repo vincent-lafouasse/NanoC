@@ -8,6 +8,6 @@ let show_char_option = function
 let show_lexer_char l = show_char_option (Lexer.get l)
 
 let () =
-  let source = " \t {   {  \n }   }" in
+  let source = " \t { aaa   { _420  \n } bbb   }" in
   Lexer.dump_all_tokens source
 ;;
