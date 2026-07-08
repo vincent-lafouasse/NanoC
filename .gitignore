@@ -8,6 +8,8 @@ grammar/src
 **/*.a
 **/*.dylib
 
+conjure-log-*
+
 # mdbook generated output
 /book/book/
 .DS_Store
