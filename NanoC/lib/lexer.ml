@@ -48,6 +48,11 @@ let char_is_ident_start = either Char.Ascii.is_letter (fun c -> c = '_')
 
 let char_is_ident = either char_is_ident_start Char.Ascii.is_digit
 
+let recognize_keyword = function
+  | "fn" -> Some Token.Fn
+  | _ -> None
+;;
+
 let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
   match get lexer with
