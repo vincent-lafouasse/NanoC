@@ -42,6 +42,8 @@ let rec advance_while char_predicate lexer =
 
 let skip_whitespace = advance_while Char.Ascii.is_white
 
+let skip_to_column0 lexer = advance (advance_while (fun c -> c != '\n') lexer)
+
 let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
 
 let either f g x = f x || g x
