@@ -51,9 +51,9 @@ let char_is_ident = either char_is_ident_start Char.Ascii.is_digit
 let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
   match get lexer with
-  | None -> Ok Token.Eof, lexer
   | Some '{' -> Ok Token.LBrace, advance lexer
   | Some '}' -> Ok Token.RBrace, advance lexer
+  | None -> Ok Token.Eof, lexer
   | Some c -> Error (UnrecognizedCharacter c), lexer
 ;;
 
