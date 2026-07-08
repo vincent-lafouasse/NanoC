@@ -91,21 +91,13 @@ let next_token lexer : (Token.t, error) result * t =
   | Some c -> Error (UnrecognizedCharacter c), lexer
 ;;
 
-let dump_all_tokens source =
-  let lexer = init source in
-  let rec iter lexer : t =
-    let maybe_tok, lexer = next_token lexer in
-    match maybe_tok with
-    | Error err ->
-      let () = print_endline (show_error err) in
-      lexer
-    | Ok Token.Eof ->
-      let () = print_endline "EOF" in
-      lexer
-    | Ok tok ->
-      let () = print_endline (Token.show tok) in
-      iter lexer
+let tokenize input =
+  let rec iter lexer acc =
+    let maybe_token, lexer = next_token lexer in
+    match maybe_token with
+    | Error e -> Error e
+    | Ok Token.Eof -> Ok (Array.of_list (List.rev (Token.Eof :: acc)))
+    | Ok tok -> iter lexer (tok :: acc)
   in
-  let _ = iter lexer in
-  ()
+  iter (init input) []
 ;;
