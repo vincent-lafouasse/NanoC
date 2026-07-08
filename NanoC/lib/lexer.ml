@@ -42,6 +42,12 @@ let skip_whitespace = advance_while Char.Ascii.is_white
 
 let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
 
+let either f g x = f x || g x
+
+let char_is_ident_start = either Char.Ascii.is_letter (fun c -> c = '_')
+
+let char_is_ident = either char_is_ident_start Char.Ascii.is_digit
+
 let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
   match get lexer with
