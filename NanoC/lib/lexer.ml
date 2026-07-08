@@ -24,6 +24,8 @@ let get_unsafe lexer = at lexer lexer.position
 
 let get lexer : char option = if eof lexer then None else Some (get_unsafe lexer)
 
+let peek lexer = get (advance lexer)
+
 let advance lexer : t =
   match get lexer with
   | None -> lexer
