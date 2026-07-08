@@ -46,7 +46,7 @@ let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
   match get lexer with
   | None -> Ok Token.Eof, lexer
-  | Some '{' -> Ok Token.LBrace, lexer
-  | Some '}' -> Ok Token.RBrace, lexer
+  | Some '{' -> Ok Token.LBrace, advance lexer
+  | Some '}' -> Ok Token.RBrace, advance lexer
   | Some c -> Error (UnrecognizedCharacter c), lexer
 ;;
