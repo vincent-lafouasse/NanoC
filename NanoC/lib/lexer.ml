@@ -40,7 +40,7 @@ let rec skip_whitespace lexer =
   | Some _ -> lexer
 ;;
 
-let next_token lexer : char option * t =
+let next_token lexer : Token.t option * t =
   match get lexer with
   | None -> None, lexer
   | Some _ -> None, lexer
