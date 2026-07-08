@@ -53,6 +53,16 @@ let recognize_keyword = function
   | _ -> None
 ;;
 
+let scan_identifier_or_keyword lexer : Token.t * t =
+  let start_position = lexer.position.absolute in
+  let past_end_lexer = advance_while char_is_ident lexer in
+  let lexeme_length = past_end_lexer.position.absolute - start_position in
+  let lexeme = String.sub lexer.input start_position lexeme_length in
+  match recognize_keyword lexeme with
+  | Some keyword -> keyword, past_end_lexer
+  | _ -> Token.Identifier lexeme, past_end_lexer
+;;
+
 let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
   match get lexer with
