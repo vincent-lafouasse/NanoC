@@ -6,4 +6,5 @@ type t =
   | RParen
   | LBrace
   | RBrace
+  | Eof
 [@@deriving show]
