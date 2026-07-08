@@ -41,6 +41,7 @@ let rec skip_whitespace lexer =
 ;;
 
 let next_token lexer : Token.t option * t =
+  let lexer = skip_whitespace lexer in
   match get lexer with
   | None -> None, lexer
   | Some _ -> None, lexer
