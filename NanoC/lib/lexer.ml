@@ -40,12 +40,7 @@ let rec advance_while char_predicate lexer =
 
 let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
 
-let rec skip_whitespace lexer =
-  match get lexer with
-  | None -> lexer
-  | Some c when Char.Ascii.is_white c -> skip_whitespace (advance lexer)
-  | Some _ -> lexer
-;;
+let skip_whitespace = advance_while Char.Ascii.is_white
 
 let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
