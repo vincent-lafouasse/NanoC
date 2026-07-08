@@ -50,6 +50,8 @@ let char_is_ident = either char_is_ident_start Char.Ascii.is_digit
 
 let recognize_keyword = function
   | "fn" -> Some Token.Fn
+  | "struct" -> Some Token.Struct
+  | "var" -> Some Token.Var
   | _ -> None
 ;;
 
