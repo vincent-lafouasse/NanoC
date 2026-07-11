@@ -31,3 +31,5 @@ type t =
   ; lexeme : Span.t
   }
 [@@deriving show]
+
+let lexeme token source = Span.slice source token.lexeme
