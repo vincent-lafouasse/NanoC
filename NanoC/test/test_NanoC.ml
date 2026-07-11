@@ -2,26 +2,28 @@ open NanoC
 
 let failures = ref 0
 
-let show_tokens tokens =
-  tokens |> Array.to_list |> List.map Token.show |> String.concat "; "
+let show_kinds kinds =
+  kinds |> Array.to_list |> List.map Token.show_kind |> String.concat "; "
 ;;
 
-let check_tokens name source expected =
-  let expected = Array.of_list expected in
+(* these tests only care about which kinds were produced, in order — not spans *)
+let check_tokens name source expected_kinds =
+  let expected_kinds = Array.of_list expected_kinds in
   match Lexer.tokenize source with
   | Error e ->
     incr failures;
     Printf.printf "FAIL %s: lexer error: %s\n" name (Lexer.format_error e)
   | Ok tokens ->
-    if tokens <> expected
+    let kinds = Array.map (fun (tok : Token.t) -> tok.kind) tokens in
+    if kinds <> expected_kinds
     then (
       incr failures;
       Printf.printf
         "FAIL %s:\n  source:   %S\n  expected: [%s]\n  got:      [%s]\n"
         name
         source
-        (show_tokens expected)
-        (show_tokens tokens))
+        (show_kinds expected_kinds)
+        (show_kinds kinds))
 ;;
 
 let keywords =

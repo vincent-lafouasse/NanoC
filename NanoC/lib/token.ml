@@ -1,4 +1,4 @@
-type t =
+type kind =
   (* keywords *)
   | Fn
   | Struct
@@ -24,4 +24,10 @@ type t =
   (* the rest i guess *)
   | Identifier of string
   | Eof
+[@@deriving show]
+
+type t =
+  { kind : kind
+  ; lexeme : Span.t
+  }
 [@@deriving show]

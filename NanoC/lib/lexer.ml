@@ -71,7 +71,7 @@ let recognize_keyword = function
   | _ -> None
 ;;
 
-let scan_identifier_or_keyword lexer : Token.t * t =
+let scan_identifier_or_keyword lexer : Token.kind * t =
   let start_position = lexer.position.absolute in
   let past_end_lexer = advance_while char_is_ident lexer in
   let lexeme_length = past_end_lexer.position.absolute - start_position in
@@ -81,15 +81,24 @@ let scan_identifier_or_keyword lexer : Token.t * t =
   | _ -> Token.Identifier lexeme, past_end_lexer
 ;;
 
+let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
+  { Token.kind; lexeme = { Span.start; stop = lexer.position } }
+;;
+
 let next_token lexer : (Token.t, error) result * t =
   let lexer = skip_whitespace lexer in
+  let start = lexer.position in
   match get lexer with
-  | Some '{' -> Ok Token.LBrace, advance lexer
-  | Some '}' -> Ok Token.RBrace, advance lexer
+  | Some '{' ->
+    let lexer = advance lexer in
+    Ok (make_token start lexer Token.LBrace), lexer
+  | Some '}' ->
+    let lexer = advance lexer in
+    Ok (make_token start lexer Token.RBrace), lexer
   | Some c when char_is_ident_start c ->
-    let tok, lexer = scan_identifier_or_keyword lexer in
-    Ok tok, lexer
-  | None -> Ok Token.Eof, lexer
+    let kind, lexer = scan_identifier_or_keyword lexer in
+    Ok (make_token start lexer kind), lexer
+  | None -> Ok (make_token start lexer Token.Eof), lexer
   | Some c -> Error (UnrecognizedCharacter c), lexer
 ;;
 
@@ -98,7 +107,7 @@ let tokenize input =
     let maybe_token, lexer = next_token lexer in
     match maybe_token with
     | Error e -> Error e
-    | Ok Token.Eof -> Ok (Array.of_list (List.rev (Token.Eof :: acc)))
+    | Ok ({ Token.kind = Eof; _ } as tok) -> Ok (Array.of_list (List.rev (tok :: acc)))
     | Ok tok -> iter lexer (tok :: acc)
   in
   iter (init input) []
