@@ -6,6 +6,7 @@ type t =
 
 type error =
   | UnterminatedString
+  | UnterminatedComment
   | UnrecognizedCharacter of char
 [@@deriving show]
 
@@ -45,6 +46,23 @@ let skip_whitespace = advance_while Char.Ascii.is_white
 let skip_to_column0 lexer = advance (advance_while (fun c -> c != '\n') lexer)
 
 let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
+
+let looking_at lexer c0 c1 =
+  match get lexer, peek lexer with
+  | Some a, Some b -> a = c0 && b = c1
+  | _ -> false
+;;
+
+let is_line_comment_start lexer = looking_at lexer '/' '/'
+let is_block_comment_start lexer = looking_at lexer '/' '*'
+
+(* [lexer] must be positioned right after the opening "/*" *)
+let rec skip_block_comment_body lexer : (t, error) result =
+  match get lexer with
+  | None -> Error UnterminatedComment
+  | Some '*' when peek lexer = Some '/' -> Ok (advance_by lexer 2)
+  | Some _ -> skip_block_comment_body (advance lexer)
+;;
 
 let either f g x = f x || g x
 
@@ -116,6 +134,7 @@ let tokenize input =
 let format_error (err : error) : string =
   match err with
   | UnterminatedString -> "Unterminated string"
+  | UnterminatedComment -> "Unterminated comment"
   | UnrecognizedCharacter c ->
     let char_repr : string =
       if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
