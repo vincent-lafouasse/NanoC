@@ -64,6 +64,20 @@ let rec skip_block_comment_body lexer : (t, error) result =
   | Some _ -> skip_block_comment_body (advance lexer)
 ;;
 
+(* skips whitespace and comments (both `//` and `/* */`), repeating until
+   neither is present, so trivia can be interleaved freely: `//a\n/*b*/  //c` *)
+let rec skip_trivia lexer : (t, error) result =
+  let lexer = skip_whitespace lexer in
+  if is_line_comment_start lexer
+  then skip_trivia (skip_to_column0 lexer)
+  else if is_block_comment_start lexer
+  then (
+    match skip_block_comment_body (advance_by lexer 2) with
+    | Ok lexer -> skip_trivia lexer
+    | Error _ as err -> err)
+  else Ok lexer
+;;
+
 let either f g x = f x || g x
 
 let char_is_ident_start = either Char.Ascii.is_letter (fun c -> c = '_')
@@ -104,20 +118,22 @@ let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
 ;;
 
 let next_token lexer : (Token.t, error) result * t =
-  let lexer = skip_whitespace lexer in
-  let start = lexer.position in
-  match get lexer with
-  | Some '{' ->
-    let lexer = advance lexer in
-    Ok (make_token start lexer Token.LBrace), lexer
-  | Some '}' ->
-    let lexer = advance lexer in
-    Ok (make_token start lexer Token.RBrace), lexer
-  | Some c when char_is_ident_start c ->
-    let kind, lexer = scan_identifier_or_keyword lexer in
-    Ok (make_token start lexer kind), lexer
-  | None -> Ok (make_token start lexer Token.Eof), lexer
-  | Some c -> Error (UnrecognizedCharacter c), lexer
+  match skip_trivia lexer with
+  | Error e -> Error e, lexer
+  | Ok lexer ->
+    let start = lexer.position in
+    (match get lexer with
+     | Some '{' ->
+       let lexer = advance lexer in
+       Ok (make_token start lexer Token.LBrace), lexer
+     | Some '}' ->
+       let lexer = advance lexer in
+       Ok (make_token start lexer Token.RBrace), lexer
+     | Some c when char_is_ident_start c ->
+       let kind, lexer = scan_identifier_or_keyword lexer in
+       Ok (make_token start lexer kind), lexer
+     | None -> Ok (make_token start lexer Token.Eof), lexer
+     | Some c -> Error (UnrecognizedCharacter c), lexer)
 ;;
 
 let tokenize input =
