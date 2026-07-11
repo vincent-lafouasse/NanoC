@@ -33,3 +33,7 @@ type t =
 [@@deriving show]
 
 let lexeme token source = Span.slice source token.lexeme
+
+let format token source =
+  Printf.sprintf "%-32s: \"%s\"" (show_kind token.kind) (lexeme token source)
+;;
