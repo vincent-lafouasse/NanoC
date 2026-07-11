@@ -26,6 +26,28 @@ let check_tokens name source expected_kinds =
         (show_kinds kinds))
 ;;
 
+let check_error name source expected_error =
+  match Lexer.tokenize source with
+  | Ok tokens ->
+    incr failures;
+    Printf.printf
+      "FAIL %s:\n  source:   %S\n  expected error: %s\n  got tokens: [%s]\n"
+      name
+      source
+      (Lexer.show_error expected_error)
+      (show_kinds (Array.map (fun (tok : Token.t) -> tok.kind) tokens))
+  | Error e ->
+    if e <> expected_error
+    then (
+      incr failures;
+      Printf.printf
+        "FAIL %s:\n  source:   %S\n  expected error: %s\n  got error:      %s\n"
+        name
+        source
+        (Lexer.show_error expected_error)
+        (Lexer.show_error e))
+;;
+
 let keywords =
   [ "fn", Token.Fn
   ; "struct", Token.Struct
@@ -73,11 +95,55 @@ let test_keywords_are_case_sensitive () =
     [ Token.Identifier "IF"; Token.Identifier "Fn"; Token.Eof ]
 ;;
 
+let test_line_comment_is_skipped () =
+  check_tokens "line comment before eof" "fn // this is a comment" [ Token.Fn; Token.Eof ]
+;;
+
+let test_line_comment_stops_at_newline () =
+  check_tokens
+    "line comment stops at newline"
+    "fn // comment\nif"
+    [ Token.Fn; Token.If; Token.Eof ]
+;;
+
+let test_block_comment_is_skipped () =
+  check_tokens "block comment" "fn /* comment */ if" [ Token.Fn; Token.If; Token.Eof ]
+;;
+
+let test_block_comment_can_span_lines () =
+  check_tokens
+    "block comment spans lines"
+    "fn /* line one\n line two */ if"
+    [ Token.Fn; Token.If; Token.Eof ]
+;;
+
+let test_block_comment_with_no_whitespace () =
+  check_tokens "adjacent block comment" "fn/*hi*/if" [ Token.Fn; Token.If; Token.Eof ]
+;;
+
+let test_interleaved_trivia () =
+  check_tokens
+    "whitespace and comments interleave"
+    "fn // one\n /* two */ if"
+    [ Token.Fn; Token.If; Token.Eof ]
+;;
+
+let test_unterminated_block_comment_is_an_error () =
+  check_error "unterminated block comment" "fn /* never closed" Lexer.UnterminatedComment
+;;
+
 let () =
   test_each_keyword ();
   test_keyword_sequence ();
   test_keyword_prefix_is_identifier ();
   test_keywords_are_case_sensitive ();
+  test_line_comment_is_skipped ();
+  test_line_comment_stops_at_newline ();
+  test_block_comment_is_skipped ();
+  test_block_comment_can_span_lines ();
+  test_block_comment_with_no_whitespace ();
+  test_interleaved_trivia ();
+  test_unterminated_block_comment_is_an_error ();
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
