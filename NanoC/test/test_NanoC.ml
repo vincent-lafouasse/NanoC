@@ -26,7 +26,8 @@ let check_tokens name source expected_kinds =
         (show_kinds kinds))
 ;;
 
-let check_error name source expected_error =
+(* this only cares about the error kind, not its span — same rationale as check_tokens *)
+let check_error name source expected_kind =
   match Lexer.tokenize source with
   | Ok tokens ->
     incr failures;
@@ -34,18 +35,18 @@ let check_error name source expected_error =
       "FAIL %s:\n  source:   %S\n  expected error: %s\n  got tokens: [%s]\n"
       name
       source
-      (Lexer.show_error expected_error)
+      (Lexer.show_error_kind expected_kind)
       (show_kinds (Array.map (fun (tok : Token.t) -> tok.kind) tokens))
-  | Error e ->
-    if e <> expected_error
+  | Error (kind, _span) ->
+    if kind <> expected_kind
     then (
       incr failures;
       Printf.printf
         "FAIL %s:\n  source:   %S\n  expected error: %s\n  got error:      %s\n"
         name
         source
-        (Lexer.show_error expected_error)
-        (Lexer.show_error e))
+        (Lexer.show_error_kind expected_kind)
+        (Lexer.show_error_kind kind))
 ;;
 
 let keywords =

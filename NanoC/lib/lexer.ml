@@ -4,11 +4,13 @@ type t =
   }
 [@@deriving show]
 
-type error =
+type error_kind =
   | UnterminatedString
   | UnterminatedComment
   | UnrecognizedCharacter of char
 [@@deriving show]
+
+type error = error_kind Span.located [@@deriving show]
 
 let init (input : string) : t =
   let position : Position.t = { absolute = 0; line = 1; column = 0 } in
@@ -56,10 +58,16 @@ let looking_at lexer c0 c1 =
 let is_line_comment_start lexer = looking_at lexer '/' '/'
 let is_block_comment_start lexer = looking_at lexer '/' '*'
 
-(* [lexer] must be positioned right after the opening "/*" *)
-let rec skip_block_comment_body lexer : (t, error) result =
+let make_span (start : Position.t) (lexer : t) : Span.t =
+  { Span.start; stop = lexer.position }
+;;
+
+(* [lexer] must be positioned right after the opening "/*".
+   On failure, returns the lexer at the point it gave up (EOF) — the caller
+   knows the comment's start position and turns this into a proper [error]. *)
+let rec skip_block_comment_body lexer : (t, t) result =
   match get lexer with
-  | None -> Error UnterminatedComment
+  | None -> Error lexer
   | Some '*' when peek lexer = Some '/' -> Ok (advance_by lexer 2)
   | Some _ -> skip_block_comment_body (advance lexer)
 ;;
@@ -72,9 +80,10 @@ let rec skip_trivia lexer : (t, error) result =
   then skip_trivia (skip_to_column0 lexer)
   else if is_block_comment_start lexer
   then (
+    let comment_start = lexer.position in
     match skip_block_comment_body (advance_by lexer 2) with
     | Ok lexer -> skip_trivia lexer
-    | Error _ as err -> err)
+    | Error eof_lexer -> Error (UnterminatedComment, make_span comment_start eof_lexer))
   else Ok lexer
 ;;
 
@@ -114,46 +123,52 @@ let scan_identifier_or_keyword lexer : Token.kind * t =
 ;;
 
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
-  { Token.kind; lexeme = { Span.start; stop = lexer.position } }
+  { Token.kind; lexeme = make_span start lexer }
 ;;
 
-let next_token lexer : (Token.t, error) result * t =
-  match skip_trivia lexer with
-  | Error e -> Error e, lexer
-  | Ok lexer ->
-    let start = lexer.position in
-    (match get lexer with
-     | Some '{' ->
-       let lexer = advance lexer in
-       Ok (make_token start lexer Token.LBrace), lexer
-     | Some '}' ->
-       let lexer = advance lexer in
-       Ok (make_token start lexer Token.RBrace), lexer
-     | Some c when char_is_ident_start c ->
-       let kind, lexer = scan_identifier_or_keyword lexer in
-       Ok (make_token start lexer kind), lexer
-     | None -> Ok (make_token start lexer Token.Eof), lexer
-     | Some c -> Error (UnrecognizedCharacter c), lexer)
+let ( let* ) = Result.bind
+
+let next_token lexer : (Token.t * t, error) result =
+  let* lexer = skip_trivia lexer in
+  let start = lexer.position in
+  match get lexer with
+  | Some '{' ->
+    let lexer = advance lexer in
+    Ok (make_token start lexer Token.LBrace, lexer)
+  | Some '}' ->
+    let lexer = advance lexer in
+    Ok (make_token start lexer Token.RBrace, lexer)
+  | Some c when char_is_ident_start c ->
+    let kind, lexer = scan_identifier_or_keyword lexer in
+    Ok (make_token start lexer kind, lexer)
+  | None -> Ok (make_token start lexer Token.Eof, lexer)
+  | Some c ->
+    let lexer = advance lexer in
+    Error (UnrecognizedCharacter c, make_span start lexer)
 ;;
 
 let tokenize input =
   let rec iter lexer acc =
-    let maybe_token, lexer = next_token lexer in
-    match maybe_token with
+    match next_token lexer with
     | Error e -> Error e
-    | Ok ({ Token.kind = Eof; _ } as tok) -> Ok (Array.of_list (List.rev (tok :: acc)))
-    | Ok tok -> iter lexer (tok :: acc)
+    | Ok (({ Token.kind = Eof; _ } as tok), _lexer) ->
+      Ok (Array.of_list (List.rev (tok :: acc)))
+    | Ok (tok, lexer) -> iter lexer (tok :: acc)
   in
   iter (init input) []
 ;;
 
-let format_error (err : error) : string =
-  match err with
-  | UnterminatedString -> "Unterminated string"
-  | UnterminatedComment -> "Unterminated comment"
-  | UnrecognizedCharacter c ->
-    let char_repr : string =
-      if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
-    in
-    Printf.sprintf "Unrecognized character %s" char_repr
+let format_error ((kind, span) : error) : string =
+  let (start : Position.t) = span.Span.start in
+  let kind_desc =
+    match kind with
+    | UnterminatedString -> "Unterminated string"
+    | UnterminatedComment -> "Unterminated comment"
+    | UnrecognizedCharacter c ->
+      let char_repr : string =
+        if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
+      in
+      Printf.sprintf "Unrecognized character %s" char_repr
+  in
+  Printf.sprintf "%d:%d: %s" start.line start.column kind_desc
 ;;
