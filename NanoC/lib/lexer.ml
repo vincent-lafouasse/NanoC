@@ -129,15 +129,17 @@ let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
 let ( let* ) = Result.bind
 
 let next_token lexer : (Token.t * t, error) result =
+  let make_hard_token start_lexer token_type length =
+    let start_position = start_lexer.position in
+    let past_end_lexer = advance_by start_lexer length in
+    let token = make_token start_position past_end_lexer token_type in
+    Ok (token, past_end_lexer)
+  in
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
-  | Some '{' ->
-    let lexer = advance lexer in
-    Ok (make_token start lexer Token.LBrace, lexer)
-  | Some '}' ->
-    let lexer = advance lexer in
-    Ok (make_token start lexer Token.RBrace, lexer)
+  | Some '{' -> make_hard_token lexer Token.LBrace 1
+  | Some '}' -> make_hard_token lexer Token.RBrace 1
   | Some c when char_is_ident_start c ->
     let kind, lexer = scan_identifier_or_keyword lexer in
     Ok (make_token start lexer kind, lexer)
