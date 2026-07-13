@@ -146,7 +146,7 @@ let next_token lexer : (Token.t * t, error) result =
   | Some '{' -> make_hard_token lexer Token.LBrace 1
   | Some '}' -> make_hard_token lexer Token.RBrace 1
   | Some c when char_is_ident_start c -> make_ident_token lexer
-  | None -> Ok (make_token start lexer Token.Eof, lexer)
+  | None -> make_hard_token lexer Token.Eof 0
   | Some c ->
     let lexer = advance lexer in
     Error (UnrecognizedCharacter c, make_span start lexer)
