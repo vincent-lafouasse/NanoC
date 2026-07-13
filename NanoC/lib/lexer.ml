@@ -129,7 +129,7 @@ let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
 let ( let* ) = Result.bind
 
 let next_token lexer : (Token.t * t, error) result =
-  let make_hard_token start_lexer token_type length =
+  let make_hard_token start_lexer token_type ~len:length =
     let start_position = start_lexer.position in
     let past_end_lexer = advance_by start_lexer length in
     let token = make_token start_position past_end_lexer token_type in
@@ -143,10 +143,10 @@ let next_token lexer : (Token.t * t, error) result =
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
-  | Some '{' -> make_hard_token lexer Token.LBrace 1
-  | Some '}' -> make_hard_token lexer Token.RBrace 1
+  | Some '{' -> make_hard_token lexer Token.LBrace ~len:1
+  | Some '}' -> make_hard_token lexer Token.RBrace ~len:1
   | Some c when char_is_ident_start c -> make_ident_token lexer
-  | None -> make_hard_token lexer Token.Eof 0
+  | None -> make_hard_token lexer Token.Eof ~len:0
   | Some c ->
     let lexer = advance lexer in
     Error (UnrecognizedCharacter c, make_span start lexer)
