@@ -125,6 +125,17 @@ let scan_identifier_or_keyword lexer : Token.kind * t =
   | _ -> Token.Identifier lexeme, past_end_lexer
 ;;
 
+let scan_string_literal lexer : (Token.t * t, error) result =
+  let _assert =
+    match get lexer with
+    | Some '"' -> 0
+    | _ -> failwith "started scanning string but not on starting quote"
+  in
+  let lexeme_start = lexer.position in
+  let lexer = advance lexer in
+  failwith "todo"
+;;
+
 (* assumes we are past the starting quote
    puts the lexer ON the ending quote *)
 let rec skip_string_literal_body lexer : (t, error_kind * t) result =
