@@ -23,6 +23,7 @@ type kind =
   | RBrace
   (* the rest i guess *)
   | Identifier of string
+  | StringLiteral of string
   | Eof
 [@@deriving show]
 
