@@ -5,7 +5,6 @@ type t =
 [@@deriving show]
 
 type error_kind =
-  | UnterminatedString
   | UnterminatedComment
   | UnrecognizedCharacter of char
   | UnterminatedStringLiteral
@@ -167,17 +166,21 @@ let tokenize input =
   iter (init input) []
 ;;
 
+let format_error_kind = function
+  | UnterminatedComment -> "Unterminated comment"
+  | UnrecognizedCharacter c ->
+    let char_repr : string =
+      if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
+    in
+    Printf.sprintf "Unrecognized character %s" char_repr
+  | UnterminatedStringLiteral -> "Unterminated string literal"
+  | UnterminatedCharLiteral -> "Unterminated char literal"
+  | UnknownEscapeSequence c -> failwith "todo"
+  | MalformedEscapeSequence s -> failwith "todo"
+;;
+
 let format_error ((kind, span) : error) : string =
   let (start : Position.t) = span.Span.start in
-  let kind_desc =
-    match kind with
-    | UnterminatedString -> "Unterminated string"
-    | UnterminatedComment -> "Unterminated comment"
-    | UnrecognizedCharacter c ->
-      let char_repr : string =
-        if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
-      in
-      Printf.sprintf "Unrecognized character %s" char_repr
-  in
+  let kind_desc = format_error_kind kind in
   Printf.sprintf "%d:%d: %s" start.line start.column kind_desc
 ;;
