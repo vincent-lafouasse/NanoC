@@ -139,9 +139,21 @@ let assert_lexer_on lexer c =
 
 let scan_string_literal lexer : (Token.t * t, error) result =
   let _assert = assert_lexer_on lexer '"' in
-  let _lexeme_start = lexer.position in
-  let _lexer = advance lexer in
-  failwith "todo"
+  let lexeme_start = lexer.position in
+  let lexer = advance lexer in
+  let iter (l : t) (acc : char list) : (Token.t * t, error) result =
+    match get l with
+    | Some '"' ->
+      let past_end_lexer = advance l in
+      let lexeme = make_span lexeme_start past_end_lexer in
+      let body = String.of_seq (List.to_seq acc) in
+      let kind = Token.StringLiteral body in
+      let token : Token.t = { kind; lexeme } in
+      Ok (token, past_end_lexer)
+    | None -> Error (UnterminatedStringLiteral, make_span lexeme_start l)
+    | Some _ -> failwith "wtf what do i do"
+  in
+  iter lexer []
 ;;
 
 (* assumes we are past the starting quote
