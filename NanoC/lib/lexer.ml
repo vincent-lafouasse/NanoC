@@ -142,7 +142,7 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
     match get l with
     | Some '"' ->
       let past_end_lexer = advance l in
-      let body = String.of_seq (List.to_seq acc) in
+      let body = String.of_seq (List.to_seq (List.rev acc)) in
       let kind = Token.StringLiteral body in
       Ok (kind, past_end_lexer)
     | None -> Error (UnterminatedStringLiteral, l)
@@ -169,11 +169,18 @@ let next_token lexer : (Token.t * t, error) result =
     let kind, lexer = scan_identifier_or_keyword start_lexer in
     Ok (make_token start lexer kind, lexer)
   in
+  let make_string_literal_token start_lexer =
+    let start = start_lexer.position in
+    match scan_string_literal start_lexer with
+    | Error (err, end_lexer) -> Error (err, make_span start end_lexer)
+    | Ok (kind, end_lexer) -> Ok (make_token start end_lexer kind, end_lexer)
+  in
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
   | Some '{' -> make_hard_token lexer Token.LBrace ~len:1
   | Some '}' -> make_hard_token lexer Token.RBrace ~len:1
+  | Some '"' -> make_string_literal_token lexer
   | Some c when char_is_ident_start c -> make_ident_token lexer
   | None -> make_hard_token lexer Token.Eof ~len:0
   | Some c ->
