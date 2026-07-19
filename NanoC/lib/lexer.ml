@@ -156,15 +156,6 @@ let scan_string_literal lexer : (Token.t * t, error) result =
   iter lexer []
 ;;
 
-(* assumes we are past the starting quote
-   puts the lexer ON the ending quote *)
-let rec skip_string_literal_body lexer : (t, error_kind * t) result =
-  match get lexer with
-  | None -> Error (UnterminatedStringLiteral, lexer)
-  | Some '"' -> failwith "wtf what do i do"
-  | Some _ -> failwith "wtf what do i do"
-;;
-
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
   { Token.kind; lexeme = make_span start lexer }
 ;;
