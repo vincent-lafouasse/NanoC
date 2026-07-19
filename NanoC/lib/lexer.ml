@@ -8,6 +8,7 @@ type error_kind =
   | UnterminatedString
   | UnterminatedComment
   | UnrecognizedCharacter of char
+  | UnknownEscapeSequence of char (* e.g. \q *)
 [@@deriving show]
 
 type error = error_kind Span.located [@@deriving show]
