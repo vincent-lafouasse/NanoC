@@ -8,6 +8,8 @@ type error_kind =
   | UnterminatedString
   | UnterminatedComment
   | UnrecognizedCharacter of char
+  | UnterminatedStringLiteral
+  | UnterminatedCharLiteral
   | UnknownEscapeSequence of char (* e.g. \q *)
   | MalformedEscapeSequence of string (* e.g. \x?? or \x4 *)
 [@@deriving show]
