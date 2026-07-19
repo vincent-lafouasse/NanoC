@@ -138,7 +138,7 @@ let assert_lexer_on lexer c : unit =
 
 let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
   assert_lexer_on lexer '"';
-  let rec iter (l : t) (acc : char list) : (Token.kind * t, error_kind) result =
+  let rec iter (l : t) (acc : char list) : (Token.kind * t, error_kind * t) result =
     match get l with
     | Some '"' ->
       let past_end_lexer = advance l in
