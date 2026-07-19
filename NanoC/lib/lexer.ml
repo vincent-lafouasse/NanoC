@@ -125,14 +125,21 @@ let scan_identifier_or_keyword lexer : Token.kind * t =
   | _ -> Token.Identifier lexeme, past_end_lexer
 ;;
 
+let assert_lexer_on lexer c =
+  match get lexer with
+  | Some ch when ch = c -> 0
+  | _ ->
+    let char_repr : string =
+      if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
+    in
+    let message = Printf.sprintf "lexer not on %s" char_repr in
+    failwith message
+;;
+
 let scan_string_literal lexer : (Token.t * t, error) result =
-  let _assert =
-    match get lexer with
-    | Some '"' -> 0
-    | _ -> failwith "started scanning string but not on starting quote"
-  in
-  let lexeme_start = lexer.position in
-  let lexer = advance lexer in
+  let _assert = assert_lexer_on lexer '"' in
+  let _lexeme_start = lexer.position in
+  let _lexer = advance lexer in
   failwith "todo"
 ;;
 
