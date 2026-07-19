@@ -125,10 +125,9 @@ let scan_identifier_or_keyword lexer : Token.kind * t =
   | _ -> Token.Identifier lexeme, past_end_lexer
 ;;
 
-let assert_lexer_on lexer c =
-  let irrelevant = 0 in
+let assert_lexer_on lexer c : unit =
   match get lexer with
-  | Some ch when ch = c -> irrelevant
+  | Some ch when ch = c -> ()
   | _ ->
     let char_repr : string =
       if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
@@ -138,7 +137,7 @@ let assert_lexer_on lexer c =
 ;;
 
 let scan_string_literal lexer : (Token.t * t, error) result =
-  let _assert = assert_lexer_on lexer '"' in
+  assert_lexer_on lexer '"';
   let lexeme_start = lexer.position in
   let lexer = advance lexer in
   let rec iter (l : t) (acc : char list) : (Token.t * t, error) result =
