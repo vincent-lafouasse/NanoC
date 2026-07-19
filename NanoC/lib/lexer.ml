@@ -126,8 +126,9 @@ let scan_identifier_or_keyword lexer : Token.kind * t =
 ;;
 
 let assert_lexer_on lexer c =
+  let irrelevant = 0 in
   match get lexer with
-  | Some ch when ch = c -> 0
+  | Some ch when ch = c -> irrelevant
   | _ ->
     let char_repr : string =
       if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
