@@ -136,19 +136,16 @@ let assert_lexer_on lexer c : unit =
     failwith message
 ;;
 
-let scan_string_literal lexer : (Token.t * t, error) result =
+let scan_string_literal lexer : (Token.kind * t, error_kind) result =
   assert_lexer_on lexer '"';
-  let lexeme_start = lexer.position in
-  let rec iter (l : t) (acc : char list) : (Token.t * t, error) result =
+  let rec iter (l : t) (acc : char list) : (Token.kind * t, error_kind) result =
     match get l with
     | Some '"' ->
       let past_end_lexer = advance l in
-      let lexeme = make_span lexeme_start past_end_lexer in
       let body = String.of_seq (List.to_seq acc) in
       let kind = Token.StringLiteral body in
-      let token : Token.t = { kind; lexeme } in
-      Ok (token, past_end_lexer)
-    | None -> Error (UnterminatedStringLiteral, make_span lexeme_start l)
+      Ok (kind, past_end_lexer)
+    | None -> Error UnterminatedStringLiteral
     | Some c -> iter (advance l) (c :: acc)
   in
   iter (advance lexer) []
