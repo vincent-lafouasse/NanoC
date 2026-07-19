@@ -133,6 +133,34 @@ let test_unterminated_block_comment_is_an_error () =
   check_error "unterminated block comment" "fn /* never closed" Lexer.UnterminatedComment
 ;;
 
+(* no escape sequences yet — plain content only *)
+
+let test_plain_string_literal () =
+  check_tokens {|"hello"|} {|"hello"|} [ Token.StringLiteral "hello"; Token.Eof ]
+;;
+
+let test_empty_string_literal () =
+  check_tokens {|""|} {|""|} [ Token.StringLiteral ""; Token.Eof ]
+;;
+
+let test_string_literal_with_spaces_and_punctuation () =
+  check_tokens
+    {|"hello, world!"|}
+    {|"hello, world!"|}
+    [ Token.StringLiteral "hello, world!"; Token.Eof ]
+;;
+
+let test_string_literal_in_context () =
+  check_tokens
+    "string literal amid other tokens"
+    {|fn { "yo" }|}
+    [ Token.Fn; Token.LBrace; Token.StringLiteral "yo"; Token.RBrace; Token.Eof ]
+;;
+
+let test_unterminated_string_literal_is_an_error () =
+  check_error {|"never closed|} {|"never closed|} Lexer.UnterminatedStringLiteral
+;;
+
 let () =
   test_each_keyword ();
   test_keyword_sequence ();
@@ -145,6 +173,11 @@ let () =
   test_block_comment_with_no_whitespace ();
   test_interleaved_trivia ();
   test_unterminated_block_comment_is_an_error ();
+  test_plain_string_literal ();
+  test_empty_string_literal ();
+  test_string_literal_with_spaces_and_punctuation ();
+  test_string_literal_in_context ();
+  test_unterminated_string_literal_is_an_error ();
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
