@@ -9,6 +9,7 @@ type error_kind =
   | UnterminatedComment
   | UnrecognizedCharacter of char
   | UnknownEscapeSequence of char (* e.g. \q *)
+  | MalformedEscapeSequence of string (* e.g. \x?? or \x4 *)
 [@@deriving show]
 
 type error = error_kind Span.located [@@deriving show]
