@@ -136,7 +136,7 @@ let assert_lexer_on lexer c : unit =
     failwith message
 ;;
 
-let scan_string_literal lexer : (Token.kind * t, error_kind) result =
+let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
   assert_lexer_on lexer '"';
   let rec iter (l : t) (acc : char list) : (Token.kind * t, error_kind) result =
     match get l with
@@ -145,7 +145,7 @@ let scan_string_literal lexer : (Token.kind * t, error_kind) result =
       let body = String.of_seq (List.to_seq acc) in
       let kind = Token.StringLiteral body in
       Ok (kind, past_end_lexer)
-    | None -> Error UnterminatedStringLiteral
+    | None -> Error (UnterminatedStringLiteral, l)
     | Some c -> iter (advance l) (c :: acc)
   in
   iter (advance lexer) []
