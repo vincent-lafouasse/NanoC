@@ -103,10 +103,18 @@
    - Stack allocated only?
    - **Proposal:** `i32[10]` (postfix, matches pointers)
 
-4. **String literals:** Currently `ptr` type
-   - Should be `u8*` for safety?
-   - Null-terminated?
-   - **Proposal:** Unsure if we want null termination
+4. ~~**String literals:** Currently `ptr` type~~ **SETTLED (termination)**
+
+   **Decision:** string literals are always null-terminated. Kept as `ptr` for now — this
+   matches C's `char *` exactly, so `extern`-declared functions (see Future Work → Foreign
+   Function Interface) can take a NanoC string literal directly, no conversion needed.
+
+   Whether literals should be typed `u8*` instead of bare `ptr` is still open, but no
+   longer blocking — termination was the part that actually needed deciding before FFI
+   could work at all.
+
+   A richer, length-carrying string type is explicitly not part of the core language or
+   the literal representation — see Future Work → Stdlib Strings.
 
 5. **Array bounds checking:** Leave as UB or define behavior?
    - UB (performance, matches C)
