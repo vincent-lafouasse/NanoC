@@ -141,7 +141,7 @@ let scan_string_literal lexer : (Token.t * t, error) result =
   let _assert = assert_lexer_on lexer '"' in
   let lexeme_start = lexer.position in
   let lexer = advance lexer in
-  let iter (l : t) (acc : char list) : (Token.t * t, error) result =
+  let rec iter (l : t) (acc : char list) : (Token.t * t, error) result =
     match get l with
     | Some '"' ->
       let past_end_lexer = advance l in
@@ -151,7 +151,7 @@ let scan_string_literal lexer : (Token.t * t, error) result =
       let token : Token.t = { kind; lexeme } in
       Ok (token, past_end_lexer)
     | None -> Error (UnterminatedStringLiteral, make_span lexeme_start l)
-    | Some _ -> failwith "wtf what do i do"
+    | Some c -> iter (advance l) (c :: acc)
   in
   iter lexer []
 ;;
