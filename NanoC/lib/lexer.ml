@@ -139,7 +139,6 @@ let assert_lexer_on lexer c : unit =
 let scan_string_literal lexer : (Token.t * t, error) result =
   assert_lexer_on lexer '"';
   let lexeme_start = lexer.position in
-  let lexer = advance lexer in
   let rec iter (l : t) (acc : char list) : (Token.t * t, error) result =
     match get l with
     | Some '"' ->
@@ -152,7 +151,7 @@ let scan_string_literal lexer : (Token.t * t, error) result =
     | None -> Error (UnterminatedStringLiteral, make_span lexeme_start l)
     | Some c -> iter (advance l) (c :: acc)
   in
-  iter lexer []
+  iter (advance lexer) []
 ;;
 
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
