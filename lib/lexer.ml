@@ -144,6 +144,10 @@ let recognize_escape_sequence = function
   | '\\' -> Some '\\'
   | '"' -> Some '"'
   | '\'' -> Some '\''
+  | '0' -> Some (Char.chr 0x00)
+  | 'a' -> Some (Char.chr 0x07)
+  | 'v' -> Some (Char.chr 0x0b)
+  | 'f' -> Some (Char.chr 0x0c)
   | _ -> None
 ;;
 
