@@ -173,6 +173,10 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
       let kind = Token.StringLiteral body in
       Ok (kind, past_end_lexer)
     | None -> Error (UnterminatedStringLiteral, l)
+    | Some '\\' ->
+      (match decode_escape_sequence l with
+       | Error (kind, lexer) -> Error (kind, lexer)
+       | Ok (ch, lexer) -> iter lexer (ch :: acc))
     | Some c -> iter (advance l) (c :: acc)
   in
   iter (advance lexer) []
