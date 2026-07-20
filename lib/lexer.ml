@@ -230,17 +230,17 @@ let tokenize input =
   iter (init input) []
 ;;
 
+let char_repr c : string =
+  if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
+;;
+
 let format_error_kind = function
   | UnterminatedComment -> "Unterminated comment"
-  | UnrecognizedCharacter c ->
-    let char_repr : string =
-      if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
-    in
-    Printf.sprintf "Unrecognized character %s" char_repr
+  | UnrecognizedCharacter c -> Printf.sprintf "Unrecognized character %s" (char_repr c)
   | UnterminatedStringLiteral -> "Unterminated string literal"
   | UnterminatedCharLiteral -> "Unterminated char literal"
-  | UnknownEscapeSequence c -> failwith "todo"
-  | MalformedEscapeSequence s -> failwith "todo"
+  | UnknownEscapeSequence c -> Printf.sprintf "Unkown escape sequence \\%s" (char_repr c)
+  | MalformedEscapeSequence s -> Printf.sprintf "Malformed escape sequence %s" s
 ;;
 
 let format_error ((kind, span) : error) : string =
