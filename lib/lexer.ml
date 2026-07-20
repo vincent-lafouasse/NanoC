@@ -152,7 +152,15 @@ let decode_escape_sequence lexer : (char * t, error_kind * t) result =
   assert_lexer_on lexer '\\';
   let lexer = advance lexer in
   match get lexer with
-  | _ -> failwith "todo"
+  | None -> Error (MalformedEscapeSequence "\\", lexer)
+  | Some ch ->
+    (match recognize_escape_sequence ch with
+     | Some c -> Ok (c, advance lexer)
+     | None ->
+       (match ch with
+        | 'x' -> failwith "hex escape todo"
+        | 'd' -> failwith "dec escape todo"
+        | _ -> Error (UnknownEscapeSequence ch, advance lexer)))
 ;;
 
 let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
