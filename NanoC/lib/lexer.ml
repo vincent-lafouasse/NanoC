@@ -147,9 +147,9 @@ let recognize_escape_sequence = function
   | _ -> None
 ;;
 
-let decode_hex_sequence lexer : (char * t, error_kind * t) result =
-  assert_lexer_on '\\';
+let decode_escape_sequence lexer : (char * t, error_kind * t) result =
   (* contract: call this function on the \ *)
+  assert_lexer_on '\\';
   let lexer = advance lexer in
   match get lexer with
   | _ -> failwith "todo"
