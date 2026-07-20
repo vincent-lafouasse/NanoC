@@ -20,7 +20,7 @@ one file per topic instead of a handful of growing, mixed-status documents.
   `extern`/FFI interop with no conversion step.
 - Full escape sequence table: `\n \t \r \\ \" \0 \a \b \f \v`, `\xHH` (fixed 2 hex digits),
   `\dDDD` (fixed 3 decimal digits, explicitly marked to avoid colliding with C's octal
-  convention), `\e` (ESC).
+  convention), `\e` (ESC). Octal escape sequences are still on the table, just very de-prioritized.
 - Explicit non-support recorded, with rationale: no octal escapes (`\ooo`), no trigraphs,
   no `\?`.
 - A length-carrying `Str` stdlib type proposed for when a richer string type is needed —
