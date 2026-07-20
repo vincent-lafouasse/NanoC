@@ -20,8 +20,7 @@ block   = "{" statement* "}" ;
 if_stmt = "if" "(" expression ")" block ("else" (if_stmt | block))? ;
 
 (* bodies of if/while MUST be blocks — bare expressions are a parse error        *)
-statement = const_decl
-          | var_decl
+statement = var_decl
           | constexpr_decl
           | lvalue "=" expression ";"    (* assignment *)
           | call_expr ";"               (* expression statement: calls/syscalls only *)

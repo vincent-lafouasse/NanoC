@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Philosophy - NanoC Design Document</title>
+        <title>Philosophy - A Tour of NanoC</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html" class="active"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html" class="active"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded "><a href="semantic-analysis.html"><strong aria-hidden="true">5.</strong> Semantic Analysis</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">6.</strong> Appendix</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,7 +142,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">NanoC Design Document</h1>
+                    <h1 class="menu-title">A Tour of NanoC</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -181,15 +181,26 @@
 <h3 id="core-principles"><a class="header" href="#core-principles">Core Principles</a></h3>
 <p><strong>1. Minimal</strong>
 NanoC is intentionally small. Every language feature must justify its existence. We prefer explicit over implicit, and simple over convenient.</p>
-<p><strong>2. Context-Free Grammar</strong>
-The grammar must be context-free and unambiguous. This makes parsing straightforward and reasoning about code easier.</p>
-<p><strong>3. Readable Assembly</strong>
-There should be a predictable, almost 1:1 mapping from NanoC to RISC-V assembly. Programmers should be able to mentally compile their code.</p>
-<p><strong>4. No Runtime</strong>
+<p><strong>2. C-like Syntax</strong>
+NanoC syntax is deliberately close to C — the target audience already knows C, and
+familiarity lowers the learning curve. Where NanoC diverges, it does so to make parsing or
+reasoning simpler: mandatory braces eliminate dangling-else ambiguity, declarations before
+statements eliminate goto-past-initialisation hazards, type annotations use <code>:</code> for
+consistency. The grammar is unambiguous and context-free by construction.</p>
+<p><strong>3. Fundamentally Procedural and Statement-Oriented</strong>
+NanoC is a sequence of instructions, not a tree of expressions. Statements map to instructions; expressions compute values into registers. There are no expression-level side effects, no implicit control flow, no values produced by blocks or conditionals. Code should be readable as assembly — each line corresponds to something the processor does.</p>
+<p><strong>4. ALU Only</strong>
+NanoC targets the integer pipeline exclusively. The FPU is a distinct hardware unit with
+its own registers, instructions, and calling convention concerns — bringing it in would
+widen the compiler's target without serving NanoC's purpose. NanoC is a language for bit
+manipulation and symbolic computation. Programs that need real-number arithmetic use
+fixed-point integers, which keeps the computation in the ALU and fully visible in the
+source.</p>
+<p><strong>5. No Runtime</strong>
 Direct syscalls, no libc dependency. The compiler generates pure assembly with no runtime overhead.</p>
-<p><strong>5. Simple Calling Convention</strong>
+<p><strong>6. Simple Calling Convention</strong>
 Register-sized arguments only. No hidden copies, no complex ABI rules.</p>
-<p><strong>6. Explicit Everything</strong>
+<p><strong>7. Explicit Everything</strong>
 No implicit conversions, no type coercion, no hidden allocations. What you see is what you get.</p>
 <hr />
 

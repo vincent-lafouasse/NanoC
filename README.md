@@ -12,16 +12,20 @@ A minimal systems programming language targeting RISC-V.
 
 ## Documentation
 
-The design documentation is available as an mdBook:
+"A Tour of NanoC" — a guided walkthrough of the language's current, settled design — is
+available as an mdBook:
 
 ```bash
-cd book
+cd aux/book
 mdbook serve
 ```
 
-Then open http://localhost:3000
+Then open http://localhost:3000. See [`aux/book/README.md`](aux/book/README.md) for more
+details on building it.
 
-See [`book/README.md`](book/README.md) for more details on building the documentation.
+Open questions, proposals, and post-MVP plans aren't in the Tour — see
+[`aux/wiki/`](aux/wiki/), one file per topic. See [`CHANGELOG.md`](CHANGELOG.md) for what's
+changed release over release.
 
 ## Quick Start
 

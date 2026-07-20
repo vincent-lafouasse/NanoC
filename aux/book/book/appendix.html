@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Appendix - NanoC Design Document</title>
+        <title>Appendix - A Tour of NanoC</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html" class="active"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded "><a href="semantic-analysis.html"><strong aria-hidden="true">5.</strong> Semantic Analysis</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html" class="active"><strong aria-hidden="true">6.</strong> Appendix</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,7 +142,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">NanoC Design Document</h1>
+                    <h1 class="menu-title">A Tour of NanoC</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -179,29 +179,36 @@
                     <main>
                         <h2 id="appendix"><a class="header" href="#appendix">Appendix</a></h2>
 <h3 id="grammar-summary"><a class="header" href="#grammar-summary">Grammar Summary</a></h3>
-<p>See <code>spec/grammar.ebnf</code> for full grammar.</p>
-<p>Key productions:</p>
-<pre><code class="language-ebnf">program = top_level_statement* ;
+<p>Full grammar: <code>spec/grammar.ebnf</code>. Key productions:</p>
+<pre><code class="language-ebnf">var_decl       = "var"       variable_name ":" type "=" var_init   ";" ;
+constexpr_decl = "constexpr" variable_name ":" type "=" expression ";" ;
+var_init       = expression | "zeroed" | "undefined" ;
+(* no runtime const — var is the only runtime binding                         *)
+(* constexpr: folded, not stored, not addressable, initialiser must be a      *)
+(*            constexpr expression — sema-checked, not grammar                *)
 
-top_level_statement = struct_decl
-                    | var_decl
-                    | function_decl
-                    ;
+(* all var/constexpr declarations precede all statements within a block *)
+block = "{" (var_decl | constexpr_decl)* statement* "}" ;
 
-register_sized = primitive_type | pointer ;
+(* blocks are statement containers — no value, no trailing expression *)
+block   = "{" statement* "}" ;
+if_stmt = "if" "(" expression ")" block ("else" (if_stmt | block))? ;
 
-var_decl = ("var" | "const") variable_name ":" type "=" var_initializer ";" ;
-var_initializer = expression | "zeroed" | "undefined" ;
-
+(* bodies of if/while MUST be blocks — bare expressions are a parse error        *)
 statement = var_decl
-          | expression ";"
+          | constexpr_decl
+          | lvalue "=" expression ";"    (* assignment *)
+          | call_expr ";"               (* expression statement: calls/syscalls only *)
           | "return" expression? ";"
-          | "if" "(" expression ")" statement ("else" statement)?
-          | "while" "(" expression ")" statement
-          | "{" statement* "}"
-          | "goto" label ";"
-          | label ":" statement
+          | if_stmt
+          | "while" "(" expression ")" block
+          | "goto" label_name ";"
+          | "unreachable" ";"
+          | label_name ":" statement
           ;
+
+(* expressions compute values — blocks and if/else are NOT expressions *)
+expression = pratt_expr ;
 </code></pre>
 <h3 id="references"><a class="header" href="#references">References</a></h3>
 <ul>
@@ -215,7 +222,7 @@ statement = var_decl
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="future-work.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="semantic-analysis.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -226,7 +233,7 @@ statement = var_decl
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="future-work.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="semantic-analysis.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 

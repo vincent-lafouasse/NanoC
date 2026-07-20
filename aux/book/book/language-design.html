@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Language Design - NanoC Design Document</title>
+        <title>Language Design - A Tour of NanoC</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html" class="active"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html" class="active"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded "><a href="semantic-analysis.html"><strong aria-hidden="true">5.</strong> Semantic Analysis</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">6.</strong> Appendix</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,7 +142,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">NanoC Design Document</h1>
+                    <h1 class="menu-title">A Tour of NanoC</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -207,15 +207,36 @@
 fn process(p: Point) { ... }   // ❌ Compile error
 </code></pre>
 <h3 id="variables-and-initialization"><a class="header" href="#variables-and-initialization">Variables and Initialization</a></h3>
+<h4 id="one-binding-keyword-var"><a class="header" href="#one-binding-keyword-var">One binding keyword: <code>var</code></a></h4>
+<p>There is no <code>const</code> keyword for runtime bindings. <code>var</code> is the only way to declare a
+variable. Immutability is a convention enforced by the programmer, not the compiler — the
+same way C was before <code>const</code> existed. There is no compile-time enforcement of read-only
+access to runtime variables.</p>
+<p>Compile-time constants use <code>constexpr</code> and are a separate concept — see
+<code>aux/wiki/ADR-0008-binding-forms-var-constexpr.md</code> and <code>aux/wiki/ADR-0015-compile-time-conditionals.md</code>.</p>
 <h4 id="mandatory-initialization"><a class="header" href="#mandatory-initialization">Mandatory Initialization</a></h4>
 <p>Every variable MUST have an initializer:</p>
-<pre><code class="language-nanoc">var x: i32 = 10;           // Expression initializer
-var buffer: u8* = zeroed;  // Zero initialization
-var temp: i32 = undefined; // Uninitialized (danger!)
+<pre><code class="language-nanoc">var x: i32 = 10;           // expression initializer
+var buffer: u8* = zeroed;  // zero-initialised
+var temp: i32 = undefined; // explicitly uninitialised (danger!)
 </code></pre>
-<p><strong>Design Decision:</strong> No uninitialized-by-default variables. Forces programmers to think about initialization.</p>
-<p>The <code>undefined</code> keyword makes undefined behavior explicit rather than accidental.</p>
-<p><strong>Rule:</strong> <code>nanoconst</code> variables cannot use <code>undefined</code> (checked at compile time).</p>
+<p><strong>Design Decision:</strong> No uninitialized-by-default variables. Forces explicit acknowledgement
+of uninitialized state. The <code>undefined</code> keyword makes the hazard visible rather than silent.</p>
+<h4 id="declarations-at-the-top-of-scope"><a class="header" href="#declarations-at-the-top-of-scope">Declarations at the top of scope</a></h4>
+<p>All <code>var</code> (and <code>constexpr</code>) declarations in a block must precede all statements. Interleaving
+declarations and statements is a parse error:</p>
+<pre><code class="language-nanoc">fn example() {
+    var x: i32 = 10;    // ✅ declaration section
+    var y: i32 = 20;    // ✅
+    x = x + y;          // ✅ statement section
+    var z: i32 = 0;     // ❌ parse error — declaration after statement
+}
+</code></pre>
+<p><strong>Rationale:</strong> This rule eliminates the <code>goto</code>-past-declaration hazard entirely. If all
+declarations are at the top of a scope and all labels are in the statement section, no
+<code>goto</code> within that scope can ever skip an initialisation. The <code>goto</code> analysis simplifies
+from "did this jump cross a declaration?" to "does this jump target a label inside a nested
+block?" — a much cheaper check.</p>
 <h3 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h3>
 <h4 id="structured-control"><a class="header" href="#structured-control">Structured Control</a></h4>
 <ul>
@@ -223,7 +244,41 @@ var temp: i32 = undefined; // Uninitialized (danger!)
 <li><code>while</code> - loops</li>
 <li><code>goto</code>/labels - arbitrary jumps</li>
 </ul>
-<p><strong>No <code>break</code> or <code>nanocontinue</code> keywords.</strong></p>
+<p><strong>No <code>break</code> or <code>continue</code> keywords.</strong></p>
+<h4 id="condition-types"><a class="header" href="#condition-types">Condition types</a></h4>
+<p>An <code>if</code> or <code>while</code> condition must be a register-sized expression: <code>u8</code>, <code>i32</code>, <code>u32</code>, or
+any pointer. Structs are not valid conditions.</p>
+<p>The condition compiles to a register load followed by a branch-if-zero or
+branch-if-not-zero instruction (<code>BEQ</code>/<code>BNE</code> against <code>x0</code>). No separate boolean type or
+implicit boolean conversion exists — the hardware already does it. Smaller types (<code>u8</code>)
+are zero-extended by the load; pointers are register-sized natively.</p>
+<pre><code class="language-nanoc">if (x)    { ... }  // ✅ i32 — non-zero is true
+if (ptr)  { ... }  // ✅ pointer — non-null is true
+if (node) { ... }  // ✅ pointer — non-null check, zero cost
+</code></pre>
+<h4 id="mandatory-braces"><a class="header" href="#mandatory-braces">Mandatory braces</a></h4>
+<p>The then-clause of <code>if</code> and the body of <code>while</code> must always be a block. The else-clause
+may be either a block or another <code>if</code> statement — the minimal exception needed for
+<code>else if</code> chains:</p>
+<pre><code class="language-nanoc">if (cond) { x = 1; }         // ✅ then-clause is a block
+if (cond) x = 1;             // ❌ parse error — then-clause must be a block
+while (cond) { ... }         // ✅
+while (cond) stmt;           // ❌ parse error
+if (a) { } else { }         // ✅ else-clause is a block
+if (a) { } else if (b) { }  // ✅ else-clause is another if — chaining
+if (a) { } else x = 1;      // ❌ parse error — else-clause must be block or if
+</code></pre>
+<p><strong>Rationale:</strong> This eliminates the dangling <code>else</code> ambiguity entirely. After <code>else</code> the
+parser sees either <code>{</code> (block) or <code>if</code> (chained if) — nothing else is valid, so there is
+nothing to be ambiguous about. <code>else if</code> chains require no special syntax:</p>
+<pre><code class="language-nanoc">if (x &gt; 0) {
+    positive
+} else if (x &lt; 0) {
+    negative
+} else {
+    zero
+}
+</code></pre>
 <p><strong>Rationale:</strong> These are redundant with <code>goto</code>. In nested loops, <code>break</code> is ambiguous about which loop to exit. <code>goto</code> is explicit:</p>
 <pre><code class="language-nanoc">while (x &gt; 0) {
     while (y &gt; 0) {
@@ -242,18 +297,9 @@ x * 2;                                // ❌ parse error: not a call
 </code></pre>
 <p><strong>Rationale:</strong> An expression statement that isn't a call is almost always a bug — the result is discarded. If two functions have side effects, call them separately: <code>f(); g();</code>. This catches mistakes like writing <code>a == b;</code> when you meant <code>a = b;</code> without needing a separate lint pass.</p>
 <h4 id="goto-restrictions"><a class="header" href="#goto-restrictions">Goto Restrictions</a></h4>
-<p><strong>Open Design Question:</strong> Should we allow backward jumps past variable declarations?</p>
-<pre><code class="language-nanoc">here:
-    var x: i32 = 3;  // What happens on second iteration?
-    goto here;
-</code></pre>
-<p>C allows this (re-executes initialization). We should either:</p>
-<ol>
-<li>Allow it (match C behavior)</li>
-<li>Static error (prevent confusion)</li>
-<li>Require declarations before labels in each scope</li>
-</ol>
-<p><strong>Current leaning:</strong> Static error for backward jumps past declarations.</p>
+<p>Whether a backward jump may land <em>before</em> a declaration and re-execute it (as C allows) is
+still an open question — see <code>aux/wiki/ADR-0001-backward-goto-past-declarations.md</code>. Current
+leaning: static error.</p>
 <h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
 <h4 id="signature-restrictions"><a class="header" href="#signature-restrictions">Signature Restrictions</a></h4>
 <pre><code class="language-nanoc">fn add(a: i32, b: i32) -&gt; i32 { ... }
@@ -268,28 +314,10 @@ x * 2;                                // ❌ parse error: not a call
 <li>Makes ABI trivial</li>
 </ul>
 <h4 id="multi-value-returns"><a class="header" href="#multi-value-returns">Multi-Value Returns</a></h4>
-<p><strong>Open Design Question:</strong> How to use both return registers (a0, a1)?</p>
-<p><strong>Option 1: Tuple returns</strong> (simple, minimal)</p>
-<pre><code class="language-nanoc">fn divmod(a: i32, b: i32) -&gt; (i32, i32) {
-    return (a / b, a % b);
-}
-
-var quot: i32;
-var rem: i32;
-(quot, rem) = divmod(10, 3);
-</code></pre>
-<p>**Option 2: Some kind of zig style error ** (could be cool but useless without some kind of <code>try</code> mechanics)</p>
-<pre><code class="language-nanoc">fn can_fail() -&gt; (x: i32, Error) {
-    try can_also_fail(x);
-
-    if (x == 0) {
-        return Err(my_error(x));
-    }
-
-    return Ok(x);
-}
-</code></pre>
-<p><strong>Current status:</strong> Not yet decided. Tuple syntax is cleaner and maps directly to registers.</p>
+<p>How to use both RISC-V return registers (<code>a0</code>, <code>a1</code>) is still open, including whether it
+ties into an error-handling story — see <code>aux/wiki/ADR-0002-tuple-returns-and-error-handling.md</code>.
+Current leaning: simple tuple returns; tuple syntax is cleaner and maps directly to
+registers.</p>
 <h3 id="operators"><a class="header" href="#operators">Operators</a></h3>
 <p>All standard C operators with standard precedence:</p>
 <ul>
@@ -345,7 +373,7 @@ US: Unspecified</p>
 <h4 id="signed-integer-overflow"><a class="header" href="#signed-integer-overflow">Signed Integer Overflow</a></h4>
 <p><strong>C behavior:</strong> Undefined behavior
 <strong>NanoC behavior:</strong> Two's complement wrapping (defined)</p>
-<pre><code class="language-nanoc">const MAX: i32 = 2147483647;
+<pre><code class="language-nanoc">constexpr MAX: i32 = 2147483647;
 var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
 </code></pre>
 <p><strong>Rationale:</strong> RISC-V integers are two's complement. Undefined behavior here serves no optimization purpose and makes overflow bugs harder to reason about.</p>
@@ -382,13 +410,8 @@ var x: i32 = side_effect() + side_effect();  // left call happens first
 <h4 id="out-of-bounds-array-access"><a class="header" href="#out-of-bounds-array-access">Out-of-Bounds Array Access</a></h4>
 <p><strong>C behavior:</strong> Undefined behavior
 <strong>NanoC behavior:</strong> Still undefined behavior (for now)</p>
-<p><strong>Open question:</strong> Should we define this? Options:</p>
-<ol>
-<li>Keep as UB (performance)</li>
-<li>Trap/panic (safety)</li>
-<li>Return zero (defined but dangerous)</li>
-</ol>
-<p><strong>Current decision:</strong> UB (same as C). May add optional bounds checking later.</p>
+<p>Whether to define this instead (trap, or a defined-but-dangerous return value) is open —
+see <code>aux/wiki/ADR-0006-array-bounds-checking.md</code>. May add optional bounds checking later.</p>
 <h4 id="null-pointer-dereference"><a class="header" href="#null-pointer-dereference">Null Pointer Dereference</a></h4>
 <p><strong>C behavior:</strong> Undefined behavior
 <strong>NanoC behavior:</strong> Undefined behavior</p>

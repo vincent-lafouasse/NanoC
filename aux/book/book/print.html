@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>NanoC Design Document</title>
+        <title>A Tour of NanoC</title>
         <meta name="robots" content="noindex">
 
 
@@ -90,7 +90,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded "><a href="semantic-analysis.html"><strong aria-hidden="true">5.</strong> Semantic Analysis</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">6.</strong> Appendix</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -143,7 +143,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">NanoC Design Document</h1>
+                    <h1 class="menu-title">A Tour of NanoC</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -178,10 +178,14 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="nanoc-design-document"><a class="header" href="#nanoc-design-document">NanoC Design Document</a></h1>
+                        <h1 id="a-tour-of-nanoc"><a class="header" href="#a-tour-of-nanoc">A Tour of NanoC</a></h1>
 <p><strong>Version:</strong> 0.1.0
-<strong>Last Updated:</strong> 2026-02-17</p>
-<p>This document describes the design philosophy, architecture, and implementation details of NanoC for contributors.</p>
+<strong>Last Updated:</strong> 2026-07-20</p>
+<p>This is a guided walkthrough of NanoC's current design — the settled language, architecture,
+and implementation, as it stands today. It describes what NanoC <em>is</em>, not what it might
+become: in-progress proposals, open questions, and post-MVP plans live in the design wiki
+(<code>aux/wiki/</code>) instead, so this tour stays a reliable, coherent read start to finish rather
+than a mix of decided and undecided material.</p>
 <h2 id="what-is-nanoc"><a class="header" href="#what-is-nanoc">What is NanoC?</a></h2>
 <p>NanoC is a minimal systems programming language targeting RISC-V. It emphasizes:</p>
 <ul>
@@ -207,7 +211,7 @@
 
 // fixed-point square root in Q25.6 format (6 fractional bits).
 fn sqrt_q6(n: i32) -&gt; i32 {
-    const scaled: i32 = n &lt;&lt; 12;
+    var scaled: i32 = n &lt;&lt; 12;
     if (scaled &lt;= 0) {
         return 0;
     }
@@ -225,8 +229,8 @@ fn sqrt_q6(n: i32) -&gt; i32 {
 
 // euclidean distance as Q25.6 fixed-point.
 fn distance(a: Point*, b: Point*) -&gt; i32 {
-    const dx: i32 = a-&gt;x - b-&gt;x;
-    const dy: i32 = a-&gt;y - b-&gt;y;
+    var dx: i32 = a-&gt;x - b-&gt;x;
+    var dy: i32 = a-&gt;y - b-&gt;y;
     return sqrt_q6(dx * dx + dy * dy);
 }
 
@@ -236,13 +240,13 @@ fn main() -&gt; i32 {
     p.x = 67;
     p.y = 420;
 
-    const dist: i32 = distance(&amp;p, &amp;origin);  // 27219 → 425.3
+    var dist: i32 = distance(&amp;p, &amp;origin);  // 27219 → 425.3
 
-    const s: ptr = "yo i'm feinberg\n\x44";
+    var s: ptr = "yo i'm feinberg\n\x44";
 
-    const SYS_WRITE: i32 = 67;
-    const STDOUT: i32 = 1;
-    const status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
+    constexpr SYS_WRITE: i32 = 67;
+    constexpr STDOUT: i32 = 1;
+    var status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
 
     if (status &lt; 0) {
         goto bad;
@@ -260,15 +264,26 @@ bad:
 <h3 id="core-principles"><a class="header" href="#core-principles">Core Principles</a></h3>
 <p><strong>1. Minimal</strong>
 NanoC is intentionally small. Every language feature must justify its existence. We prefer explicit over implicit, and simple over convenient.</p>
-<p><strong>2. Context-Free Grammar</strong>
-The grammar must be context-free and unambiguous. This makes parsing straightforward and reasoning about code easier.</p>
-<p><strong>3. Readable Assembly</strong>
-There should be a predictable, almost 1:1 mapping from NanoC to RISC-V assembly. Programmers should be able to mentally compile their code.</p>
-<p><strong>4. No Runtime</strong>
+<p><strong>2. C-like Syntax</strong>
+NanoC syntax is deliberately close to C — the target audience already knows C, and
+familiarity lowers the learning curve. Where NanoC diverges, it does so to make parsing or
+reasoning simpler: mandatory braces eliminate dangling-else ambiguity, declarations before
+statements eliminate goto-past-initialisation hazards, type annotations use <code>:</code> for
+consistency. The grammar is unambiguous and context-free by construction.</p>
+<p><strong>3. Fundamentally Procedural and Statement-Oriented</strong>
+NanoC is a sequence of instructions, not a tree of expressions. Statements map to instructions; expressions compute values into registers. There are no expression-level side effects, no implicit control flow, no values produced by blocks or conditionals. Code should be readable as assembly — each line corresponds to something the processor does.</p>
+<p><strong>4. ALU Only</strong>
+NanoC targets the integer pipeline exclusively. The FPU is a distinct hardware unit with
+its own registers, instructions, and calling convention concerns — bringing it in would
+widen the compiler's target without serving NanoC's purpose. NanoC is a language for bit
+manipulation and symbolic computation. Programs that need real-number arithmetic use
+fixed-point integers, which keeps the computation in the ALU and fully visible in the
+source.</p>
+<p><strong>5. No Runtime</strong>
 Direct syscalls, no libc dependency. The compiler generates pure assembly with no runtime overhead.</p>
-<p><strong>5. Simple Calling Convention</strong>
+<p><strong>6. Simple Calling Convention</strong>
 Register-sized arguments only. No hidden copies, no complex ABI rules.</p>
-<p><strong>6. Explicit Everything</strong>
+<p><strong>7. Explicit Everything</strong>
 No implicit conversions, no type coercion, no hidden allocations. What you see is what you get.</p>
 <hr />
 <div style="break-before: page; page-break-before: always;"></div><h2 id="language-design"><a class="header" href="#language-design">Language Design</a></h2>
@@ -301,15 +316,36 @@ No implicit conversions, no type coercion, no hidden allocations. What you see i
 fn process(p: Point) { ... }   // ❌ Compile error
 </code></pre>
 <h3 id="variables-and-initialization"><a class="header" href="#variables-and-initialization">Variables and Initialization</a></h3>
+<h4 id="one-binding-keyword-var"><a class="header" href="#one-binding-keyword-var">One binding keyword: <code>var</code></a></h4>
+<p>There is no <code>const</code> keyword for runtime bindings. <code>var</code> is the only way to declare a
+variable. Immutability is a convention enforced by the programmer, not the compiler — the
+same way C was before <code>const</code> existed. There is no compile-time enforcement of read-only
+access to runtime variables.</p>
+<p>Compile-time constants use <code>constexpr</code> and are a separate concept — see
+<code>aux/wiki/ADR-0008-binding-forms-var-constexpr.md</code> and <code>aux/wiki/ADR-0015-compile-time-conditionals.md</code>.</p>
 <h4 id="mandatory-initialization"><a class="header" href="#mandatory-initialization">Mandatory Initialization</a></h4>
 <p>Every variable MUST have an initializer:</p>
-<pre><code class="language-nanoc">var x: i32 = 10;           // Expression initializer
-var buffer: u8* = zeroed;  // Zero initialization
-var temp: i32 = undefined; // Uninitialized (danger!)
+<pre><code class="language-nanoc">var x: i32 = 10;           // expression initializer
+var buffer: u8* = zeroed;  // zero-initialised
+var temp: i32 = undefined; // explicitly uninitialised (danger!)
 </code></pre>
-<p><strong>Design Decision:</strong> No uninitialized-by-default variables. Forces programmers to think about initialization.</p>
-<p>The <code>undefined</code> keyword makes undefined behavior explicit rather than accidental.</p>
-<p><strong>Rule:</strong> <code>nanoconst</code> variables cannot use <code>undefined</code> (checked at compile time).</p>
+<p><strong>Design Decision:</strong> No uninitialized-by-default variables. Forces explicit acknowledgement
+of uninitialized state. The <code>undefined</code> keyword makes the hazard visible rather than silent.</p>
+<h4 id="declarations-at-the-top-of-scope"><a class="header" href="#declarations-at-the-top-of-scope">Declarations at the top of scope</a></h4>
+<p>All <code>var</code> (and <code>constexpr</code>) declarations in a block must precede all statements. Interleaving
+declarations and statements is a parse error:</p>
+<pre><code class="language-nanoc">fn example() {
+    var x: i32 = 10;    // ✅ declaration section
+    var y: i32 = 20;    // ✅
+    x = x + y;          // ✅ statement section
+    var z: i32 = 0;     // ❌ parse error — declaration after statement
+}
+</code></pre>
+<p><strong>Rationale:</strong> This rule eliminates the <code>goto</code>-past-declaration hazard entirely. If all
+declarations are at the top of a scope and all labels are in the statement section, no
+<code>goto</code> within that scope can ever skip an initialisation. The <code>goto</code> analysis simplifies
+from "did this jump cross a declaration?" to "does this jump target a label inside a nested
+block?" — a much cheaper check.</p>
 <h3 id="control-flow"><a class="header" href="#control-flow">Control Flow</a></h3>
 <h4 id="structured-control"><a class="header" href="#structured-control">Structured Control</a></h4>
 <ul>
@@ -317,7 +353,41 @@ var temp: i32 = undefined; // Uninitialized (danger!)
 <li><code>while</code> - loops</li>
 <li><code>goto</code>/labels - arbitrary jumps</li>
 </ul>
-<p><strong>No <code>break</code> or <code>nanocontinue</code> keywords.</strong></p>
+<p><strong>No <code>break</code> or <code>continue</code> keywords.</strong></p>
+<h4 id="condition-types"><a class="header" href="#condition-types">Condition types</a></h4>
+<p>An <code>if</code> or <code>while</code> condition must be a register-sized expression: <code>u8</code>, <code>i32</code>, <code>u32</code>, or
+any pointer. Structs are not valid conditions.</p>
+<p>The condition compiles to a register load followed by a branch-if-zero or
+branch-if-not-zero instruction (<code>BEQ</code>/<code>BNE</code> against <code>x0</code>). No separate boolean type or
+implicit boolean conversion exists — the hardware already does it. Smaller types (<code>u8</code>)
+are zero-extended by the load; pointers are register-sized natively.</p>
+<pre><code class="language-nanoc">if (x)    { ... }  // ✅ i32 — non-zero is true
+if (ptr)  { ... }  // ✅ pointer — non-null is true
+if (node) { ... }  // ✅ pointer — non-null check, zero cost
+</code></pre>
+<h4 id="mandatory-braces"><a class="header" href="#mandatory-braces">Mandatory braces</a></h4>
+<p>The then-clause of <code>if</code> and the body of <code>while</code> must always be a block. The else-clause
+may be either a block or another <code>if</code> statement — the minimal exception needed for
+<code>else if</code> chains:</p>
+<pre><code class="language-nanoc">if (cond) { x = 1; }         // ✅ then-clause is a block
+if (cond) x = 1;             // ❌ parse error — then-clause must be a block
+while (cond) { ... }         // ✅
+while (cond) stmt;           // ❌ parse error
+if (a) { } else { }         // ✅ else-clause is a block
+if (a) { } else if (b) { }  // ✅ else-clause is another if — chaining
+if (a) { } else x = 1;      // ❌ parse error — else-clause must be block or if
+</code></pre>
+<p><strong>Rationale:</strong> This eliminates the dangling <code>else</code> ambiguity entirely. After <code>else</code> the
+parser sees either <code>{</code> (block) or <code>if</code> (chained if) — nothing else is valid, so there is
+nothing to be ambiguous about. <code>else if</code> chains require no special syntax:</p>
+<pre><code class="language-nanoc">if (x &gt; 0) {
+    positive
+} else if (x &lt; 0) {
+    negative
+} else {
+    zero
+}
+</code></pre>
 <p><strong>Rationale:</strong> These are redundant with <code>goto</code>. In nested loops, <code>break</code> is ambiguous about which loop to exit. <code>goto</code> is explicit:</p>
 <pre><code class="language-nanoc">while (x &gt; 0) {
     while (y &gt; 0) {
@@ -336,18 +406,9 @@ x * 2;                                // ❌ parse error: not a call
 </code></pre>
 <p><strong>Rationale:</strong> An expression statement that isn't a call is almost always a bug — the result is discarded. If two functions have side effects, call them separately: <code>f(); g();</code>. This catches mistakes like writing <code>a == b;</code> when you meant <code>a = b;</code> without needing a separate lint pass.</p>
 <h4 id="goto-restrictions"><a class="header" href="#goto-restrictions">Goto Restrictions</a></h4>
-<p><strong>Open Design Question:</strong> Should we allow backward jumps past variable declarations?</p>
-<pre><code class="language-nanoc">here:
-    var x: i32 = 3;  // What happens on second iteration?
-    goto here;
-</code></pre>
-<p>C allows this (re-executes initialization). We should either:</p>
-<ol>
-<li>Allow it (match C behavior)</li>
-<li>Static error (prevent confusion)</li>
-<li>Require declarations before labels in each scope</li>
-</ol>
-<p><strong>Current leaning:</strong> Static error for backward jumps past declarations.</p>
+<p>Whether a backward jump may land <em>before</em> a declaration and re-execute it (as C allows) is
+still an open question — see <code>aux/wiki/ADR-0001-backward-goto-past-declarations.md</code>. Current
+leaning: static error.</p>
 <h3 id="functions"><a class="header" href="#functions">Functions</a></h3>
 <h4 id="signature-restrictions"><a class="header" href="#signature-restrictions">Signature Restrictions</a></h4>
 <pre><code class="language-nanoc">fn add(a: i32, b: i32) -&gt; i32 { ... }
@@ -362,28 +423,10 @@ x * 2;                                // ❌ parse error: not a call
 <li>Makes ABI trivial</li>
 </ul>
 <h4 id="multi-value-returns"><a class="header" href="#multi-value-returns">Multi-Value Returns</a></h4>
-<p><strong>Open Design Question:</strong> How to use both return registers (a0, a1)?</p>
-<p><strong>Option 1: Tuple returns</strong> (simple, minimal)</p>
-<pre><code class="language-nanoc">fn divmod(a: i32, b: i32) -&gt; (i32, i32) {
-    return (a / b, a % b);
-}
-
-var quot: i32;
-var rem: i32;
-(quot, rem) = divmod(10, 3);
-</code></pre>
-<p>**Option 2: Some kind of zig style error ** (could be cool but useless without some kind of <code>try</code> mechanics)</p>
-<pre><code class="language-nanoc">fn can_fail() -&gt; (x: i32, Error) {
-    try can_also_fail(x);
-
-    if (x == 0) {
-        return Err(my_error(x));
-    }
-
-    return Ok(x);
-}
-</code></pre>
-<p><strong>Current status:</strong> Not yet decided. Tuple syntax is cleaner and maps directly to registers.</p>
+<p>How to use both RISC-V return registers (<code>a0</code>, <code>a1</code>) is still open, including whether it
+ties into an error-handling story — see <code>aux/wiki/ADR-0002-tuple-returns-and-error-handling.md</code>.
+Current leaning: simple tuple returns; tuple syntax is cleaner and maps directly to
+registers.</p>
 <h3 id="operators"><a class="header" href="#operators">Operators</a></h3>
 <p>All standard C operators with standard precedence:</p>
 <ul>
@@ -439,7 +482,7 @@ US: Unspecified</p>
 <h4 id="signed-integer-overflow"><a class="header" href="#signed-integer-overflow">Signed Integer Overflow</a></h4>
 <p><strong>C behavior:</strong> Undefined behavior
 <strong>NanoC behavior:</strong> Two's complement wrapping (defined)</p>
-<pre><code class="language-nanoc">const MAX: i32 = 2147483647;
+<pre><code class="language-nanoc">constexpr MAX: i32 = 2147483647;
 var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
 </code></pre>
 <p><strong>Rationale:</strong> RISC-V integers are two's complement. Undefined behavior here serves no optimization purpose and makes overflow bugs harder to reason about.</p>
@@ -476,13 +519,8 @@ var x: i32 = side_effect() + side_effect();  // left call happens first
 <h4 id="out-of-bounds-array-access"><a class="header" href="#out-of-bounds-array-access">Out-of-Bounds Array Access</a></h4>
 <p><strong>C behavior:</strong> Undefined behavior
 <strong>NanoC behavior:</strong> Still undefined behavior (for now)</p>
-<p><strong>Open question:</strong> Should we define this? Options:</p>
-<ol>
-<li>Keep as UB (performance)</li>
-<li>Trap/panic (safety)</li>
-<li>Return zero (defined but dangerous)</li>
-</ol>
-<p><strong>Current decision:</strong> UB (same as C). May add optional bounds checking later.</p>
+<p>Whether to define this instead (trap, or a defined-but-dangerous return value) is open —
+see <code>aux/wiki/ADR-0006-array-bounds-checking.md</code>. May add optional bounds checking later.</p>
 <h4 id="null-pointer-dereference"><a class="header" href="#null-pointer-dereference">Null Pointer Dereference</a></h4>
 <p><strong>C behavior:</strong> Undefined behavior
 <strong>NanoC behavior:</strong> Undefined behavior</p>
@@ -677,419 +715,201 @@ Low addresses
 <li>Suggest fixes where possible</li>
 </ul>
 <hr />
-<div style="break-before: page; page-break-before: always;"></div><h2 id="open-questions"><a class="header" href="#open-questions">Open Questions</a></h2>
-<h3 id="language-design-1"><a class="header" href="#language-design-1">Language Design</a></h3>
-<ol>
-<li>
-<p><strong>Backward goto past declarations:</strong> Allow or forbid?</p>
+<div style="break-before: page; page-break-before: always;"></div><h2 id="semantic-analysis"><a class="header" href="#semantic-analysis">Semantic Analysis</a></h2>
+<p>Semantic analysis runs after parsing and before code generation. It is the last phase that can
+produce user-facing errors. If it passes, code generation is a deterministic, infallible
+translation.</p>
+<h3 id="passes"><a class="header" href="#passes">Passes</a></h3>
+<p>Two passes over the AST (see Compiler Architecture for rationale):</p>
+<p><strong>Pass 1 — declaration collection.</strong> Walk top-level items only. Do not recurse into function
+bodies. Collect into the symbol table:</p>
 <ul>
-<li>C allows (re-initializes)</li>
-<li>Could be confusing</li>
-<li><strong>Proposal:</strong> Static error</li>
+<li>All struct definitions (name → field list with types)</li>
+<li>All function signatures (name → parameter types + return type)</li>
+<li>All global variable declarations (name → type)</li>
 </ul>
-</li>
-<li>
-<p><strong>Tuple returns and error handling:</strong> Multiple proposals for using both RISC-V return registers (a0, a1)</p>
-<p><strong>Background:</strong> RISC-V calling convention provides two return registers (a0 and a1). Most functions only use a0. We could use both registers for richer return semantics.</p>
-<p><strong>Proposal A: Simple tuples (minimal)</strong></p>
-<pre><code class="language-nanoc">fn divmod(a: i32, b: i32) -&gt; (i32, i32) {
-    return (a / b, a % b);
-}
-
-var quot: i32;
-var rem: i32;
-(quot, rem) = divmod(10, 3);
-</code></pre>
-<ul>
-<li>Pro: Minimal syntax, explicit</li>
-<li>Con: Doesn't address error handling ergonomics</li>
-</ul>
-<p><strong>Proposal B: Tuple-based Result pattern (convention)</strong></p>
-<pre><code class="language-nanoc">// Convention: (value, error_code)
-// a0 = value (or garbage if error)
-// a1 = error code (0 = success)
-
-fn divide(a: i32, b: i32) -&gt; (i32, i32) {
-    if (b == 0) {
-        return (0, 1);  // ERR_DIV_ZERO
-    }
-    return (a / b, 0);  // value, no error
-}
-
-var result: i32;
-var err: i32;
-(result, err) = divide(10, 0);
-if (err != 0) {
-    // Handle error
-}
-</code></pre>
-<ul>
-<li>Pro: Uses both registers, explicit error handling</li>
-<li>Con: Very verbose for error propagation</li>
-</ul>
-<p><strong>Proposal C: Zig-style <code>try</code> (ergonomic)</strong></p>
-<pre><code class="language-nanoc">fn process_file() -&gt; (i32, i32) {
-    const fd = try open_file("data.txt");  // Auto-propagate on error
-    const data = try read_data(fd);
-    const result = try process(data);
-    return (result, 0);
-}
-
-// `try` desugars to:
-// var fd: i32;
-// var err: i32;
-// (fd, err) = open_file("data.txt");
-// if (err != 0) { return (undefined, err); }
-</code></pre>
-<ul>
-<li>Pro: Ergonomic, explicit keyword, makes error handling practical</li>
-<li>Con: Adds keyword, implicit control flow (early return)</li>
-<li>Similar to Zig's error handling (proven in practice)</li>
-</ul>
-<p><strong>Current leaning:</strong></p>
-<ul>
-<li>Proposal A (simple tuples) for general use</li>
-<li>Either skip Result pattern entirely (too verbose without <code>try</code>)</li>
-<li>OR add <code>try</code> keyword (Proposal C) if error handling becomes important</li>
-</ul>
-<p><strong>Key insight:</strong> Without <code>try</code> semantics, the Result pattern is too verbose to be practical. Either commit to <code>try</code> or stick with traditional C error codes.</p>
-</li>
-<li>
-<p><strong>Assignment as expression:</strong> Should <code>x = value</code> be an expression or a statement?</p>
-<p>In C, assignment is an expression that returns the assigned value, enabling chained assignment (<code>a = b = 0</code>) and assignment in conditions (<code>while ((n = read()) &gt; 0)</code>).</p>
-<p><strong>Option A: Statement only (current leaning)</strong></p>
-<pre><code class="language-nanoc">x = value;          // ✅ valid as a statement
-var y = x = 0;      // ❌ compile error
-if (x = read()) {}  // ❌ compile error (also: warning d) would catch this)
-</code></pre>
-<ul>
-<li>Eliminates the classic <code>if (x = 0)</code> bug class entirely</li>
-<li>Simpler grammar: assignment is its own statement form, not an operator</li>
-<li>The <code>Precedence::Assignment</code> slot in the Pratt table is still useful as a floor when parsing the RHS of assignment statements</li>
-</ul>
-<p><strong>Option B: Expression (C-style)</strong></p>
-<pre><code class="language-nanoc">a = b = 0;           // ✅ right-associative, both set to 0
-while ((n = read()) &gt; 0) {}  // ✅ assign and test in one
-</code></pre>
-<ul>
-<li>More expressive, familiar to C programmers</li>
-<li><code>a = b = 0</code> maps naturally to the Pratt parser (right-associative, same precedence for recursive call)</li>
-<li>Risk: assignment in condition is a common source of bugs</li>
-</ul>
-<p><strong>Current leaning:</strong> Statement only. The bug prevention outweighs the expressiveness, and NanoC already uses <code>goto</code> for the patterns that would otherwise motivate assignment-as-expression.</p>
-</li>
-<li>
-<p><strong>Array syntax:</strong> Static arrays in grammar but not implemented</p>
-<ul>
-<li>Should be <code>i32[10]</code> or <code>[10]i32</code>?</li>
-<li>Stack allocated only?</li>
-<li><strong>Proposal:</strong> <code>i32[10]</code> (postfix, matches pointers)</li>
-</ul>
-</li>
-<li>
-<p><strong>String literals:</strong> Currently <code>ptr</code> type</p>
-<ul>
-<li>Should be <code>u8*</code> for safety?</li>
-<li>Null-terminated?</li>
-<li><strong>Proposal:</strong> Unsure if we want null termination</li>
-</ul>
-</li>
-<li>
-<p><strong>Array bounds checking:</strong> Leave as UB or define behavior?</p>
-<ul>
-<li>UB (performance, matches C)</li>
-<li>Trap/panic (safety)</li>
-<li>Return zero (defined but misleading)</li>
-<li><strong>Current:</strong> UB (same as C), may add optional checking</li>
-</ul>
-</li>
-<li>
-<p><strong><code>inline</code> keyword:</strong> Force function inlining at call sites</p>
-<p><strong>Proposal:</strong></p>
-<pre><code class="language-nanoc">inline fn square(x: i32) -&gt; i32 {
-    return x * x;
-}
-
-fn compute() -&gt; i32 {
-    return square(5);  // Always inlined
-}
-</code></pre>
-<p><strong>Semantics:</strong></p>
-<ul>
-<li>The <code>inline</code> keyword guarantees the function will be inlined at every call site</li>
-<li>This is NOT a hint or optimization suggestion - it is a mandate</li>
-<li>The compiler must inline the function or fail with an error if inlining is impossible</li>
-<li>Recursive calls to <code>inline</code> functions are a compile error</li>
-<li>Taking the address of an <code>inline</code> function is a compile error</li>
-</ul>
-<p><strong>Rationale:</strong></p>
-<ul>
-<li>Provides deterministic performance characteristics (no call overhead)</li>
-<li>Makes code generation predictable for users who need it</li>
-<li>Users, not the compiler, decide if inlining is beneficial for their use case</li>
-<li>Useful for hot paths where call overhead matters</li>
-<li>Explicit control over the generated assembly (fits NanoC's philosophy)</li>
-</ul>
-<p><strong>Trade-offs:</strong></p>
-<ul>
-<li>May increase code size (duplicated function bodies)</li>
-<li>User is responsible for deciding if inlining is actually beneficial</li>
-<li>Whether it improves or harms performance is the user's concern, not the compiler's</li>
-</ul>
-<p><strong>Implementation notes:</strong></p>
-<ul>
-<li>Inline during codegen phase, not in AST/IR</li>
-<li>May need to detect recursive inline calls during semantic analysis</li>
-<li>Function address-taking requires generating both inline and out-of-line versions</li>
-</ul>
-<p><strong>Status:</strong> Proposed, not yet implemented</p>
-</li>
-</ol>
-<h3 id="implementation"><a class="header" href="#implementation">Implementation</a></h3>
-<ol>
-<li>
-<p><strong>Error recovery:</strong> Should parser attempt to continue after errors?</p>
-<ul>
-<li>Pro: Report multiple errors at once</li>
-<li>Con: More complex parser</li>
-<li><strong>Current:</strong> Fail fast (report first error only)</li>
-</ul>
-</li>
-<li>
-<p><strong>Optimization passes:</strong> Add any?</p>
-<ul>
-<li>Dead code elimination?</li>
-<li>Constant folding?</li>
-<li><strong>Current:</strong> None (keep codegen simple)</li>
-</ul>
-</li>
-<li>
-<p><strong>Debug info:</strong> Generate DWARF?</p>
-<ul>
-<li>Useful for debugging</li>
-<li>Adds complexity</li>
-<li><strong>Proposal:</strong> Later, not MVP</li>
-</ul>
-</li>
-<li>
-<p><strong>Compiler warnings:</strong> Which warnings should the compiler emit?</p>
-<p><strong>Rationale:</strong> While NanoC aims for simplicity, some code patterns are error-prone or surprising. Warnings can help users catch mistakes without adding language complexity.</p>
-<p><strong>Proposed warnings:</strong></p>
-<p><strong>a) Precedence warnings</strong> (Priority: HIGH)</p>
-<p>Warn about potentially confusing operator precedence, especially where bitwise operators mix with comparison/equality operators.</p>
-<pre><code class="language-nanoc">// Warning: '&amp;' has lower precedence than '=='; '==' will be evaluated first
-if (x &amp; 0xFF == 0) { ... }
-//    ^~~~~~~~~~~
-// Suggestion: Use parentheses: (x &amp; 0xFF) == 0
-</code></pre>
-<p>This is surprising because:</p>
-<ul>
-<li>Most programmers expect bitwise AND to bind tighter than equality</li>
-<li>C's precedence puts equality above bitwise operators (inherited from B language)</li>
-<li>Even experienced programmers get this wrong</li>
-</ul>
-<p>Similar warnings for:</p>
-<ul>
-<li><code>x | FLAG == y</code> → suggest <code>(x | FLAG) == y</code></li>
-<li><code>x ^ y == 0</code> → suggest <code>(x ^ y) == 0</code></li>
-<li><code>a &lt; b &amp; mask</code> → suggest <code>a &lt; (b &amp; mask)</code> or <code>(a &lt; b) &amp; mask</code></li>
-</ul>
-<p><strong>b) Unused variable warnings</strong></p>
-<pre><code class="language-nanoc">var temp: i32 = compute();  // Warning: variable 'temp' is unused
-</code></pre>
-<p><strong>c) Const variable never read</strong></p>
-<pre><code class="language-nanoc">const MAX: i32 = 100;  // Warning: constant 'MAX' is never used
-</code></pre>
-<p><strong>d) Suspicious assignment in condition</strong></p>
-<pre><code class="language-nanoc">if (x = 5) { ... }  // Warning: using assignment in condition (did you mean '=='?)
-</code></pre>
-<p>Note: NanoC doesn't support this syntax in conditions, but if we add it, warn about it.</p>
-<p><strong>e) Unreachable code</strong></p>
-<pre><code class="language-nanoc">fn example() -&gt; i32 {
-    return 42;
-    var x: i32 = 0;  // Warning: unreachable code
-}
-</code></pre>
-<p><strong>f) Function declared but never called</strong> (for non-exported functions)</p>
-<pre><code class="language-nanoc">fn helper() -&gt; i32 {  // Warning: function 'helper' is never used
-    return 5;
-}
-</code></pre>
-<p><strong>g) Division by literal zero</strong> (Priority: HIGH, candidate for hard error)</p>
-<p>Division by zero is UB in NanoC. When the divisor is a literal <code>0</code>, the compiler can catch it statically.</p>
-<pre><code class="language-nanoc">var x: i32 = a / 0;   // Error: division by zero
-var y: i32 = a % 0;   // Error: division by zero
-</code></pre>
-<p><strong>Proposal:</strong> Promote this to a hard compile error rather than a warning, since there is no legitimate use case for dividing by a literal zero. A warning would suggest the code might be acceptable — it never is.</p>
-<p>Note: This only applies to literal <code>0</code>. Division by a variable whose runtime value happens to be zero remains UB and is the programmer's responsibility to guard against.</p>
-<p><strong>Implementation approach:</strong></p>
-<ul>
-<li>Warnings are purely optional and don't affect compilation</li>
-<li>Can be enabled/disabled via compiler flags (e.g., <code>-Wall</code>, <code>-Wno-precedence</code>)</li>
-<li>Should not impact the simplicity of the core compiler</li>
-<li>Could be implemented as a separate analysis pass after parsing</li>
-</ul>
-<p><strong>Status:</strong> Proposed</p>
-<ul>
-<li>Precedence warnings: HIGH priority (genuinely confusing)</li>
-<li>Other warnings: MEDIUM priority (nice to have)</li>
-</ul>
-</li>
-</ol>
+<p><strong>Pass 2 — resolution and checking.</strong> Walk the full AST. Resolve every identifier to a symbol
+table entry. Perform all checks listed below.</p>
 <hr />
-<div style="break-before: page; page-break-before: always;"></div><h2 id="future-work"><a class="header" href="#future-work">Future Work</a></h2>
-<h3 id="module-system-post-mvp"><a class="header" href="#module-system-post-mvp">Module System (Post-MVP)</a></h3>
-<p><strong>Not currently implemented.</strong> Design proposal for when modularization becomes necessary:</p>
-<h4 id="import-mechanism"><a class="header" href="#import-mechanism">Import Mechanism</a></h4>
-<p><strong>Shallow parsing on import:</strong></p>
-<pre><code class="language-nanoc">// math.nc
-pub fn sin(x: i32) -&gt; i32 { ... }
-pub fn cos(x: i32) -&gt; i32 { ... }
-
-// main.nc
-import math;
-
-fn main() -&gt; i32 {
-    var result: i32 = math::sin(10);
-    return result;
+<h3 id="certain-checks"><a class="header" href="#certain-checks">Certain checks</a></h3>
+<p>These are required regardless of any open design questions.</p>
+<h4 id="name-resolution"><a class="header" href="#name-resolution">Name resolution</a></h4>
+<ul>
+<li><strong>Undefined name:</strong> any reference to a variable, function, or type that was not declared.</li>
+<li><strong>Duplicate declaration:</strong> two declarations of the same name in the same scope —
+applies to variables, functions, structs, struct fields, and goto labels within a function.</li>
+<li><strong>Variable used before declaration:</strong> within a function body, a name may not be referenced
+before its declaration statement. (Labels are exempt — they are collected in a pre-pass over
+the function body so that forward <code>goto</code> works.)</li>
+<li><strong><code>goto</code> to undefined label:</strong> a <code>goto</code> whose target label does not exist anywhere in the
+enclosing function.</li>
+</ul>
+<h4 id="declaration-checks"><a class="header" href="#declaration-checks">Declaration checks</a></h4>
+<ul>
+<li><strong>Struct passed by value:</strong> a function parameter or return type that is a bare struct type
+(not a pointer) is an error. All struct access must go through pointers.
+<pre><code class="language-nanoc">fn process(p: Point*)  { ... }  // ✅
+fn process(p: Point)   { ... }  // ❌ struct by value
+fn get() -&gt; Point      { ... }  // ❌ struct by value
+</code></pre>
+</li>
+<li><strong>Non-register-sized function parameter:</strong> parameter types must be primitives (<code>u8</code>, <code>i32</code>,
+<code>u32</code>) or pointers. Struct types are excluded by the rule above.</li>
+<li><strong>Recursive <code>inline</code> function:</strong> a function marked <code>inline</code> that calls itself directly or
+transitively is an error. Inlining a recursive call would not terminate.</li>
+<li><strong>Address-of an <code>inline</code> function:</strong> taking <code>&amp;fn_name</code> where <code>fn_name</code> is <code>inline</code> is an
+error. An inlined function has no stable address.</li>
+</ul>
+<h4 id="type-checks"><a class="header" href="#type-checks">Type checks</a></h4>
+<p><strong>Assignment:</strong></p>
+<ul>
+<li>The RHS expression type must exactly match the declared type of the LHS. No implicit
+conversions.</li>
+</ul>
+<p><strong>Binary operators:</strong></p>
+<ul>
+<li>Arithmetic (<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code>) and bitwise (<code>&amp;</code>, <code>|</code>, <code>^</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>): both operands
+must be integer types and must match each other.</li>
+<li>Comparison (<code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>): both operands must be the same type.</li>
+<li>Logical (<code>&amp;&amp;</code>, <code>||</code>): both operands must be integer types (NanoC has no boolean type;
+zero is false, nonzero is true).</li>
+</ul>
+<p><strong>Unary operators:</strong></p>
+<ul>
+<li><code>!</code>, <code>~</code>: operand must be an integer type.</li>
+<li>Unary <code>-</code>: operand must be an integer type.</li>
+<li><code>&amp;</code> (address-of): operand must be an lvalue (see below).</li>
+<li><code>*</code> (dereference): operand must be a pointer type. Result type is the pointed-to type.</li>
+</ul>
+<p><strong>Field and index access:</strong></p>
+<ul>
+<li><code>-&gt;</code>: left operand must be a pointer-to-struct. Right operand must be a valid field name of
+that struct.</li>
+<li><code>[]</code>: left operand must be a pointer type; right operand must be an integer type. The
+left operand being an integer and right a pointer is rejected (no <code>i[arr]</code> — see Language
+Design).</li>
+</ul>
+<p><strong>Function calls:</strong></p>
+<ul>
+<li>Argument count must match the declared parameter count.</li>
+<li>Each argument type must match the corresponding parameter type exactly.</li>
+<li>The call expression's type is the function's return type.</li>
+</ul>
+<p><strong><code>return</code> statement:</strong></p>
+<ul>
+<li>The type of the returned expression must match the function's declared return type.</li>
+<li><code>return</code> with no expression is valid only in a unit-returning function (no <code>-&gt;</code> annotation).</li>
+<li><code>return expr</code> in a unit-returning function is an error.</li>
+</ul>
+<p><strong><code>if</code>/<code>while</code> condition:</strong></p>
+<ul>
+<li>The condition must have a register-sized type: <code>u8</code>, <code>i32</code>, <code>u32</code>, or any pointer.
+Structs are not valid conditions — they don't fit in a register.</li>
+<li>The value is loaded into a register and the branch tests it against zero (<code>BEQ</code>/<code>BNE</code>
+with <code>x0</code>). This is not a type conversion — it is what the load instruction does.
+<code>u8</code> is zero-extended; <code>i32</code>/<code>u32</code> fill the register directly; pointers are
+register-sized natively.</li>
+<li><code>if (ptr)</code> is a valid null check at zero cost — no explicit <code>!= zeroed</code> required.</li>
+</ul>
+<p><strong><code>syscall</code> arguments:</strong></p>
+<ul>
+<li>The syscall number (first argument) must be an integer type.</li>
+<li>Remaining arguments are unchecked — they map directly to registers and the kernel reads
+what it needs. Passing the wrong number of arguments fills unused registers harmlessly.</li>
+</ul>
+<h4 id="lvalue-checks"><a class="header" href="#lvalue-checks">Lvalue checks</a></h4>
+<p>The left-hand side of an assignment, and the operand of <code>&amp;</code>, must be an lvalue. Valid lvalues:</p>
+<ul>
+<li>A <code>var</code> name — the only runtime binding (see <code>aux/wiki/ADR-0008-binding-forms-var-constexpr.md</code>).</li>
+<li>A pointer dereference: <code>*p</code>.</li>
+<li>An array index: <code>a[i]</code>.</li>
+<li>A field access: <code>p-&gt;field</code>.</li>
+</ul>
+<p>Not lvalues:</p>
+<ul>
+<li>Literals (<code>42</code>, <code>true</code>).</li>
+<li>Arithmetic expressions (<code>a + b</code>).</li>
+<li>Function call results (<code>foo()</code>).</li>
+<li><code>constexpr</code> bindings — not stored, so there's no storage to assign to or take the
+address of; both are sema errors.</li>
+</ul>
+<h4 id="control-flow-checks"><a class="header" href="#control-flow-checks">Control flow checks</a></h4>
+<ul>
+<li><strong><code>goto</code> into a nested block:</strong> a <code>goto</code> whose target label is inside a nested block
+(inner <code>{ }</code>) is an error. Since all declarations precede all statements within every
+block, a <code>goto</code> within the same scope or to an outer scope can never skip an
+initialisation. Only jumping <em>into</em> a nested scope is hazardous (it bypasses that
+scope's declaration section).
+<pre><code class="language-nanoc">goto inner;         // ❌ jumps into nested block, skipping its declarations
+if (cond) {
+    var x: i32 = 0;
+inner:
+    return x;
 }
 </code></pre>
-<p>When the compiler encounters <code>import math</code>, it performs a <strong>shallow pass</strong> of <code>math.nc</code>:</p>
-<ul>
-<li>Parse only top-level declarations (structs, function signatures, pub items)</li>
-<li>Extract public symbols without processing function bodies</li>
-<li>Track imported modules to detect circular dependencies</li>
-<li>Build a symbol table for <code>math::</code> namespace</li>
+</li>
+<li><strong><code>return</code> type mismatch:</strong> covered under type checks above.</li>
 </ul>
-<p><strong>Benefits:</strong></p>
-<ul>
-<li>Fast compilation (don't parse entire dependency tree deeply)</li>
-<li>Clear dependency graph</li>
-<li>Circular import detection</li>
-</ul>
-<h4 id="namespace-and-mangling"><a class="header" href="#namespace-and-mangling">Namespace and Mangling</a></h4>
-<p><strong>Public symbols:</strong> Use <code>pub</code> keyword to export</p>
-<pre><code class="language-nanoc">pub fn add(a: i32, b: i32) -&gt; i32 { ... }  // Exported
-fn helper() -&gt; i32 { ... }                  // Private
-</code></pre>
-<p><strong>Namespace access:</strong> Use <code>::</code> for qualified names</p>
-<pre><code class="language-nanoc">math::sin(x)
-io::write(fd, buffer)
-</code></pre>
-<p><strong>Symbol mangling:</strong> Convert <code>::</code> to <code>$</code> for linker symbols</p>
-<pre><code>Source:  std::math::sin
-Symbol:  std$math$sin
-</code></pre>
-<p><strong>Rationale:</strong> <code>$</code> is:</p>
-<ul>
-<li>Rejected by the lexer (so users can't create conflicting symbols)</li>
-<li>Valid in most linker formats (ELF, Mach-O)</li>
-<li>Simple deterministic mangling (no hash collisions)</li>
-</ul>
-<h4 id="foreign-function-interface-ffi"><a class="header" href="#foreign-function-interface-ffi">Foreign Function Interface (FFI)</a></h4>
-<p><strong>Proposal:</strong> Use <code>extern</code> keyword to declare unmangled symbols from linked libraries.</p>
-<p><strong>Basic form — no rename:</strong></p>
-<pre><code class="language-nanoc">extern fn malloc(size: u32) -&gt; ptr;
-extern fn free(p: ptr);
-extern fn write(fd: i32, buf: ptr, count: u32) -&gt; i32;
-
-fn main() -&gt; i32 {
-    var buffer: ptr = malloc(1024);
-    free(buffer);
-    return 0;
-}
-</code></pre>
-<p>The declared name is used verbatim as the linker symbol — no NanoC mangling applied.</p>
-<p><strong>Rename form — import under a different name:</strong></p>
-<pre><code class="language-nanoc">extern "syscall" as fn libc_syscall(number: i32, ...) -&gt; i32;
-extern "write"   as fn posix_write(fd: i32, buf: ptr, n: u32) -&gt; i32;
-</code></pre>
-<p>The string literal is the actual symbol name in the linked object; the identifier after <code>as fn</code> is the NanoC-side name. This is necessary whenever the C symbol name would collide with a NanoC keyword or built-in. The motivating case is libc's <code>syscall(2)</code>: NanoC already uses <code>syscall</code> as a keyword for the raw <code>ecall</code> instruction, so any program that wants to call libc's <code>syscall</code> wrapper (e.g. when targeting a hosted environment rather than bare metal) needs to import it under a different name:</p>
-<pre><code class="language-nanoc">extern "syscall" as fn libc_syscall(number: i32, a0: i32, a1: i32, a2: i32) -&gt; i32;
-
-fn main() -&gt; i32 {
-    // NanoC built-in: emits ecall directly
-    syscall(SYS_WRITE, 1, buf, len);
-
-    // libc wrapper: goes through libc's syscall() C function
-    libc_syscall(SYS_WRITE, 1, buf, len);
-
-    return 0;
-}
-</code></pre>
-<p><strong>Variadic extern:</strong> C variadic functions (<code>...</code>) can be declared for type-checking purposes even if NanoC can't verify argument types at call sites. Open question whether to permit this or require a fixed-signature wrapper.</p>
-<p><strong>Design note — <code>extern</code> vs <code>foreign</code>:</strong> <code>extern</code> is shorter and more familiar to C/Rust programmers. <code>foreign</code> reads more explicitly as "this is not NanoC code". Either could work; decision deferred until FFI is implemented.</p>
-<p><strong>Symbol mangling interaction:</strong> <code>extern</code> declarations are never mangled regardless of whether they appear in a <code>pub</code> context. Mangling only applies to symbols <em>defined</em> in NanoC source.</p>
-<h4 id="object-file-generation"><a class="header" href="#object-file-generation">Object File Generation</a></h4>
-<p><strong>Current:</strong> Compiler emits <code>.s</code> assembly text</p>
-<pre><code>nanoc file.nc -&gt; file.s -&gt; (as) -&gt; file.o -&gt; (ld) -&gt; binary
-</code></pre>
-<p><strong>Future:</strong> Emit relocatable object files directly</p>
-<pre><code>nanoc file.nc -&gt; file.o -&gt; (ld) -&gt; binary
-</code></pre>
-<p><strong>Benefits:</strong></p>
-<ul>
-<li>Faster compilation (skip assembler invocation)</li>
-<li>Better integration with existing build systems</li>
-<li>Can generate debug info (DWARF) directly</li>
-<li>Enables true separate compilation</li>
-</ul>
-<p><strong>Implementation notes:</strong></p>
-<ul>
-<li>Use a library like <code>object</code> crate or write ELF/Mach-O directly</li>
-<li>Generate relocation entries for cross-module references</li>
-<li>Emit symbol tables with mangled names</li>
-<li>Support incremental compilation (only recompile changed modules)</li>
-</ul>
-<h4 id="module-resolution"><a class="header" href="#module-resolution">Module Resolution</a></h4>
-<p><strong>Proposed search path:</strong></p>
-<ol>
-<li>Current directory</li>
-<li><code>./lib/</code> subdirectory</li>
-<li>System library path (e.g., <code>/usr/local/nanoc/lib/</code>)</li>
-<li><code>NANOC_PATH</code> environment variable</li>
-</ol>
-<p><strong>Module naming:</strong></p>
-<pre><code class="language-nanoc">import std::math;     // Looks for std/math.nc
-import io::file;      // Looks for io/file.nc
-import mylib;         // Looks for mylib.nc
-</code></pre>
-<h4 id="open-design-questions"><a class="header" href="#open-design-questions">Open Design Questions</a></h4>
-<ol>
-<li><strong>Package/crate system?</strong> Or just files and directories?</li>
-<li><strong>Visibility levels?</strong> Just <code>pub</code> vs private, or more granular?</li>
-<li><strong>Re-exports?</strong> <code>pub import</code> to re-export symbols?</li>
-<li><strong>Cyclic modules?</strong> Allow if no circular type dependencies?</li>
-</ol>
-<p><strong>Current status:</strong> Not implemented. Core language and single-file compilation comes first.</p>
 <hr />
-<p><strong>Document Status:</strong> Living document, updated as design evolves.</p>
-<p><strong>Next Review:</strong> After Pratt parser implementation.</p>
+<h3 id="statement-orientation"><a class="header" href="#statement-orientation">Statement orientation</a></h3>
+<p>NanoC is statement-oriented. Blocks are statement containers with no value. <code>if/else</code> and
+<code>while</code> are statements. Expressions compute values; they do not contain control flow.</p>
+<p>No <code>unit</code> or <code>never</code> types are needed in expression context. <code>return</code>, <code>goto</code>, and
+<code>unreachable</code> are statements only — they cannot appear inside an expression. (See
+<code>aux/wiki/ADR-0009-statement-oriented-expressions.md</code> for the alternatives this ruled out.)</p>
+<h3 id="mutually-referential-structs"><a class="header" href="#mutually-referential-structs">Mutually-referential structs</a></h3>
+<pre><code class="language-nanoc">struct A { b: B*, }
+struct B { a: A*, }
+</code></pre>
+<p>Pass 1 collects all struct names before resolving field types, so this works as long as the
+type checker resolves field types in pass 2 rather than pass 1. No forward declaration syntax
+needed, but the implementation must handle the ordering explicitly.</p>
+<h3 id="gaps-depending-on-open-design-questions"><a class="header" href="#gaps-depending-on-open-design-questions">Gaps depending on open design questions</a></h3>
+<p>A handful of checks can't be specified yet because they depend on decisions not yet made —
+noted here so they're not forgotten, full discussion in the wiki:</p>
+<ul>
+<li><strong>Exhaustive return checking</strong> — must every code path in a non-unit function end with a
+<code>return</code>? Depends on control-flow analysis in the presence of <code>goto</code>.
+See <code>aux/wiki/ADR-0018-exhaustive-return-checking.md</code>.</li>
+<li><strong>Cast operator</strong> — with no implicit conversions and no cast operator, users have no
+escape hatch for mixing types. See <code>aux/wiki/ADR-0017-type-system-gaps.md</code>.</li>
+<li><strong>Pointer arithmetic rules</strong> — how typed pointers (<code>i32*</code>) and the opaque <code>ptr</code> type mix
+in arithmetic isn't defined yet. See <code>aux/wiki/ADR-0017-type-system-gaps.md</code>.</li>
+<li><strong>Variable shadowing</strong> — whether shadowing an outer-scope binding is an error, a warning,
+or allowed isn't decided. See <code>aux/wiki/ADR-0017-type-system-gaps.md</code>.</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h2 id="appendix"><a class="header" href="#appendix">Appendix</a></h2>
 <h3 id="grammar-summary"><a class="header" href="#grammar-summary">Grammar Summary</a></h3>
-<p>See <code>spec/grammar.ebnf</code> for full grammar.</p>
-<p>Key productions:</p>
-<pre><code class="language-ebnf">program = top_level_statement* ;
+<p>Full grammar: <code>spec/grammar.ebnf</code>. Key productions:</p>
+<pre><code class="language-ebnf">var_decl       = "var"       variable_name ":" type "=" var_init   ";" ;
+constexpr_decl = "constexpr" variable_name ":" type "=" expression ";" ;
+var_init       = expression | "zeroed" | "undefined" ;
+(* no runtime const — var is the only runtime binding                         *)
+(* constexpr: folded, not stored, not addressable, initialiser must be a      *)
+(*            constexpr expression — sema-checked, not grammar                *)
 
-top_level_statement = struct_decl
-                    | var_decl
-                    | function_decl
-                    ;
+(* all var/constexpr declarations precede all statements within a block *)
+block = "{" (var_decl | constexpr_decl)* statement* "}" ;
 
-register_sized = primitive_type | pointer ;
+(* blocks are statement containers — no value, no trailing expression *)
+block   = "{" statement* "}" ;
+if_stmt = "if" "(" expression ")" block ("else" (if_stmt | block))? ;
 
-var_decl = ("var" | "const") variable_name ":" type "=" var_initializer ";" ;
-var_initializer = expression | "zeroed" | "undefined" ;
-
+(* bodies of if/while MUST be blocks — bare expressions are a parse error        *)
 statement = var_decl
-          | expression ";"
+          | constexpr_decl
+          | lvalue "=" expression ";"    (* assignment *)
+          | call_expr ";"               (* expression statement: calls/syscalls only *)
           | "return" expression? ";"
-          | "if" "(" expression ")" statement ("else" statement)?
-          | "while" "(" expression ")" statement
-          | "{" statement* "}"
-          | "goto" label ";"
-          | label ":" statement
+          | if_stmt
+          | "while" "(" expression ")" block
+          | "goto" label_name ";"
+          | "unreachable" ";"
+          | label_name ":" statement
           ;
+
+(* expressions compute values — blocks and if/else are NOT expressions *)
+expression = pratt_expr ;
 </code></pre>
 <h3 id="references"><a class="header" href="#references">References</a></h3>
 <ul>

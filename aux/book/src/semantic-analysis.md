@@ -102,7 +102,7 @@ These are required regardless of any open design questions.
 #### Lvalue checks
 
 The left-hand side of an assignment, and the operand of `&`, must be an lvalue. Valid lvalues:
-- A variable name (both `var` and… see Uncertain for `const`).
+- A `var` name — the only runtime binding (see `aux/wiki/ADR-0008-binding-forms-var-constexpr.md`).
 - A pointer dereference: `*p`.
 - An array index: `a[i]`.
 - A field access: `p->field`.
@@ -111,7 +111,8 @@ Not lvalues:
 - Literals (`42`, `true`).
 - Arithmetic expressions (`a + b`).
 - Function call results (`foo()`).
-- `const` bindings — assigning to a `const` after its declaration is an error.
+- `constexpr` bindings — not stored, so there's no storage to assign to or take the
+  address of; both are sema errors.
 
 #### Control flow checks
 
@@ -132,57 +133,16 @@ Not lvalues:
 
 ---
 
-### Uncertain checks
-
-These depend on open design questions or design decisions not yet made. Noted here so they
-are not forgotten.
-
-#### Statement orientation (open question §8, settled)
+### Statement orientation
 
 NanoC is statement-oriented. Blocks are statement containers with no value. `if/else` and
 `while` are statements. Expressions compute values; they do not contain control flow.
 
 No `unit` or `never` types are needed in expression context. `return`, `goto`, and
-`unreachable` are statements only — they cannot appear inside an expression.
+`unreachable` are statements only — they cannot appear inside an expression. (See
+`aux/wiki/ADR-0009-statement-oriented-expressions.md` for the alternatives this ruled out.)
 
-#### Depends on unit-returning function syntax
-
-If `fn foo()` with no `->` means "returns unit" (current leaning: yes, omitted = unit):
-
-- **Exhaustive return checking:** must every code path in a non-unit function end with a
-  `return`? This requires control flow analysis (building a CFG and checking that all exit
-  paths return). Many compilers implement this as a warning rather than an error, or defer it.
-  The check is non-trivial in the presence of `goto`. Deferred until post-MVP.
-
-#### Depends on cast operator decision
-
-NanoC currently has no explicit cast operator. This creates gaps:
-
-- Is `i32 + u8` valid? With no implicit promotion and no cast, you cannot mix types at all,
-  which may be too restrictive.
-- Is `var x: i32 = some_u32` a type error? Probably yes under strict no-implicit-conversion.
-- Without a cast, users have no escape hatch. A cast operator (`x as i32`, or C-style
-  `(i32)x`) should be designed before the type checker is finalised. Deferred.
-
-#### Pointer arithmetic rules
-
-`ptr` is currently an opaque, untyped pointer. Typed pointers (`i32*`, `Point*`) also exist.
-The rules for mixing them in arithmetic are not yet defined:
-
-- `i32* + i32` → does the compiler scale the offset by `sizeof(i32)`? Or is it byte-level?
-- `ptr + i32` → valid? `ptr` has no element size to scale by.
-- `i32* - i32*` → valid? Result type?
-- Mixing `ptr` and `i32*` in arithmetic or assignment → valid?
-
-These need design decisions before the type checker can enforce them.
-
-#### Variable shadowing
-
-Whether declaring a variable with the same name as one in an outer scope is a hard error,
-a warning, or silently allowed is not yet decided. Many systems languages allow it (Rust,
-C) with optional warnings; others forbid it.
-
-#### Mutually-referential structs
+### Mutually-referential structs
 
 ```nanoc
 struct A { b: B*, }
@@ -192,3 +152,18 @@ struct B { a: A*, }
 Pass 1 collects all struct names before resolving field types, so this works as long as the
 type checker resolves field types in pass 2 rather than pass 1. No forward declaration syntax
 needed, but the implementation must handle the ordering explicitly.
+
+### Gaps depending on open design questions
+
+A handful of checks can't be specified yet because they depend on decisions not yet made —
+noted here so they're not forgotten, full discussion in the wiki:
+
+- **Exhaustive return checking** — must every code path in a non-unit function end with a
+  `return`? Depends on control-flow analysis in the presence of `goto`.
+  See `aux/wiki/ADR-0018-exhaustive-return-checking.md`.
+- **Cast operator** — with no implicit conversions and no cast operator, users have no
+  escape hatch for mixing types. See `aux/wiki/ADR-0017-type-system-gaps.md`.
+- **Pointer arithmetic rules** — how typed pointers (`i32*`) and the opaque `ptr` type mix
+  in arithmetic isn't defined yet. See `aux/wiki/ADR-0017-type-system-gaps.md`.
+- **Variable shadowing** — whether shadowing an outer-scope binding is an error, a warning,
+  or allowed isn't decided. See `aux/wiki/ADR-0017-type-system-gaps.md`.

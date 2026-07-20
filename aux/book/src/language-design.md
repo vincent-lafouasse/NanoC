@@ -44,7 +44,8 @@ variable. Immutability is a convention enforced by the programmer, not the compi
 same way C was before `const` existed. There is no compile-time enforcement of read-only
 access to runtime variables.
 
-Compile-time constants use `constexpr` and are a separate concept (see Future Work).
+Compile-time constants use `constexpr` and are a separate concept — see
+`aux/wiki/ADR-0008-binding-forms-var-constexpr.md` and `aux/wiki/ADR-0015-compile-time-conditionals.md`.
 
 #### Mandatory Initialization
 Every variable MUST have an initializer:
@@ -160,20 +161,9 @@ x * 2;                                // ❌ parse error: not a call
 
 #### Goto Restrictions
 
-**Open Design Question:** Should we allow backward jumps past variable declarations?
-
-```nanoc
-here:
-    var x: i32 = 3;  // What happens on second iteration?
-    goto here;
-```
-
-C allows this (re-executes initialization). We should either:
-1. Allow it (match C behavior)
-2. Static error (prevent confusion)
-3. Require declarations before labels in each scope
-
-**Current leaning:** Static error for backward jumps past declarations.
+Whether a backward jump may land *before* a declaration and re-execute it (as C allows) is
+still an open question — see `aux/wiki/ADR-0001-backward-goto-past-declarations.md`. Current
+leaning: static error.
 
 ### Functions
 
@@ -193,33 +183,10 @@ fn add(a: i32, b: i32) -> i32 { ... }
 
 #### Multi-Value Returns
 
-**Open Design Question:** How to use both return registers (a0, a1)?
-
-**Option 1: Tuple returns** (simple, minimal)
-```nanoc
-fn divmod(a: i32, b: i32) -> (i32, i32) {
-    return (a / b, a % b);
-}
-
-var quot: i32;
-var rem: i32;
-(quot, rem) = divmod(10, 3);
-```
-
-**Option 2: Some kind of zig style error ** (could be cool but useless without some kind of `try` mechanics)
-```nanoc
-fn can_fail() -> (x: i32, Error) {
-    try can_also_fail(x);
-
-    if (x == 0) {
-        return Err(my_error(x));
-    }
-
-    return Ok(x);
-}
-```
-
-**Current status:** Not yet decided. Tuple syntax is cleaner and maps directly to registers.
+How to use both RISC-V return registers (`a0`, `a1`) is still open, including whether it
+ties into an error-handling story — see `aux/wiki/ADR-0002-tuple-returns-and-error-handling.md`.
+Current leaning: simple tuple returns; tuple syntax is cleaner and maps directly to
+registers.
 
 ### Operators
 
@@ -290,7 +257,7 @@ US: Unspecified
 **NanoC behavior:** Two's complement wrapping (defined)
 
 ```nanoc
-const MAX: i32 = 2147483647;
+constexpr MAX: i32 = 2147483647;
 var x: i32 = MAX + 1;  // x = -2147483648 (wraps, defined)
 ```
 
@@ -348,12 +315,8 @@ var x: i32 = side_effect() + side_effect();  // left call happens first
 **C behavior:** Undefined behavior
 **NanoC behavior:** Still undefined behavior (for now)
 
-**Open question:** Should we define this? Options:
-1. Keep as UB (performance)
-2. Trap/panic (safety)
-3. Return zero (defined but dangerous)
-
-**Current decision:** UB (same as C). May add optional bounds checking later.
+Whether to define this instead (trap, or a defined-but-dangerous return value) is open —
+see `aux/wiki/ADR-0006-array-bounds-checking.md`. May add optional bounds checking later.
 
 #### Null Pointer Dereference
 **C behavior:** Undefined behavior

@@ -1,9 +1,13 @@
-# NanoC Design Document
+# A Tour of NanoC
 
 **Version:** 0.1.0
-**Last Updated:** 2026-02-17
+**Last Updated:** 2026-07-20
 
-This document describes the design philosophy, architecture, and implementation details of NanoC for contributors.
+This is a guided walkthrough of NanoC's current design — the settled language, architecture,
+and implementation, as it stands today. It describes what NanoC *is*, not what it might
+become: in-progress proposals, open questions, and post-MVP plans live in the design wiki
+(`aux/wiki/`) instead, so this tour stays a reliable, coherent read start to finish rather
+than a mix of decided and undecided material.
 
 ## What is NanoC?
 
@@ -34,7 +38,7 @@ struct Point {
 
 // fixed-point square root in Q25.6 format (6 fractional bits).
 fn sqrt_q6(n: i32) -> i32 {
-    const scaled: i32 = n << 12;
+    var scaled: i32 = n << 12;
     if (scaled <= 0) {
         return 0;
     }
@@ -52,8 +56,8 @@ fn sqrt_q6(n: i32) -> i32 {
 
 // euclidean distance as Q25.6 fixed-point.
 fn distance(a: Point*, b: Point*) -> i32 {
-    const dx: i32 = a->x - b->x;
-    const dy: i32 = a->y - b->y;
+    var dx: i32 = a->x - b->x;
+    var dy: i32 = a->y - b->y;
     return sqrt_q6(dx * dx + dy * dy);
 }
 
@@ -63,13 +67,13 @@ fn main() -> i32 {
     p.x = 67;
     p.y = 420;
 
-    const dist: i32 = distance(&p, &origin);  // 27219 → 425.3
+    var dist: i32 = distance(&p, &origin);  // 27219 → 425.3
 
-    const s: ptr = "yo i'm feinberg\n\x44";
+    var s: ptr = "yo i'm feinberg\n\x44";
 
-    const SYS_WRITE: i32 = 67;
-    const STDOUT: i32 = 1;
-    const status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
+    constexpr SYS_WRITE: i32 = 67;
+    constexpr STDOUT: i32 = 1;
+    var status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
 
     if (status < 0) {
         goto bad;

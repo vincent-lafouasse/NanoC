@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - NanoC Design Document</title>
+        <title>Introduction - A Tour of NanoC</title>
 
 
         <!-- Custom HTML head -->
@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html" class="active">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded affix "><li class="part-title">Planning</li><li class="chapter-item expanded "><a href="open-questions.html"><strong aria-hidden="true">5.</strong> Open Questions</a></li><li class="chapter-item expanded "><a href="future-work.html"><strong aria-hidden="true">6.</strong> Future Work</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">7.</strong> Appendix</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="intro.html" class="active">Introduction</a></li><li class="chapter-item expanded affix "><li class="part-title">Core Design</li><li class="chapter-item expanded "><a href="philosophy.html"><strong aria-hidden="true">1.</strong> Philosophy</a></li><li class="chapter-item expanded "><a href="language-design.html"><strong aria-hidden="true">2.</strong> Language Design</a></li><li class="chapter-item expanded "><a href="compiler-architecture.html"><strong aria-hidden="true">3.</strong> Compiler Architecture</a></li><li class="chapter-item expanded affix "><li class="part-title">Implementation</li><li class="chapter-item expanded "><a href="implementation-details.html"><strong aria-hidden="true">4.</strong> Implementation Details</a></li><li class="chapter-item expanded "><a href="semantic-analysis.html"><strong aria-hidden="true">5.</strong> Semantic Analysis</a></li><li class="chapter-item expanded affix "><li class="part-title">Reference</li><li class="chapter-item expanded "><a href="appendix.html"><strong aria-hidden="true">6.</strong> Appendix</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -142,7 +142,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">NanoC Design Document</h1>
+                    <h1 class="menu-title">A Tour of NanoC</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -177,10 +177,14 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="nanoc-design-document"><a class="header" href="#nanoc-design-document">NanoC Design Document</a></h1>
+                        <h1 id="a-tour-of-nanoc"><a class="header" href="#a-tour-of-nanoc">A Tour of NanoC</a></h1>
 <p><strong>Version:</strong> 0.1.0
-<strong>Last Updated:</strong> 2026-02-17</p>
-<p>This document describes the design philosophy, architecture, and implementation details of NanoC for contributors.</p>
+<strong>Last Updated:</strong> 2026-07-20</p>
+<p>This is a guided walkthrough of NanoC's current design — the settled language, architecture,
+and implementation, as it stands today. It describes what NanoC <em>is</em>, not what it might
+become: in-progress proposals, open questions, and post-MVP plans live in the design wiki
+(<code>aux/wiki/</code>) instead, so this tour stays a reliable, coherent read start to finish rather
+than a mix of decided and undecided material.</p>
 <h2 id="what-is-nanoc"><a class="header" href="#what-is-nanoc">What is NanoC?</a></h2>
 <p>NanoC is a minimal systems programming language targeting RISC-V. It emphasizes:</p>
 <ul>
@@ -206,7 +210,7 @@
 
 // fixed-point square root in Q25.6 format (6 fractional bits).
 fn sqrt_q6(n: i32) -&gt; i32 {
-    const scaled: i32 = n &lt;&lt; 12;
+    var scaled: i32 = n &lt;&lt; 12;
     if (scaled &lt;= 0) {
         return 0;
     }
@@ -224,8 +228,8 @@ fn sqrt_q6(n: i32) -&gt; i32 {
 
 // euclidean distance as Q25.6 fixed-point.
 fn distance(a: Point*, b: Point*) -&gt; i32 {
-    const dx: i32 = a-&gt;x - b-&gt;x;
-    const dy: i32 = a-&gt;y - b-&gt;y;
+    var dx: i32 = a-&gt;x - b-&gt;x;
+    var dy: i32 = a-&gt;y - b-&gt;y;
     return sqrt_q6(dx * dx + dy * dy);
 }
 
@@ -235,13 +239,13 @@ fn main() -&gt; i32 {
     p.x = 67;
     p.y = 420;
 
-    const dist: i32 = distance(&amp;p, &amp;origin);  // 27219 → 425.3
+    var dist: i32 = distance(&amp;p, &amp;origin);  // 27219 → 425.3
 
-    const s: ptr = "yo i'm feinberg\n\x44";
+    var s: ptr = "yo i'm feinberg\n\x44";
 
-    const SYS_WRITE: i32 = 67;
-    const STDOUT: i32 = 1;
-    const status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
+    constexpr SYS_WRITE: i32 = 67;
+    constexpr STDOUT: i32 = 1;
+    var status: i32 = syscall(SYS_WRITE, STDOUT, s, 16);
 
     if (status &lt; 0) {
         goto bad;

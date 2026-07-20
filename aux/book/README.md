@@ -1,6 +1,9 @@
-# NanoC Design Book
+# A Tour of NanoC
 
-This directory contains the NanoC design documentation as an [mdBook](https://rust-lang.github.io/mdBook/).
+This directory contains "A Tour of NanoC" — a guided walkthrough of the language's current,
+settled design — as an [mdBook](https://rust-lang.github.io/mdBook/). In-progress proposals
+and open questions live separately, in the design wiki at `aux/wiki/`, so this tour only
+ever describes what NanoC *is*, not what it might become.
 
 ## Prerequisites
 
@@ -35,13 +38,13 @@ book/
 │   ├── language-design.md
 │   ├── compiler-architecture.md
 │   ├── implementation-details.md
-│   ├── testing-strategy.md
-│   ├── contributing.md
-│   ├── open-questions.md
-│   ├── future-work.md
+│   ├── semantic-analysis.md
 │   └── appendix.md
 └── book/              # Generated HTML (after build)
 ```
+
+Open questions, proposals, and post-MVP plans are not in this tour — see `aux/wiki/` for
+those, one file per topic.
 
 ## Editing
 
