@@ -147,6 +147,14 @@ let recognize_escape_sequence = function
   | _ -> None
 ;;
 
+let decode_hex_sequence lexer : (char * t, error_kind * t) result =
+  assert_lexer_on '\\';
+  (* contract: call this function on the \ *)
+  let lexer = advance lexer in
+  match get lexer with
+  | _ -> failwith "todo"
+;;
+
 let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
   assert_lexer_on lexer '"';
   let rec iter (l : t) (acc : char list) : (Token.kind * t, error_kind * t) result =
