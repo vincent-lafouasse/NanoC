@@ -158,8 +158,8 @@ let decode_escape_sequence lexer : (char * t, error_kind * t) result =
      | Some c -> Ok (c, advance lexer)
      | None ->
        (match ch with
-        | 'x' -> failwith "hex escape todo"
-        | 'd' -> failwith "dec escape todo"
+        | 'x' -> Ok ('0', advance_by lexer 3)
+        | 'd' -> Ok ('0', advance_by lexer 4)
         | _ -> Error (UnknownEscapeSequence ch, advance lexer)))
 ;;
 
