@@ -1,8 +1,3 @@
-(* NanoC grammar — informative reference
- * The parser is hand-written and is the authoritative source.
- * This document may lag behind the parser on fine details.
- *)
-
 (* ─── Top-level ─────────────────────────────────────────────────────────── *)
 
 program        = top_level_item* ;
