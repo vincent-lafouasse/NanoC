@@ -9,9 +9,9 @@ happens to also be vimwiki's markdown-syntax mode, so `[[wiki-link]]`-style navi
 `:VimwikiFollowLink` work here without any conversion if you open it in vim with vimwiki
 configured accordingly.
 
-## Relationship to `aux/book/`
+## Relationship to `design/book/`
 
-`aux/book/` ("A Tour of NanoC") is the settled, current-state reference — what NanoC *is*.
+`design/book/` ("A Tour of NanoC") is the settled, current-state reference — what NanoC *is*.
 This wiki is where that state gets argued about before it's settled, and where decisions
 that were made but don't belong in a guided tour (rejected alternatives, deferred features,
 rationale) stay recorded. A topic generally starts here; once genuinely settled and load-
@@ -53,7 +53,7 @@ Each file is small and self-contained:
 `History` is a curated, prose changelog for *this one topic* — deliberately not just a
 pointer to `git log`, since a raw commit history is terse and usually touches several files
 at once. Entries here should read as a short story of how the decision evolved, tagged to
-the language version (`aux/book/src/intro.md`'s `**Version:**`) where relevant. Where a
+the language version (`design/book/src/intro.md`'s `**Version:**`) where relevant. Where a
 decision predates version tracking, say so plainly rather than inventing a date.
 
 ## Index
@@ -81,4 +81,4 @@ decision predates version tracking, say so plainly rather than inventing a date.
 
 Next number is `0019`. Pick a longish, greppable filename after the number — you should be
 able to find a topic either by jumping straight to its number, or by `grep`-ing a keyword
-(e.g. `grep -l goto aux/wiki/*.md` should find the goto one by content or filename).
+(e.g. `grep -l goto design/wiki/*.md` should find the goto one by content or filename).

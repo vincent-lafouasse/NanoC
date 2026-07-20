@@ -16,15 +16,15 @@ A minimal systems programming language targeting RISC-V.
 available as an mdBook:
 
 ```bash
-cd aux/book
+cd design/book
 mdbook serve
 ```
 
-Then open http://localhost:3000. See [`aux/book/README.md`](aux/book/README.md) for more
+Then open http://localhost:3000. See [`design/book/README.md`](design/book/README.md) for more
 details on building it.
 
 Open questions, proposals, and post-MVP plans aren't in the Tour — see
-[`aux/wiki/`](aux/wiki/), one file per topic. See [`CHANGELOG.md`](CHANGELOG.md) for what's
+[`design/wiki/`](design/wiki/), one file per topic. See [`CHANGELOG.md`](CHANGELOG.md) for what's
 changed release over release.
 
 ## Quick Start

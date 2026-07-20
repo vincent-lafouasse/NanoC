@@ -12,6 +12,6 @@ conjure-log-*
 
 .claude
 
-# mdbook generated output (source theme assets live in aux/book/theme/, untouched by this)
-/aux/book/book/
+# mdbook generated output (source theme assets live in design/book/theme/, untouched by this)
+/design/book/book/
 .DS_Store

@@ -6,7 +6,7 @@
 This is a guided walkthrough of NanoC's current design — the settled language, architecture,
 and implementation, as it stands today. It describes what NanoC *is*, not what it might
 become: in-progress proposals, open questions, and post-MVP plans live in the design wiki
-(`aux/wiki/`) instead, so this tour stays a reliable, coherent read start to finish rather
+(`design/wiki/`) instead, so this tour stays a reliable, coherent read start to finish rather
 than a mix of decided and undecided material.
 
 ## What is NanoC?

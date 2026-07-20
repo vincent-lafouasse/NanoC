@@ -2,7 +2,7 @@
 
 This directory contains "A Tour of NanoC" — a guided walkthrough of the language's current,
 settled design — as an [mdBook](https://rust-lang.github.io/mdBook/). In-progress proposals
-and open questions live separately, in the design wiki at `aux/wiki/`, so this tour only
+and open questions live separately, in the design wiki at `design/wiki/`, so this tour only
 ever describes what NanoC *is*, not what it might become.
 
 ## Prerequisites
@@ -43,7 +43,7 @@ book/
 └── book/              # Generated HTML (after build)
 ```
 
-Open questions, proposals, and post-MVP plans are not in this tour — see `aux/wiki/` for
+Open questions, proposals, and post-MVP plans are not in this tour — see `design/wiki/` for
 those, one file per topic.
 
 ## Editing

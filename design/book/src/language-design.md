@@ -45,7 +45,7 @@ same way C was before `const` existed. There is no compile-time enforcement of r
 access to runtime variables.
 
 Compile-time constants use `constexpr` and are a separate concept — see
-`aux/wiki/ADR-0008-binding-forms-var-constexpr.md` and `aux/wiki/ADR-0015-compile-time-conditionals.md`.
+`design/wiki/ADR-0008-binding-forms-var-constexpr.md` and `design/wiki/ADR-0015-compile-time-conditionals.md`.
 
 #### Mandatory Initialization
 Every variable MUST have an initializer:
@@ -162,7 +162,7 @@ x * 2;                                // ❌ parse error: not a call
 #### Goto Restrictions
 
 Whether a backward jump may land *before* a declaration and re-execute it (as C allows) is
-still an open question — see `aux/wiki/ADR-0001-backward-goto-past-declarations.md`. Current
+still an open question — see `design/wiki/ADR-0001-backward-goto-past-declarations.md`. Current
 leaning: static error.
 
 ### Functions
@@ -184,7 +184,7 @@ fn add(a: i32, b: i32) -> i32 { ... }
 #### Multi-Value Returns
 
 How to use both RISC-V return registers (`a0`, `a1`) is still open, including whether it
-ties into an error-handling story — see `aux/wiki/ADR-0002-tuple-returns-and-error-handling.md`.
+ties into an error-handling story — see `design/wiki/ADR-0002-tuple-returns-and-error-handling.md`.
 Current leaning: simple tuple returns; tuple syntax is cleaner and maps directly to
 registers.
 
@@ -316,7 +316,7 @@ var x: i32 = side_effect() + side_effect();  // left call happens first
 **NanoC behavior:** Still undefined behavior (for now)
 
 Whether to define this instead (trap, or a defined-but-dangerous return value) is open —
-see `aux/wiki/ADR-0006-array-bounds-checking.md`. May add optional bounds checking later.
+see `design/wiki/ADR-0006-array-bounds-checking.md`. May add optional bounds checking later.
 
 #### Null Pointer Dereference
 **C behavior:** Undefined behavior

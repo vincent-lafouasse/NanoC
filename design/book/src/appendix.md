@@ -2,7 +2,7 @@
 
 ### Grammar Summary
 
-Full grammar: `spec/grammar.ebnf`. Key productions:
+Full grammar: `design/grammar.ebnf`. Key productions:
 
 ```ebnf
 var_decl       = "var"       variable_name ":" type "=" var_init   ";" ;

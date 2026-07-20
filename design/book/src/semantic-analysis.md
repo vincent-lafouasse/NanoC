@@ -102,7 +102,7 @@ These are required regardless of any open design questions.
 #### Lvalue checks
 
 The left-hand side of an assignment, and the operand of `&`, must be an lvalue. Valid lvalues:
-- A `var` name — the only runtime binding (see `aux/wiki/ADR-0008-binding-forms-var-constexpr.md`).
+- A `var` name — the only runtime binding (see `design/wiki/ADR-0008-binding-forms-var-constexpr.md`).
 - A pointer dereference: `*p`.
 - An array index: `a[i]`.
 - A field access: `p->field`.
@@ -140,7 +140,7 @@ NanoC is statement-oriented. Blocks are statement containers with no value. `if/
 
 No `unit` or `never` types are needed in expression context. `return`, `goto`, and
 `unreachable` are statements only — they cannot appear inside an expression. (See
-`aux/wiki/ADR-0009-statement-oriented-expressions.md` for the alternatives this ruled out.)
+`design/wiki/ADR-0009-statement-oriented-expressions.md` for the alternatives this ruled out.)
 
 ### Mutually-referential structs
 
@@ -160,10 +160,10 @@ noted here so they're not forgotten, full discussion in the wiki:
 
 - **Exhaustive return checking** — must every code path in a non-unit function end with a
   `return`? Depends on control-flow analysis in the presence of `goto`.
-  See `aux/wiki/ADR-0018-exhaustive-return-checking.md`.
+  See `design/wiki/ADR-0018-exhaustive-return-checking.md`.
 - **Cast operator** — with no implicit conversions and no cast operator, users have no
-  escape hatch for mixing types. See `aux/wiki/ADR-0017-type-system-gaps.md`.
+  escape hatch for mixing types. See `design/wiki/ADR-0017-type-system-gaps.md`.
 - **Pointer arithmetic rules** — how typed pointers (`i32*`) and the opaque `ptr` type mix
-  in arithmetic isn't defined yet. See `aux/wiki/ADR-0017-type-system-gaps.md`.
+  in arithmetic isn't defined yet. See `design/wiki/ADR-0017-type-system-gaps.md`.
 - **Variable shadowing** — whether shadowing an outer-scope binding is an error, a warning,
-  or allowed isn't decided. See `aux/wiki/ADR-0017-type-system-gaps.md`.
+  or allowed isn't decided. See `design/wiki/ADR-0017-type-system-gaps.md`.

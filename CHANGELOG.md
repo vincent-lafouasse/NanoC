@@ -1,8 +1,8 @@
 # Changelog
 
 All notable changes to the NanoC language design are recorded here, one entry per
-version. See `aux/wiki/` for the in-progress discussion behind any of these decisions, and
-`aux/book/` ("A Tour of NanoC") for the current state of the settled design.
+version. See `design/wiki/` for the in-progress discussion behind any of these decisions, and
+`design/book/` ("A Tour of NanoC") for the current state of the settled design.
 
 This tracks the *design*, not implementation progress — the compiler itself (currently an
 OCaml lexer, under `NanoC/`) is a separate, unversioned, in-progress effort.
@@ -42,7 +42,7 @@ one file per topic instead of a handful of growing, mixed-status documents.
 
 ### Documentation
 
-- Design doc split: settled reference moved into "A Tour of NanoC" (`aux/book/`); open
+- Design doc split: settled reference moved into "A Tour of NanoC" (`design/book/`); open
   questions, proposals, and post-MVP plans moved into a one-file-per-topic design wiki
-  (`aux/wiki/`).
+  (`design/wiki/`).
 - Renamed from "NanoC Design Document" to "A Tour of NanoC".
