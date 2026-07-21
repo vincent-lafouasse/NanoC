@@ -157,15 +157,15 @@ let recognize_escape_sequence = function
   | _ -> None
 ;;
 
-let try_read_sequence lexer ~len ~termination : string option =
+let try_read_sequence lexer ~len ~termination : (string, string) result =
   let str rev_list = rev_list |> List.rev |> List.to_seq |> String.of_seq in
-  let rec iter lexer len (acc : char list) : string option =
+  let rec iter lexer len (acc : char list) =
     if len = 0
-    then Some (str acc)
+    then Ok (str acc)
     else (
       match get lexer with
-      | None -> None
-      | Some ch when ch = termination -> None
+      | None -> Error (str acc)
+      | Some ch when ch = termination -> Error (str acc)
       | Some ch -> iter (advance lexer) (len - 1) (ch :: acc))
   in
   iter lexer len []
