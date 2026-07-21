@@ -172,7 +172,10 @@ let try_read_sequence lexer ~len ~termination : string option =
   iter lexer len []
 ;;
 
-let decode_hex_sequence (hex : string) : (char, error_kind) result = failwith "todo"
+let decode_hex_sequence (hex : string) : (char, error_kind) result =
+  _assert (String.length hex != 2) "hex sequence wasn't 2 char long";
+  failwith "todo"
+;;
 
 let decode_escape_sequence lexer : (char * t, error_kind * t) result =
   (* contract: call this function on the \ *)
