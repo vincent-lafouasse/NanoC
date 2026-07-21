@@ -181,7 +181,11 @@ let hex_value ch : int option =
 
 let decode_hex_sequence (hex : string) : (char, error_kind) result =
   _assert (String.length hex != 2) "hex sequence wasn't 2 char long";
-  failwith "todo"
+  let high = String.get hex 0 in
+  let low = String.get hex 1 in
+  match hex_value high, hex_value low with
+  | Some hi, Some lo -> Ok (Char.chr ((16 * hi) + lo))
+  | _ -> Error (MalformedEscapeSequence hex)
 ;;
 
 let decode_escape_sequence lexer : (char * t, error_kind * t) result =
