@@ -125,15 +125,20 @@ let scan_identifier_or_keyword lexer : Token.kind * t =
   | _ -> Token.Identifier lexeme, past_end_lexer
 ;;
 
+let char_repr c : string =
+  if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
+;;
+
+let _assert cond message : unit = if cond then () else failwith message
+
 let assert_lexer_on lexer c : unit =
-  match get lexer with
-  | Some ch when ch = c -> ()
-  | _ ->
-    let char_repr : string =
-      if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
-    in
-    let message = Printf.sprintf "lexer not on %s" char_repr in
-    failwith message
+  let cond =
+    match get lexer with
+    | Some ch when ch = c -> true
+    | _ -> false
+  in
+  let message = Printf.sprintf "lexer not on %s" (char_repr c) in
+  _assert cond message
 ;;
 
 let recognize_escape_sequence = function
@@ -250,10 +255,6 @@ let tokenize input =
     | Ok (tok, lexer) -> iter lexer (tok :: acc)
   in
   iter (init input) []
-;;
-
-let char_repr c : string =
-  if Char.Ascii.is_print c then Printf.sprintf "%c" c else Char.escaped c
 ;;
 
 let format_error_kind = function
