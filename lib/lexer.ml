@@ -153,19 +153,17 @@ let recognize_escape_sequence = function
 ;;
 
 let try_read_string lexer ~len:length : string option =
-  let rec iter lexer length (acc : char list) : char list option =
+  let rec iter lexer length (acc : char list) : string option =
     if length = 0
-    then Some acc
+    then (
+      let chars = List.to_seq (List.rev acc) in
+      Some (String.of_seq chars))
     else (
       match get lexer with
       | None -> None
       | Some ch -> iter (advance lexer) (length - 1) (ch :: acc))
   in
-  match iter lexer length [] with
-  | None -> None
-  | Some list ->
-    let chars = List.to_seq (List.rev list) in
-    Some (String.of_seq chars)
+  iter lexer length []
 ;;
 
 let decode_escape_sequence lexer : (char * t, error_kind * t) result =
