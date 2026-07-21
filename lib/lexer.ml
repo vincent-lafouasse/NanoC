@@ -152,7 +152,7 @@ let recognize_escape_sequence = function
   | _ -> None
 ;;
 
-let try_read_string lexer ~len:length : string option =
+let try_read_string lexer ~len:length ~termination:termination : string option =
   let rec iter lexer length (acc : char list) : string option =
     if length = 0
     then (
@@ -161,6 +161,7 @@ let try_read_string lexer ~len:length : string option =
     else (
       match get lexer with
       | None -> None
+      | Some ch when ch = termination -> None
       | Some ch -> iter (advance lexer) (length - 1) (ch :: acc))
   in
   iter lexer length []
