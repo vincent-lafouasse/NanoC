@@ -152,9 +152,9 @@ let recognize_escape_sequence = function
   | _ -> None
 ;;
 
-let try_read_sequence lexer ~len:length ~termination:termination : string option =
-  let rec iter lexer length (acc : char list) : string option =
-    if length = 0
+let try_read_sequence lexer ~len ~termination : string option =
+  let rec iter lexer len (acc : char list) : string option =
+    if len = 0
     then (
       let chars = List.to_seq (List.rev acc) in
       Some (String.of_seq chars))
@@ -162,9 +162,9 @@ let try_read_sequence lexer ~len:length ~termination:termination : string option
       match get lexer with
       | None -> None
       | Some ch when ch = termination -> None
-      | Some ch -> iter (advance lexer) (length - 1) (ch :: acc))
+      | Some ch -> iter (advance lexer) (len - 1) (ch :: acc))
   in
-  iter lexer length []
+  iter lexer len []
 ;;
 
 let decode_escape_sequence lexer : (char * t, error_kind * t) result =
