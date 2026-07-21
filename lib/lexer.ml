@@ -188,6 +188,20 @@ let decode_hex_sequence (hex : string) : (char, error_kind) result =
   | _ -> Error (MalformedEscapeSequence hex)
 ;;
 
+let read_hex_sequence lexer : (char * t, error_kind * t) result =
+  let maybe_data = try_read_sequence lexer ~len:2 ~termination:'"' in
+  match maybe_data with
+  | Error bad_escape ->
+    let len = String.length bad_escape in
+    let err = MalformedEscapeSequence bad_escape in
+    Error (err, advance_by lexer len)
+  | Ok data ->
+    let end_lexer = advance_by lexer 2 in
+    (match decode_hex_sequence data with
+     | Error err -> Error (err, end_lexer)
+     | Ok value -> Ok (value, end_lexer))
+;;
+
 let decode_escape_sequence lexer : (char * t, error_kind * t) result =
   (* contract: call this function on the \ *)
   assert_lexer_on lexer '\\';
@@ -199,7 +213,7 @@ let decode_escape_sequence lexer : (char * t, error_kind * t) result =
      | Some c -> Ok (c, advance lexer)
      | None ->
        (match ch with
-        | 'x' -> Ok ('0', advance_by lexer 3)
+        | 'x' -> read_hex_sequence lexer
         | 'd' -> Ok ('0', advance_by lexer 4)
         | _ -> Error (UnknownEscapeSequence ch, advance lexer)))
 ;;
