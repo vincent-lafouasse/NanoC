@@ -167,6 +167,8 @@ let try_read_sequence lexer ~len ~termination : string option =
   iter lexer len []
 ;;
 
+let decode_hex_sequence (hex : string) : (char, error_kind) result = failwith "todo"
+
 let decode_escape_sequence lexer : (char * t, error_kind * t) result =
   (* contract: call this function on the \ *)
   assert_lexer_on lexer '\\';
