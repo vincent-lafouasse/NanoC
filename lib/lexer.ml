@@ -220,6 +220,16 @@ let decode_escape_sequence lexer : (char * t, error_kind * t) result =
         | _ -> Error (UnknownEscapeSequence ch, advance lexer)))
 ;;
 
+let scan_char_literal lexer : (Token.kind * t, error_kind * t) result =
+  assert_lexer_on lexer '\'';
+  let lexer = advance lexer in
+  match get lexer with
+  | None -> Error UnterminatedCharLiteral, lexer
+  | Some '\'' -> Error EmptyCharLiteral, advance lexer
+  | Some '\\' -> failwith "escape todo"
+  | Some ch -> failwith "normal char todo"
+;;
+
 let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
   assert_lexer_on lexer '"';
   let rec iter (l : t) (acc : char list) : (Token.kind * t, error_kind * t) result =
