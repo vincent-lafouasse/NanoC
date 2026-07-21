@@ -307,13 +307,11 @@ let () =
   test_unterminated_string_literal_is_an_error ();
   test_each_named_escape ();
   test_multiple_escapes_in_one_string ();
-  (*
   test_each_hex_escape ();
   test_hex_escape_too_short_is_malformed ();
   test_hex_escape_with_no_digits_is_malformed ();
   test_hex_escape_invalid_digits_is_malformed ();
   test_hex_escape_one_invalid_digit_is_malformed ();
-  *)
   test_each_unknown_escape ();
   test_no_octal_escapes ();
   if !failures > 0
