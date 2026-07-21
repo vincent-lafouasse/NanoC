@@ -2,6 +2,7 @@
 
 **Status:** Open
 **Area:** Language Design
+**Leaning:** two separate unresolved gaps, no leaning on either
 
 Two small but distinct gaps in the type checker's design, grouped here because they're
 each short and each blocks finalizing the type checker, without yet being developed enough

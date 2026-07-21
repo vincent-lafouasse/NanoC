@@ -33,6 +33,7 @@ Each file is small and self-contained:
 
 **Status:** Open | Settled | Deferred | Superseded
 **Area:** Language Design | Implementation | Future Work
+**Leaning:** <short free-text summary, optional>
 
 <Context — what's the question, why does it matter>
 
@@ -42,6 +43,13 @@ Each file is small and self-contained:
 - <version or date>: <one-line summary of what changed and why>
 ```
 
+The header is machine-checked, by `make_index.py` (see below) — it hard-errors on any ADR
+that doesn't match this exactly, so the format isn't just a convention, it's enforced.
+Concretely: `Status` and `Area` must each be *exactly* one of their listed values, one
+value, nothing appended — no parentheticals, no dashes, no "(see below)". Anything more
+nuanced than the bare category goes in `Leaning` or in the body, never in `Status`/`Area`
+themselves.
+
 `Status` is the load-bearing field:
 - **Open** — undecided, still being argued about.
 - **Settled** — decided; the language behaves this way.
@@ -49,6 +57,12 @@ Each file is small and self-contained:
   something else has to land first, or it isn't needed until later (post-MVP).
 - **Superseded** — replaced by a later decision; kept for history, cross-linked from
   whatever replaced it.
+
+`Leaning` is where the nuance that used to get crammed into `Status` lives instead — a
+short phrase like "UB" or "toward it, not fully sold" or "depends on ADR-0008". Optional:
+omit it entirely when `Status` alone already says everything (a cleanly `Settled` ADR with
+no remaining wrinkle doesn't need one). It shows up next to `Status` in the generated
+index, so it's the thing a reader sees before ever opening the file.
 
 `History` is a curated, prose changelog for *this one topic* — deliberately not just a
 pointer to `git log`, since a raw commit history is terse and usually touches several files
@@ -58,30 +72,19 @@ decision predates version tracking, say so plainly rather than inventing a date.
 
 ## Index
 
-- [ADR-0001: Goto past a declaration](ADR-0001-backward-goto-past-declarations.md) — Mostly settled (UB, reserved for flow analysis later)
-- [ADR-0002: Tuple returns and error handling](ADR-0002-tuple-returns-and-error-handling.md) — Open (no leaning)
-- [ADR-0003: Assignment as expression](ADR-0003-assignment-as-expression.md) — Open (leaning: no)
-- [ADR-0004: Array syntax](ADR-0004-array-syntax.md) — Open
-- [ADR-0005: String literals and escape sequences](ADR-0005-string-literals-and-escape-sequences.md) — Settled (octal deferred)
-- [ADR-0006: Array bounds checking](ADR-0006-array-bounds-checking.md) — Settled (UB)
-- [ADR-0007: `inline` keyword](ADR-0007-inline-keyword.md) — Open (no leaning at all)
-- [ADR-0008: Binding forms: `var` / `constexpr`](ADR-0008-binding-forms-var-constexpr.md) — Open (leaning toward it)
-- [ADR-0009: Statement-oriented, not expression-oriented](ADR-0009-statement-oriented-expressions.md) — Settled
-- [ADR-0010: Error recovery](ADR-0010-error-recovery.md) — Open (fail-fast for now, a velocity call)
-- [ADR-0011: Optimization passes and debug info](ADR-0011-optimization-passes-and-debug-info.md) — Deferred (leaning: debug info yes, optimization passes maybe never)
-- [ADR-0012: Compiler warnings](ADR-0012-compiler-warnings.md) — Open
-- [ADR-0013: Module system and FFI](ADR-0013-module-system-and-ffi.md) — Deferred (post-MVP)
-- [ADR-0014: Object file generation](ADR-0014-object-file-generation.md) — Deferred (post-MVP)
-- [ADR-0015: Compile-time conditionals](ADR-0015-compile-time-conditionals.md) — Open (depends on ADR-0008)
-- [ADR-0016: Stdlib strings](ADR-0016-stdlib-strings.md) — Settled (impl. deferred)
-- [ADR-0017: Type system gaps: pointer arithmetic, shadowing](ADR-0017-type-system-gaps.md) — Open
-- [ADR-0018: Exhaustive return checking](ADR-0018-exhaustive-return-checking.md) — Deferred
-- [ADR-0019: Integer literals](ADR-0019-integer-literals.md) — Open (syntax settled, range checking not confirmed)
-- [ADR-0020: Character literals](ADR-0020-character-literals.md) — Settled (syntax); type not stated
-- [ADR-0021: Cast operator](ADR-0021-cast-operator.md) — Open
+Generated, not hand-maintained — see [`index.md`](index.md). Regenerate it with:
+
+```bash
+python3 make_index.py
+```
+
+after adding, renaming, or changing the status of any ADR. It rebuilds three views —
+chronological (by number), grouped by status, grouped by area — and hard-errors instead of
+silently producing a stale or wrong index if any file's header doesn't parse.
 
 ## Adding a new one
 
 Next number is `0022`. Pick a longish, greppable filename after the number — you should be
 able to find a topic either by jumping straight to its number, or by `grep`-ing a keyword
 (e.g. `grep -l goto design/wiki/*.md` should find the goto one by content or filename).
+Run `make_index.py` afterward to refresh `index.md`.

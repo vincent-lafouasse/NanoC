@@ -1,7 +1,8 @@
 # ADR-0019: Integer literals
 
-**Status:** Open — syntax settled, range checking not yet confirmed
+**Status:** Open
 **Area:** Language Design
+**Leaning:** syntax settled (i32 default, u suffix); range-check hard-error recommended, not confirmed
 
 ## Syntax
 

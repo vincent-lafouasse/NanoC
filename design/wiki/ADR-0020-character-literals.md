@@ -1,7 +1,8 @@
 # ADR-0020: Character literals
 
-**Status:** Settled (syntax); type not yet stated
+**Status:** Settled
 **Area:** Language Design
+**Leaning:** syntax settled; type likely u8, not yet stated explicitly
 
 ## Syntax
 

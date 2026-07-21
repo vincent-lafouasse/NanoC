@@ -1,7 +1,8 @@
 # ADR-0006: Array bounds checking
 
-**Status:** Settled (UB)
+**Status:** Settled
 **Area:** Language Design
+**Leaning:** UB
 
 ## Context
 

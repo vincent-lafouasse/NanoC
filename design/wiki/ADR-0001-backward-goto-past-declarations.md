@@ -1,8 +1,8 @@
 # ADR-0001: Goto past a declaration
 
-**Status:** Mostly settled — leaning UB, with a reserved option to revisit via flow
-analysis, depending on how far sema ends up going (not yet known)
+**Status:** Settled
 **Area:** Language Design
+**Leaning:** UB, both directions — reserved option to revisit via flow analysis if sema ends up needing it for other reasons anyway
 
 ## Context
 

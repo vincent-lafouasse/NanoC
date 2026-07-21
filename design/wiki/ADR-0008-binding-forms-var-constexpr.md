@@ -1,7 +1,8 @@
 # ADR-0008: Binding forms: `var` / `constexpr`
 
-**Status:** Open — proposed, leaning toward it, not settled
+**Status:** Open
 **Area:** Language Design
+**Leaning:** toward it, not fully sold
 
 ## Proposal
 

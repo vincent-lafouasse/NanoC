@@ -1,7 +1,8 @@
 # ADR-0012: Compiler warnings
 
-**Status:** Open (proposed)
+**Status:** Open
 **Area:** Implementation
+**Leaning:** precedence warnings + division-by-literal-zero are highest priority
 
 ## Rationale
 

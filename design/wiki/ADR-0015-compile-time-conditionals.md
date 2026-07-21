@@ -1,8 +1,8 @@
 # ADR-0015: Compile-time conditionals
 
-**Status:** Open — depends on [ADR-0008](ADR-0008-binding-forms-var-constexpr.md), which is
-no longer settled
+**Status:** Open
 **Area:** Future Work
+**Leaning:** depends entirely on [ADR-0008](ADR-0008-binding-forms-var-constexpr.md), which is no longer settled itself
 
 **Not currently implemented.** Needed for portable code that targets multiple platforms
 (RISC-V vs ARM, bare-metal vs Linux, debug vs release).

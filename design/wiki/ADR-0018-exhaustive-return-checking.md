@@ -2,6 +2,7 @@
 
 **Status:** Deferred
 **Area:** Implementation
+**Leaning:** deferred until CFG-shaped analysis is needed elsewhere anyway
 
 ## Context
 

@@ -2,6 +2,7 @@
 
 **Status:** Open
 **Area:** Language Design
+**Leaning:** i32[10] (postfix, matches pointer syntax)
 
 ## Context
 

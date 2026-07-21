@@ -1,7 +1,8 @@
 # ADR-0003: Assignment as expression
 
-**Status:** Open (current leaning: statement only)
+**Status:** Open
 **Area:** Language Design
+**Leaning:** statement only
 
 ## Context
 

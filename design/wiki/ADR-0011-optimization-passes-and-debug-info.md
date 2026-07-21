@@ -2,6 +2,7 @@
 
 **Status:** Deferred
 **Area:** Implementation
+**Leaning:** debug info — yes, eventually; optimization passes — maybe never
 
 ## Optimization passes
 

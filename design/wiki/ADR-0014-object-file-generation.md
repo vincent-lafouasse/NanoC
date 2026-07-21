@@ -1,7 +1,8 @@
 # ADR-0014: Object file generation
 
-**Status:** Deferred (post-MVP)
+**Status:** Deferred
 **Area:** Future Work
+**Leaning:** post-MVP
 
 ## Current
 

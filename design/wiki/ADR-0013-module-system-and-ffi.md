@@ -1,7 +1,8 @@
 # ADR-0013: Module system and FFI
 
-**Status:** Deferred (post-MVP)
+**Status:** Deferred
 **Area:** Future Work
+**Leaning:** post-MVP
 
 **Not currently implemented.** Core language and single-file compilation comes first.
 

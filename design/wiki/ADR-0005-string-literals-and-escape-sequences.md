@@ -1,7 +1,8 @@
 # ADR-0005: String literals and escape sequences
 
-**Status:** Settled (octal deferred — see below)
+**Status:** Settled
 **Area:** Language Design
+**Leaning:** octal deferred, not rejected — see below
 
 ## String literal termination and typing
 

@@ -1,7 +1,8 @@
 # ADR-0016: Stdlib strings
 
-**Status:** Settled (design); implementation deferred (post-MVP)
+**Status:** Settled
 **Area:** Future Work
+**Leaning:** design settled; implementation deferred (post-MVP)
 
 **Not currently implemented** — and not worth pursuing before an MVP compiler (parser,
 sema, codegen) exists, since none of this matters until codegen can emit `.rodata` layouts.

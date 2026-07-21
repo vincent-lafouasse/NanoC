@@ -1,7 +1,8 @@
 # ADR-0010: Error recovery
 
-**Status:** Open (current: fail-fast)
+**Status:** Open
 **Area:** Implementation
+**Leaning:** fail-fast — a velocity call, may revisit
 
 ## Context
 

@@ -1,7 +1,8 @@
 # ADR-0007: `inline` keyword
 
-**Status:** Open — no leaning at all
+**Status:** Open
 **Area:** Language Design
+**Leaning:** none at all — deep, unexplored consequences
 
 Being fully specified below is not a sign this is close to decided. There's genuinely no
 leaning either way yet — the semantics below have deep, not-yet-explored consequences
