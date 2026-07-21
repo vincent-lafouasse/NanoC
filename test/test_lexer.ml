@@ -288,6 +288,97 @@ let test_no_octal_escapes () =
     (Lexer.UnknownEscapeSequence '1')
 ;;
 
+(* --- character literals --- *)
+
+let test_plain_char_literal () =
+  check_tokens {|'a'|} {|'a'|} [ Token.CharLiteral 'a'; Token.Eof ]
+;;
+
+let test_char_literal_digit () =
+  (* a digit inside single quotes is a char literal, not confused with an int literal *)
+  check_tokens {|'5'|} {|'5'|} [ Token.CharLiteral '5'; Token.Eof ]
+;;
+
+let test_char_literal_space () =
+  check_tokens {|' '|} {|' '|} [ Token.CharLiteral ' '; Token.Eof ]
+;;
+
+let char_literal_escapes =
+  [ {|'\n'|}, '\n'
+  ; {|'\t'|}, '\t'
+  ; {|'\\'|}, '\\'
+  ; {|'\''|}, '\'' (* the one escape strings never need, but chars always might *)
+  ; {|'\x41'|}, 'A'
+  ]
+;;
+
+let test_each_char_literal_escape () =
+  List.iter
+    (fun (source, decoded) ->
+       check_tokens
+         ("char escape " ^ source)
+         source
+         [ Token.CharLiteral decoded; Token.Eof ])
+    char_literal_escapes
+;;
+
+let test_char_literal_in_context () =
+  check_tokens
+    "char literal amid other tokens"
+    {|fn { 'a' }|}
+    [ Token.Fn; Token.LBrace; Token.CharLiteral 'a'; Token.RBrace; Token.Eof ]
+;;
+
+let test_empty_char_literal_is_an_error () =
+  check_error {|''|} {|''|} Lexer.EmptyCharLiteral
+;;
+
+let test_multi_char_literal_is_an_error () =
+  check_error {|'ab'|} {|'ab'|} Lexer.MultiCharacterLiteral
+;;
+
+let test_unterminated_char_literal_is_an_error () =
+  check_error {|'a|} {|'a|} Lexer.UnterminatedCharLiteral
+;;
+
+(* --- integer literals — default i32, `u` suffix for u32 --- *)
+
+let test_zero_literal () = check_tokens "0" "0" [ Token.IntLiteral 0; Token.Eof ]
+let test_plain_int_literal () = check_tokens "42" "42" [ Token.IntLiteral 42; Token.Eof ]
+
+let test_i32_max_literal () =
+  check_tokens "2147483647" "2147483647" [ Token.IntLiteral 2147483647; Token.Eof ]
+;;
+
+let test_zero_unsigned_literal () =
+  check_tokens "0u" "0u" [ Token.UnsignedIntLiteral 0; Token.Eof ]
+;;
+
+let test_unsigned_suffix_literal () =
+  check_tokens "42u" "42u" [ Token.UnsignedIntLiteral 42; Token.Eof ]
+;;
+
+let test_u32_max_literal () =
+  check_tokens
+    "4294967295u"
+    "4294967295u"
+    [ Token.UnsignedIntLiteral 4294967295; Token.Eof ]
+;;
+
+let test_int_literal_in_context () =
+  check_tokens
+    "int literal amid other tokens"
+    "fn { 42 }"
+    [ Token.Fn; Token.LBrace; Token.IntLiteral 42; Token.RBrace; Token.Eof ]
+;;
+
+let test_several_int_literals_in_sequence () =
+  check_tokens
+    "signed and unsigned literals in sequence"
+    "42 7u 100"
+    [ Token.IntLiteral 42; Token.UnsignedIntLiteral 7; Token.IntLiteral 100; Token.Eof ]
+;;
+
 let () =
   test_each_keyword ();
   test_keyword_sequence ();
@@ -314,6 +405,22 @@ let () =
   test_hex_escape_one_invalid_digit_is_malformed ();
   test_each_unknown_escape ();
   test_no_octal_escapes ();
+  test_plain_char_literal ();
+  test_char_literal_digit ();
+  test_char_literal_space ();
+  test_each_char_literal_escape ();
+  test_char_literal_in_context ();
+  test_empty_char_literal_is_an_error ();
+  test_multi_char_literal_is_an_error ();
+  test_unterminated_char_literal_is_an_error ();
+  test_zero_literal ();
+  test_plain_int_literal ();
+  test_i32_max_literal ();
+  test_zero_unsigned_literal ();
+  test_unsigned_suffix_literal ();
+  test_u32_max_literal ();
+  test_int_literal_in_context ();
+  test_several_int_literals_in_sequence ();
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;

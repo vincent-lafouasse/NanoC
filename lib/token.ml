@@ -24,6 +24,9 @@ type kind =
   (* the rest i guess *)
   | Identifier of string
   | StringLiteral of string
+  | CharLiteral of char
+  | IntLiteral of int
+  | UnsignedIntLiteral of int
   | Eof
 [@@deriving show]
 

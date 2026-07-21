@@ -9,6 +9,8 @@ type error_kind =
   | UnrecognizedCharacter of char
   | UnterminatedStringLiteral
   | UnterminatedCharLiteral
+  | EmptyCharLiteral (* '' *)
+  | MultiCharacterLiteral (* 'ab' — a char literal must hold exactly one byte *)
   | UnknownEscapeSequence of char (* e.g. \q *)
   | MalformedEscapeSequence of string (* e.g. \x?? or \x4 *)
 [@@deriving show]
@@ -290,6 +292,8 @@ let format_error_kind = function
   | UnrecognizedCharacter c -> Printf.sprintf "Unrecognized character %s" (char_repr c)
   | UnterminatedStringLiteral -> "Unterminated string literal"
   | UnterminatedCharLiteral -> "Unterminated char literal"
+  | EmptyCharLiteral -> "Empty char literal"
+  | MultiCharacterLiteral -> "Char literal holds more than one byte"
   | UnknownEscapeSequence c -> Printf.sprintf "Unkown escape sequence \\%s" (char_repr c)
   | MalformedEscapeSequence s -> Printf.sprintf "Malformed escape sequence %s" s
 ;;
