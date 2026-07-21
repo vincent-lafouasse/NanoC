@@ -171,6 +171,14 @@ let try_read_sequence lexer ~len ~termination : (string, string) result =
   iter lexer len []
 ;;
 
+let hex_value ch : int option =
+  match ch with
+  | '0' .. '9' -> Some (Char.code ch - Char.code '0')
+  | 'a' .. 'f' -> Some (10 + Char.code ch - Char.code 'a')
+  | 'A' .. 'F' -> Some (10 + Char.code ch - Char.code 'A')
+  | _ -> None
+;;
+
 let decode_hex_sequence (hex : string) : (char, error_kind) result =
   _assert (String.length hex != 2) "hex sequence wasn't 2 char long";
   failwith "todo"
