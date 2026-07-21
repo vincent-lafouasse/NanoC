@@ -223,11 +223,18 @@ let decode_escape_sequence lexer : (char * t, error_kind * t) result =
 let scan_char_literal lexer : (Token.kind * t, error_kind * t) result =
   assert_lexer_on lexer '\'';
   let lexer = advance lexer in
+  let char_res : (char * t, error_kind * t) result =
+    match get lexer with
+    | None -> Error (UnterminatedCharLiteral, lexer)
+    | Some '\'' -> Error (EmptyCharLiteral, advance lexer)
+    | Some '\\' -> decode_escape_sequence lexer
+    | Some ch -> Ok (ch, advance lexer)
+  in
   match get lexer with
-  | None -> Error UnterminatedCharLiteral, lexer
-  | Some '\'' -> Error EmptyCharLiteral, advance lexer
-  | Some '\\' -> failwith "escape todo"
-  | Some ch -> failwith "normal char todo"
+  | Some '\'' ->
+    Result.map (fun (ch, lexer) -> Token.CharLiteral ch, advance lexer) char_res
+  | None -> Error (UnterminatedCharLiteral, lexer)
+  | _ -> Error (MultiCharacterLiteral, advance lexer)
 ;;
 
 let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
