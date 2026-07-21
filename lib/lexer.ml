@@ -152,7 +152,7 @@ let recognize_escape_sequence = function
   | _ -> None
 ;;
 
-let try_read_string lexer ~len:length ~termination:termination : string option =
+let try_read_sequence lexer ~len:length ~termination:termination : string option =
   let rec iter lexer length (acc : char list) : string option =
     if length = 0
     then (
