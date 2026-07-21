@@ -74,11 +74,14 @@ decision predates version tracking, say so plainly rather than inventing a date.
 - [ADR-0014: Object file generation](ADR-0014-object-file-generation.md) — Deferred (post-MVP)
 - [ADR-0015: Compile-time conditionals](ADR-0015-compile-time-conditionals.md) — Open (depends on ADR-0008)
 - [ADR-0016: Stdlib strings](ADR-0016-stdlib-strings.md) — Settled (impl. deferred)
-- [ADR-0017: Type system gaps: casts, pointer arithmetic, shadowing](ADR-0017-type-system-gaps.md) — Open
+- [ADR-0017: Type system gaps: pointer arithmetic, shadowing](ADR-0017-type-system-gaps.md) — Open
 - [ADR-0018: Exhaustive return checking](ADR-0018-exhaustive-return-checking.md) — Deferred
+- [ADR-0019: Integer literals](ADR-0019-integer-literals.md) — Open (syntax settled, range checking not confirmed)
+- [ADR-0020: Character literals](ADR-0020-character-literals.md) — Settled (syntax); type not stated
+- [ADR-0021: Cast operator](ADR-0021-cast-operator.md) — Open
 
 ## Adding a new one
 
-Next number is `0019`. Pick a longish, greppable filename after the number — you should be
+Next number is `0022`. Pick a longish, greppable filename after the number — you should be
 able to find a topic either by jumping straight to its number, or by `grep`-ing a keyword
 (e.g. `grep -l goto design/wiki/*.md` should find the goto one by content or filename).

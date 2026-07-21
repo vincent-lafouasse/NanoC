@@ -32,9 +32,10 @@ Stdlib supplies the accessors (`str_len`, `str_data`, etc.).
 
 An alternative keeps a string as a single `ptr` (no wrapper struct) by storing the length
 just *before* the pointed-to data, so `p[0]` is still the first byte and length is
-`*(u32*)(p - 4)`. Not rejected, just blocked: it needs pointer arithmetic and a cast
-operator, neither of which exist yet (see [type-system-gaps](ADR-0017-type-system-gaps.md)). Worth
-revisiting once those land, if the extra word per `Str` ever actually matters.
+`*(u32*)(p - 4)`. Not rejected, just blocked: it needs pointer arithmetic (see
+[type-system-gaps](ADR-0017-type-system-gaps.md)) and a cast operator (see
+[cast-operator](ADR-0021-cast-operator.md)), neither of which exist yet. Worth revisiting
+once those land, if the extra word per `Str` ever actually matters.
 
 ## History
 
