@@ -214,7 +214,7 @@ let decode_escape_sequence lexer : (char * t, error_kind * t) result =
      | None ->
        (match ch with
         | 'x' -> read_hex_sequence (advance lexer)
-        | 'd' -> Ok ('0', advance_by lexer 4)
+        | 'd' -> failwith "decimal escape sequences unimplemented"
         | _ -> Error (UnknownEscapeSequence ch, advance lexer)))
 ;;
 
