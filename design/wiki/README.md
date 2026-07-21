@@ -84,7 +84,7 @@ silently producing a stale or wrong index if any file's header doesn't parse.
 
 ## Adding a new one
 
-Next number is `0022`. Pick a longish, greppable filename after the number — you should be
+Next number is `0023`. Pick a longish, greppable filename after the number — you should be
 able to find a topic either by jumping straight to its number, or by `grep`-ing a keyword
 (e.g. `grep -l goto design/wiki/*.md` should find the goto one by content or filename).
 Run `make_index.py` afterward to refresh `index.md`.
