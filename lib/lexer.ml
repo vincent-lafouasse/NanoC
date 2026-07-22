@@ -230,13 +230,15 @@ let scan_char_literal lexer : (Token.kind * t, error_kind * t) result =
     | Some '\\' -> decode_escape_sequence lexer
     | Some ch -> Ok (ch, advance lexer)
   in
-  let make_char_token (ch, lexer) : Token.kind * t =
-    Token.CharLiteral ch, advance lexer
-  in
-  match get lexer with
-  | Some '\'' -> Result.map make_char_token char_res
-  | None -> Error (UnterminatedCharLiteral, lexer)
-  | _ -> Error (MultiCharacterLiteral, advance lexer)
+  match char_res with
+  | Error e -> Error e
+  | Ok (ch, lexer) ->
+    (match get lexer with
+     | Some '\'' ->
+       let token = Token.CharLiteral ch in
+       Ok (token, advance lexer)
+     | None -> Error (UnterminatedCharLiteral, lexer)
+     | _ -> Error (MultiCharacterLiteral, advance lexer))
 ;;
 
 let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
