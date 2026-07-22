@@ -230,9 +230,11 @@ let scan_char_literal lexer : (Token.kind * t, error_kind * t) result =
     | Some '\\' -> decode_escape_sequence lexer
     | Some ch -> Ok (ch, advance lexer)
   in
+  let make_char_token (ch, lexer) : Token.kind * t =
+    Token.CharLiteral ch, advance lexer
+  in
   match get lexer with
-  | Some '\'' ->
-    Result.map (fun (ch, lexer) -> Token.CharLiteral ch, advance lexer) char_res
+  | Some '\'' -> Result.map make_char_token char_res
   | None -> Error (UnterminatedCharLiteral, lexer)
   | _ -> Error (MultiCharacterLiteral, advance lexer)
 ;;
@@ -280,12 +282,19 @@ let next_token lexer : (Token.t * t, error) result =
     | Error (err, end_lexer) -> Error (err, make_span start end_lexer)
     | Ok (kind, end_lexer) -> Ok (make_token start end_lexer kind, end_lexer)
   in
+  let make_char_literal_token start_lexer =
+    let start = start_lexer.position in
+    match scan_char_literal start_lexer with
+    | Error (err, end_lexer) -> Error (err, make_span start end_lexer)
+    | Ok (kind, end_lexer) -> Ok (make_token start end_lexer kind, end_lexer)
+  in
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
   | Some '{' -> make_hard_token lexer Token.LBrace ~len:1
   | Some '}' -> make_hard_token lexer Token.RBrace ~len:1
   | Some '"' -> make_string_literal_token lexer
+  | Some '\'' -> make_char_literal_token lexer
   | Some c when char_is_ident_start c -> make_ident_token lexer
   | None -> make_hard_token lexer Token.Eof ~len:0
   | Some c ->
