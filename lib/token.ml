@@ -11,6 +11,30 @@ type kind =
   | Undefined
   | Zeroed
   | While
+  (* bitwise *)
+  | BitwiseNot
+  | BitwiseOr
+  | BitwiseAnd
+  | BitwiseXor
+  (* comparison *)
+  | Equals
+  | NotEquals
+  | LessThan
+  | GreaterThan
+  | LessEquals
+  | GreaterEquals
+  (* algebric *)
+  | Plus
+  | Minus
+  | Divides
+  | Multiplies
+  | Modulo
+  | Assign
+  | PlusAssign
+  | LessAssign
+  | ModuloAssign
+  | MultipliesAssign
+  | DividesAssign
   (* type keywords *)
   | U8
   | U32
