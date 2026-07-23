@@ -293,6 +293,10 @@ let next_token lexer : (Token.t * t, error) result =
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
+  | Some '~' -> make_hard_token lexer Token.BitwiseNot ~len:1
+  | Some '|' -> make_hard_token lexer Token.BitwiseOr ~len:1
+  | Some '&' -> make_hard_token lexer Token.Ampersand ~len:1
+  | Some '^' -> make_hard_token lexer Token.BitwiseXor ~len:1
   | Some '{' -> make_hard_token lexer Token.LBrace ~len:1
   | Some '}' -> make_hard_token lexer Token.RBrace ~len:1
   | Some '"' -> make_string_literal_token lexer
