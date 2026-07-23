@@ -293,6 +293,17 @@ let next_token lexer : (Token.t * t, error) result =
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
+  (* algebraic *)
+  | Some '+' when looking_at lexer '+' '=' ->
+    make_hard_token lexer Token.PlusAssign ~len:2
+  | Some '-' when looking_at lexer '-' '=' ->
+    make_hard_token lexer Token.MinusAssign ~len:2
+  | Some '*' when looking_at lexer '*' '=' ->
+    make_hard_token lexer Token.MultipliesAssign ~len:2
+  | Some '/' when looking_at lexer '/' '=' ->
+    make_hard_token lexer Token.DividesAssign ~len:2
+  | Some '%' when looking_at lexer '%' '=' ->
+    make_hard_token lexer Token.ModuloAssign ~len:2
   (* logical *)
   | Some '!' -> make_hard_token lexer Token.LogicalNot ~len:1
   | Some '|' when looking_at lexer '|' '|' -> make_hard_token lexer Token.LogicalOr ~len:2
