@@ -333,9 +333,15 @@ let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
     | IntI32 -> 2147483648L
     | IntU8 -> 255L
   in
+  let check_bounds int_kind digits value : (int64, error_kind) result =
+    let upper_bound = int_max raw.suffix in
+    let err = error_from_kind int_kind digits in
+    if value > upper_bound then Error err else Ok value
+  in
   let raw, _end_lexer = gather_int_literal lexer in
-  let _maybe_value = Atoi.atoi64 raw.digits |> Result.map_error transmute_error in
-  let _upper_bound = int_max raw.suffix in
+  let _maybe_value =
+    Atoi.atoi64 raw.digits |> Result.map_error transmute_error |> Result.bind check_bounds
+  in
   failwith "todo"
 ;;
 
