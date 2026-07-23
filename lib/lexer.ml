@@ -253,7 +253,7 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
     match get l with
     | Some '"' ->
       let past_end_lexer = advance l in
-      let body = String.of_seq (List.to_seq (List.rev acc)) in
+      let body = acc |> List.rev |> List.to_seq |> String.of_seq in
       let kind = Token.StringLiteral body in
       Ok (kind, past_end_lexer)
     | None -> Error (UnterminatedStringLiteral, l)
@@ -372,11 +372,12 @@ let tokenize input =
   let rec iter lexer acc =
     match next_token lexer with
     | Error e -> Error e
-    | Ok (({ Token.kind = Eof; _ } as tok), _lexer) ->
-      Ok (Array.of_list (List.rev (tok :: acc)))
+    | Ok (({ Token.kind = Eof; _ } as tok), _lexer) -> Ok (tok :: acc)
     | Ok (tok, lexer) -> iter lexer (tok :: acc)
   in
-  iter (init input) []
+  let rev_token_res = iter (init input) [] in
+  let make_array = Fun.compose Array.of_list List.rev in
+  Result.map make_array rev_token_res
 ;;
 
 let format_error_kind = function
