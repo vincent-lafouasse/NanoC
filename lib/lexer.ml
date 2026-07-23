@@ -325,6 +325,9 @@ let next_token lexer : (Token.t * t, error) result =
   | Some '^' -> make_hard_token lexer ~len:1 Token.BitwiseXor
   (* logical *)
   | Some '!' -> make_hard_token lexer ~len:1 Token.LogicalNot
+  (* comparison *)
+  | Some '<' -> make_hard_token lexer ~len:1 Token.LessThan
+  | Some '>' -> make_hard_token lexer ~len:1 Token.GreaterThan
   (* punctuation *)
   | Some '{' -> make_hard_token lexer ~len:1 Token.LBrace
   | Some '}' -> make_hard_token lexer ~len:1 Token.RBrace
