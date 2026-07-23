@@ -384,7 +384,7 @@ let test_several_int_literals_in_sequence () =
 let operators =
   [ "~", Token.BitwiseNot
   ; "|", Token.BitwiseOr
-  ; "&", Token.BitwiseAnd
+  ; "&", Token.Ampersand
   ; "^", Token.BitwiseXor
   ; "<<", Token.ShiftLeft
   ; ">>", Token.ShiftRight
@@ -400,7 +400,7 @@ let operators =
   ; "+", Token.Plus
   ; "-", Token.Minus
   ; "/", Token.Divides
-  ; "*", Token.Multiplies
+  ; "*", Token.Star
   ; "%", Token.Modulo
   ; "=", Token.Assign
   ; "+=", Token.PlusAssign
@@ -421,7 +421,7 @@ let test_operator_sequence () =
   check_tokens
     "algebraic operators in sequence"
     "+-*/%"
-    [ Token.Plus; Token.Minus; Token.Multiplies; Token.Divides; Token.Modulo; Token.Eof ]
+    [ Token.Plus; Token.Minus; Token.Star; Token.Divides; Token.Modulo; Token.Eof ]
 ;;
 
 let test_bitwise_operator_sequence () =
@@ -430,7 +430,7 @@ let test_bitwise_operator_sequence () =
     "~ | & ^ << >>"
     [ Token.BitwiseNot
     ; Token.BitwiseOr
-    ; Token.BitwiseAnd
+    ; Token.Ampersand
     ; Token.BitwiseXor
     ; Token.ShiftLeft
     ; Token.ShiftRight
@@ -495,7 +495,7 @@ let test_minus_assign_is_not_minus_then_assign () =
 ;;
 
 let test_logical_and_is_not_two_bitwise_ands () =
-  check_tokens "&& is not BitwiseAnd;BitwiseAnd" "&&" [ Token.LogicalAnd; Token.Eof ]
+  check_tokens "&& is not Ampersand;Ampersand" "&&" [ Token.LogicalAnd; Token.Eof ]
 ;;
 
 let test_logical_or_is_not_two_bitwise_ors () =
@@ -518,9 +518,9 @@ let test_plus_then_assign_with_space_is_two_tokens () =
 
 let test_bitwise_and_then_and_with_space_is_two_tokens () =
   check_tokens
-    "& & is BitwiseAnd;BitwiseAnd"
+    "& & is Ampersand;Ampersand"
     "& &"
-    [ Token.BitwiseAnd; Token.BitwiseAnd; Token.Eof ]
+    [ Token.Ampersand; Token.Ampersand; Token.Eof ]
 ;;
 
 let test_less_than_then_less_than_with_space_is_two_tokens () =
