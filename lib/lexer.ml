@@ -333,8 +333,7 @@ let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
   let check_bounds value = if value <= int_max then Ok value else Error err in
   let make_token value : Token.kind =
     match suffix with
-    (* TODO: create Token.PtrLiteral *)
-    | IntPtr -> Token.IntLiteral value
+    | IntPtr -> Token.PtrLiteral value
     | IntI32 -> Token.IntLiteral value
     | IntU32 -> Token.UnsignedIntLiteral value
     | IntU8 -> Token.ByteLiteral value

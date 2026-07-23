@@ -65,6 +65,7 @@ type kind =
   | IntLiteral of int64
   | UnsignedIntLiteral of int64
   | ByteLiteral of int64
+  | PtrLiteral of int64
   | Eof
 [@@deriving show]
 
