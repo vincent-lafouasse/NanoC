@@ -312,6 +312,20 @@ let gather_int_literal lexer : raw_int_literal * t =
   { digits; suffix }, lexer
 ;;
 
+let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
+  let _raw, _end_lexer = gather_int_literal lexer in
+  let _transmute_error atoi_error int_kind : error_kind =
+    match atoi_error with
+    | Atoi.TooSmall _ ->
+      failwith "unreachable: there should never be a negative number here"
+    | Atoi.TooBig digits ->
+      (match int_kind with
+       | IntPtr -> failwith "todo"
+       | _ -> failwith "todo")
+  in
+  failwith "todo"
+;;
+
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
   { Token.kind; lexeme = make_span start lexer }
 ;;
