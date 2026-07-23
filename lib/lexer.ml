@@ -318,13 +318,13 @@ let next_token lexer : (Token.t * t, error) result =
   | Some '/' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.DividesAssign
   | Some '%' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.ModuloAssign
   (* -- 1 char hard tokens -- *)
-  (* logical *)
-  | Some '!' -> make_hard_token lexer ~len:1 Token.LogicalNot
   (* bitwise *)
   | Some '~' -> make_hard_token lexer ~len:1 Token.BitwiseNot
   | Some '|' -> make_hard_token lexer ~len:1 Token.BitwiseOr
   | Some '&' -> make_hard_token lexer ~len:1 Token.Ampersand
   | Some '^' -> make_hard_token lexer ~len:1 Token.BitwiseXor
+  (* logical *)
+  | Some '!' -> make_hard_token lexer ~len:1 Token.LogicalNot
   (* punctuation *)
   | Some '{' -> make_hard_token lexer ~len:1 Token.LBrace
   | Some '}' -> make_hard_token lexer ~len:1 Token.RBrace
