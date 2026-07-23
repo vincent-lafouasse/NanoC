@@ -14,7 +14,7 @@ type kind =
   (* bitwise *)
   | BitwiseNot
   | BitwiseOr
-  | BitwiseAnd
+  | Ampersand (* this doubles as the address-of op. *)
   | BitwiseXor
   | ShiftLeft
   | ShiftRight
@@ -33,7 +33,7 @@ type kind =
   | Plus
   | Minus
   | Divides
-  | Multiplies
+  | Star (* doubles as the deref op. *)
   | Modulo
   | Assign
   | PlusAssign
