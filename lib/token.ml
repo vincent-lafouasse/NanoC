@@ -1,10 +1,3 @@
-type int_suffix =
-  | IntPtr
-  | IntU8
-  | IntU32
-  | IntI32
-[@@deriving show]
-
 type kind =
   (* keywords *)
   | Fn
@@ -71,6 +64,7 @@ type kind =
   | CharLiteral of char
   | IntLiteral of int
   | UnsignedIntLiteral of int
+  | ByteLiteral of int
   | Eof
 [@@deriving show]
 
