@@ -113,6 +113,12 @@ let test_keyword_prefix_is_identifier () =
     [ Token.Identifier "iffy"; Token.Identifier "structure"; Token.Eof ]
 ;;
 
+let test_plain_identifier () =
+  check_tokens "plain identifier" "foo" [ Token.Identifier "foo"; Token.Eof ]
+;;
+
+let test_eof_on_empty_input () = check_tokens "empty input" "" [ Token.Eof ]
+
 let test_keywords_are_case_sensitive () =
   check_tokens
     "keywords are case sensitive"
@@ -544,10 +550,106 @@ let test_operator_in_context () =
     ]
 ;;
 
+(* --- punctuation: one dedicated test per punctuation token kind --- *)
+
+let punctuation =
+  [ "(", Token.LParen
+  ; ")", Token.RParen
+  ; "{", Token.LBrace
+  ; "}", Token.RBrace
+  ; "[", Token.LBracket
+  ; "]", Token.RBracket
+  ; ";", Token.Semicolon
+  ; ":", Token.Colon
+  ; ",", Token.Comma
+  ; ".", Token.Dot
+  ; "->", Token.Arrow
+  ]
+;;
+
+let test_each_punctuation () =
+  List.iter
+    (fun (source, tok) ->
+       check_tokens ("punctuation " ^ source) source [ tok; Token.Eof ])
+    punctuation
+;;
+
+let test_paren_pair_sequence () =
+  check_tokens
+    "parens amid a call expression"
+    "f(a)"
+    [ Token.Identifier "f"; Token.LParen; Token.Identifier "a"; Token.RParen; Token.Eof ]
+;;
+
+let test_bracket_pair_sequence () =
+  check_tokens
+    "brackets amid an index expression"
+    "a[0]"
+    [ Token.Identifier "a"
+    ; Token.LBracket
+    ; Token.IntLiteral 0
+    ; Token.RBracket
+    ; Token.Eof
+    ]
+;;
+
+let test_comma_separated_sequence () =
+  check_tokens
+    "comma-separated identifiers"
+    "a, b, c"
+    [ Token.Identifier "a"
+    ; Token.Comma
+    ; Token.Identifier "b"
+    ; Token.Comma
+    ; Token.Identifier "c"
+    ; Token.Eof
+    ]
+;;
+
+let test_dot_field_access_sequence () =
+  check_tokens
+    "dot field access"
+    "p.x"
+    [ Token.Identifier "p"; Token.Dot; Token.Identifier "x"; Token.Eof ]
+;;
+
+let test_var_decl_colon_semicolon_sequence () =
+  check_tokens
+    "var decl uses colon and semicolon"
+    "var x: i32 = 0;"
+    [ Token.Var
+    ; Token.Identifier "x"
+    ; Token.Colon
+    ; Token.I32
+    ; Token.Assign
+    ; Token.IntLiteral 0
+    ; Token.Semicolon
+    ; Token.Eof
+    ]
+;;
+
+let test_function_return_arrow_sequence () =
+  check_tokens
+    "function signature uses arrow"
+    "fn f() -> i32 {}"
+    [ Token.Fn
+    ; Token.Identifier "f"
+    ; Token.LParen
+    ; Token.RParen
+    ; Token.Arrow
+    ; Token.I32
+    ; Token.LBrace
+    ; Token.RBrace
+    ; Token.Eof
+    ]
+;;
+
 let () =
   test_each_keyword ();
   test_keyword_sequence ();
   test_keyword_prefix_is_identifier ();
+  test_plain_identifier ();
+  test_eof_on_empty_input ();
   test_keywords_are_case_sensitive ();
   test_line_comment_is_skipped ();
   test_line_comment_stops_at_newline ();
@@ -607,6 +709,13 @@ let () =
   test_bitwise_and_then_and_with_space_is_two_tokens ();
   test_less_than_then_less_than_with_space_is_two_tokens ();
   test_operator_in_context ();
+  test_each_punctuation ();
+  test_paren_pair_sequence ();
+  test_bracket_pair_sequence ();
+  test_comma_separated_sequence ();
+  test_dot_field_access_sequence ();
+  test_var_decl_colon_semicolon_sequence ();
+  test_function_return_arrow_sequence ();
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
