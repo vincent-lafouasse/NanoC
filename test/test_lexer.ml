@@ -379,6 +379,171 @@ let test_several_int_literals_in_sequence () =
     [ Token.IntLiteral 42; Token.UnsignedIntLiteral 7; Token.IntLiteral 100; Token.Eof ]
 ;;
 
+(* --- operators --- *)
+
+let operators =
+  [ "~", Token.BitwiseNot
+  ; "|", Token.BitwiseOr
+  ; "&", Token.BitwiseAnd
+  ; "^", Token.BitwiseXor
+  ; "<<", Token.ShiftLeft
+  ; ">>", Token.ShiftRight
+  ; "!", Token.LogicalNot
+  ; "&&", Token.LogicalAnd
+  ; "||", Token.LogicalOr
+  ; "==", Token.Equals
+  ; "!=", Token.NotEquals
+  ; "<", Token.LessThan
+  ; ">", Token.GreaterThan
+  ; "<=", Token.LessEquals
+  ; ">=", Token.GreaterEquals
+  ; "+", Token.Plus
+  ; "-", Token.Minus
+  ; "/", Token.Divides
+  ; "*", Token.Multiplies
+  ; "%", Token.Modulo
+  ; "=", Token.Assign
+  ; "+=", Token.PlusAssign
+  ; "-=", Token.MinusAssign
+  ; "%=", Token.ModuloAssign
+  ; "*=", Token.MultipliesAssign
+  ; "/=", Token.DividesAssign
+  ]
+;;
+
+let test_each_operator () =
+  List.iter
+    (fun (source, tok) -> check_tokens ("operator " ^ source) source [ tok; Token.Eof ])
+    operators
+;;
+
+let test_operator_sequence () =
+  check_tokens
+    "algebraic operators in sequence"
+    "+-*/%"
+    [ Token.Plus; Token.Minus; Token.Multiplies; Token.Divides; Token.Modulo; Token.Eof ]
+;;
+
+let test_bitwise_operator_sequence () =
+  check_tokens
+    "bitwise operators in sequence"
+    "~ | & ^ << >>"
+    [ Token.BitwiseNot
+    ; Token.BitwiseOr
+    ; Token.BitwiseAnd
+    ; Token.BitwiseXor
+    ; Token.ShiftLeft
+    ; Token.ShiftRight
+    ; Token.Eof
+    ]
+;;
+
+let test_logical_operator_sequence () =
+  check_tokens
+    "logical operators in sequence"
+    "! && ||"
+    [ Token.LogicalNot; Token.LogicalAnd; Token.LogicalOr; Token.Eof ]
+;;
+
+let test_comparison_operator_sequence () =
+  check_tokens
+    "comparison operators in sequence"
+    "== != < > <= >="
+    [ Token.Equals
+    ; Token.NotEquals
+    ; Token.LessThan
+    ; Token.GreaterThan
+    ; Token.LessEquals
+    ; Token.GreaterEquals
+    ; Token.Eof
+    ]
+;;
+
+(* maximal munch: each two-character operator must not be lexed as two one-character
+   operators (e.g. "==" is Equals, not Assign;Assign) *)
+
+let test_equals_is_not_two_assigns () =
+  check_tokens "== is not Assign;Assign" "==" [ Token.Equals; Token.Eof ]
+;;
+
+let test_less_equals_is_not_less_then_assign () =
+  check_tokens "<= is not LessThan;Assign" "<=" [ Token.LessEquals; Token.Eof ]
+;;
+
+let test_greater_equals_is_not_greater_then_assign () =
+  check_tokens ">= is not GreaterThan;Assign" ">=" [ Token.GreaterEquals; Token.Eof ]
+;;
+
+let test_plus_assign_is_not_plus_then_assign () =
+  check_tokens "+= is not Plus;Assign" "+=" [ Token.PlusAssign; Token.Eof ]
+;;
+
+let test_multiplies_assign_is_not_multiplies_then_assign () =
+  check_tokens "*= is not Multiplies;Assign" "*=" [ Token.MultipliesAssign; Token.Eof ]
+;;
+
+let test_divides_assign_is_not_divides_then_assign () =
+  check_tokens "/= is not Divides;Assign" "/=" [ Token.DividesAssign; Token.Eof ]
+;;
+
+let test_modulo_assign_is_not_modulo_then_assign () =
+  check_tokens "%= is not Modulo;Assign" "%=" [ Token.ModuloAssign; Token.Eof ]
+;;
+
+let test_minus_assign_is_not_minus_then_assign () =
+  check_tokens "-= is not Minus;Assign" "-=" [ Token.MinusAssign; Token.Eof ]
+;;
+
+let test_logical_and_is_not_two_bitwise_ands () =
+  check_tokens "&& is not BitwiseAnd;BitwiseAnd" "&&" [ Token.LogicalAnd; Token.Eof ]
+;;
+
+let test_logical_or_is_not_two_bitwise_ors () =
+  check_tokens "|| is not BitwiseOr;BitwiseOr" "||" [ Token.LogicalOr; Token.Eof ]
+;;
+
+let test_shift_left_is_not_two_less_thans () =
+  check_tokens "<< is not LessThan;LessThan" "<<" [ Token.ShiftLeft; Token.Eof ]
+;;
+
+let test_shift_right_is_not_two_greater_thans () =
+  check_tokens ">> is not GreaterThan;GreaterThan" ">>" [ Token.ShiftRight; Token.Eof ]
+;;
+
+(* a space between an operator and "=" (or its own repetition) must keep them as two
+   separate tokens *)
+let test_plus_then_assign_with_space_is_two_tokens () =
+  check_tokens "+ = is Plus;Assign" "+ =" [ Token.Plus; Token.Assign; Token.Eof ]
+;;
+
+let test_bitwise_and_then_and_with_space_is_two_tokens () =
+  check_tokens
+    "& & is BitwiseAnd;BitwiseAnd"
+    "& &"
+    [ Token.BitwiseAnd; Token.BitwiseAnd; Token.Eof ]
+;;
+
+let test_less_than_then_less_than_with_space_is_two_tokens () =
+  check_tokens
+    "< < is LessThan;LessThan"
+    "< <"
+    [ Token.LessThan; Token.LessThan; Token.Eof ]
+;;
+
+let test_operator_in_context () =
+  check_tokens
+    "operator amid other tokens"
+    "fn { a + b }"
+    [ Token.Fn
+    ; Token.LBrace
+    ; Token.Identifier "a"
+    ; Token.Plus
+    ; Token.Identifier "b"
+    ; Token.RBrace
+    ; Token.Eof
+    ]
+;;
+
 let () =
   test_each_keyword ();
   test_keyword_sequence ();
@@ -421,6 +586,27 @@ let () =
   test_u32_max_literal ();
   test_int_literal_in_context ();
   test_several_int_literals_in_sequence ();
+  test_each_operator ();
+  test_operator_sequence ();
+  test_bitwise_operator_sequence ();
+  test_logical_operator_sequence ();
+  test_comparison_operator_sequence ();
+  test_equals_is_not_two_assigns ();
+  test_less_equals_is_not_less_then_assign ();
+  test_greater_equals_is_not_greater_then_assign ();
+  test_plus_assign_is_not_plus_then_assign ();
+  test_multiplies_assign_is_not_multiplies_then_assign ();
+  test_divides_assign_is_not_divides_then_assign ();
+  test_modulo_assign_is_not_modulo_then_assign ();
+  test_minus_assign_is_not_minus_then_assign ();
+  test_logical_and_is_not_two_bitwise_ands ();
+  test_logical_or_is_not_two_bitwise_ors ();
+  test_shift_left_is_not_two_less_thans ();
+  test_shift_right_is_not_two_greater_thans ();
+  test_plus_then_assign_with_space_is_two_tokens ();
+  test_bitwise_and_then_and_with_space_is_two_tokens ();
+  test_less_than_then_less_than_with_space_is_two_tokens ();
+  test_operator_in_context ();
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
