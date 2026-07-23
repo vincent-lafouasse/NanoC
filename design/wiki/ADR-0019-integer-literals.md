@@ -2,7 +2,7 @@
 
 **Status:** Open
 **Area:** Language Design
-**Leaning:** syntax mostly settled (i32 default; u/u32/u8/i32 suffixes, u short for u32); range-check hard-error recommended, not confirmed — leaning toward a u32 magnitude bounds check at lexing, full i32-aware bounds check at parsing; a `ptr` suffix for magic addresses deferred until a bare-metal ARM target exists
+**Leaning:** syntax mostly settled (i32 default; u/u32/u8/i32 suffixes, u short for u32); three separate token constructors (`IntLiteral`/`UnsignedIntLiteral`/`ByteLiteral`), not a tagged payload; negating an unsigned or byte literal is a hard error; range-check hard-error recommended, not confirmed — `UnsignedIntLiteral`/`ByteLiteral` fully bounds-checked at lexing, `IntLiteral` checked up to `abs(i32::MIN)` at lexing with the single leftover case resolved by the parser; a `ptr` suffix for magic addresses deferred until a bare-metal ARM target exists
 
 ## Syntax
 
@@ -34,6 +34,32 @@ Still needs the suffix-matching rule nailed down (longest-match against a fixed 
 what a not-quite-matching tail like `42u3` or `42u16` means — malformed-suffix error,
 presumably, not two separate tokens, since nothing in the grammar allows an identifier to
 directly abut a digit run with no separator) before it's implementable.
+
+### Token representation: three constructors, not a tagged payload
+
+Considered: a single `IntLiteral of { magnitude : int; suffix : suffix }` with
+`suffix = NoSuffix | I32 | U32 | U8`, one constructor for every int literal regardless of
+suffix. Rejected in favor of three separate `Token.kind` constructors —
+`IntLiteral of int` (i32, default or explicit `i32` suffix — behaviorally identical, so no
+separate case needed for the explicit spelling), `UnsignedIntLiteral of int` (u32), and
+`ByteLiteral of int` (u8) — because the three behave differently enough (see negation,
+below) that a tagged payload would just push a `match suffix with` into every place that
+needs to branch on it, with no exhaustiveness check forcing every case to be handled. Three
+constructors make each branch-point a real pattern match instead. The `u`/`u32` spelling
+distinction never reaches the token either way — both produce `UnsignedIntLiteral`, since
+sema only ever needs to know the resulting type, not which spelling was written.
+
+### Negating an unsigned or byte literal is a hard error
+
+`Negate(IntLiteral n)` is legal (this is the `i32::MIN` case, below). `Negate
+(UnsignedIntLiteral n)` and `Negate(ByteLiteral n)` are hard errors, not "legal but
+unusual" (unlike C, which allows negating an unsigned value — it just wraps). No stated
+use case for it, and no syntax is being removed to enforce it — anyone who wants a specific
+unsigned bit pattern that happens to look like a negative number's two's complement can
+just write that pattern directly (bitwise, or hex once that exists) instead of negating a
+literal. This is also the concrete payoff of picking separate constructors over a tagged
+payload above: `Negate`'s operand match has three constructor patterns, not one, so the two
+rejecting arms have to be written explicitly rather than falling out of a missed `if`.
 
 ### Deferred — a `ptr` suffix for magic addresses (`0x40020014ptr`)
 
@@ -105,25 +131,32 @@ strictly less context available. The grammar's existing choice stands: `-` alway
 its own `Minus` token (see [grammar.ebnf](../grammar.ebnf)'s `prefix_op`), sign is never
 part of `INTEGER_LITERAL`.
 
-Given that, the range check itself splits cleanly across two phases by what each phase can
-actually see:
+Given the three-constructor split above, the range check itself splits cleanly by what
+each token kind and each phase can actually see:
 
-- **At lexing:** check the literal's magnitude fits in 32 bits at all — i.e. reject
-  anything past `u32::MAX` (4294967295), regardless of suffix. This bound holds no matter
-  what precedes the literal; no unary minus makes a 40-digit number fit in 32 bits. Safe
-  and unambiguous with zero context.
-- **At parsing:** check the tighter, sign-aware bound — `i32::MAX` (2147483647) for an
-  unsuffixed literal not immediately preceded by a unary minus, or the full `i32` range
-  (down to `i32::MIN`) when the AST shape is `Negate(IntLiteral n)`. This needs the
-  surrounding syntax the lexer doesn't have.
+- **`UnsignedIntLiteral`/`ByteLiteral`, fully checked at lexing.** Since negating either is
+  now a hard error, their magnitude is never combined with a sign — nothing about their
+  validity depends on surrounding syntax. The lexer can and should fully own these: reject
+  anything past `u32::MAX` (4294967295) for `UnsignedIntLiteral`, past `u8::MAX` (255) for
+  `ByteLiteral`. No later phase needs to touch it.
+- **`IntLiteral`, mostly checked at lexing, one value deferred to the parser.** The
+  magnitude alone can't exceed `abs(i32::MIN)` = 2147483648 under *any* interpretation,
+  negated or not — the lexer rejects anything past that unconditionally, narrower than the
+  original `u32::MAX` guess since this constructor can never carry a `u`/`u8` suffix. That
+  leaves exactly one ambiguous magnitude, not a range: `2147483648` itself, valid only as
+  `i32::MIN` (i.e. only when immediately negated), invalid as a bare positive `i32`. The
+  parser is what resolves it, not sema — the parser is already the phase that folds the
+  involutive `Negate(IntLiteral n)` shape (needed for `i32::MIN` regardless), so it already
+  holds the one fact needed ("was this literal immediately preceded by a unary minus") to
+  decide this one leftover case without waiting for a separate pass.
 
 Considered and rejected as the simpler alternative: skip the lexer-side check entirely and
-let sema/parsing own the whole thing (this is what rustc does — the lexer just captures
-digits). Simpler, one place instead of two, and not meaningfully slower since sema already
-walks the full AST regardless. Still leaning toward the split above instead, since the
-lexer-side bound is free, unambiguous, and catches the pathological case (absurdly long
-digit runs) at the earliest possible point — but this is genuinely a toss-up, not a strong
-conviction either way.
+let the parser/sema own the whole thing (this is what rustc does — the lexer just captures
+digits). Simpler, one place instead of two, and not meaningfully slower since the parser
+already walks every literal regardless. Still leaning toward the split above instead, since
+two of the three literal kinds end up lexer-complete for free once negation of
+unsigned/byte literals is a hard error, and the third only has a single leftover value
+instead of an entire range to defer.
 
 ## History
 
@@ -137,3 +170,12 @@ conviction either way.
   on the *previous* token, which a forward-only lexer can't see); settled on splitting the
   range check itself instead — a sign-independent `u32`-magnitude bound at lexing, the
   tighter `i32`-aware bound (with the `i32::MIN` exception) at parsing.
+- v0.1.0: settled on three separate token constructors (`IntLiteral`/`UnsignedIntLiteral`/
+  `ByteLiteral`) over a single tagged-payload constructor, driven by negating an unsigned
+  or byte literal becoming a hard error (unlike C) — separate constructors make the
+  rejecting match arms exhaustiveness-checked rather than an easily-missed `if` on a tag.
+  This also sharpened the range-check split: `UnsignedIntLiteral`/`ByteLiteral` are now
+  fully checked at lexing (nothing about their validity ever depends on a preceding sign),
+  and `IntLiteral`'s lexer-side bound tightens from `u32::MAX` to `abs(i32::MIN)`
+  (2147483648), leaving only one exact leftover value — not a range — for the parser to
+  resolve, using the same involutive-`Negate`-folding step it already needs for `i32::MIN`.
