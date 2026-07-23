@@ -305,7 +305,7 @@ let gather_int_literal lexer : raw_int_literal * t =
     else if looking_at lexer "i32"
     then IntI32, advance_by lexer 3
     else if looking_at lexer "u8"
-    then IntU8, advance_by lexer 3
+    then IntU8, advance_by lexer 2
     else if looking_at lexer "u"
     then IntU32, advance_by lexer 1
     else IntI32, lexer
