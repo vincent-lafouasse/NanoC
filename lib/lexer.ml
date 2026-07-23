@@ -13,6 +13,9 @@ type error_kind =
   | MultiCharacterLiteral (* 'ab' — a char literal must hold exactly one byte *)
   | UnknownEscapeSequence of char (* e.g. \q *)
   | MalformedEscapeSequence of string (* e.g. \x?? or \x4 *)
+  | I32TooBig of string
+  | U32TooBig of string
+  | U8TooBig of string
 [@@deriving show]
 
 type error = error_kind Span.located [@@deriving show]
@@ -422,6 +425,9 @@ let format_error_kind = function
   | MultiCharacterLiteral -> "Char literal holds more than one byte"
   | UnknownEscapeSequence c -> Printf.sprintf "Unkown escape sequence \\%s" (char_repr c)
   | MalformedEscapeSequence s -> Printf.sprintf "Malformed escape sequence %s" s
+  | I32TooBig digits -> Printf.sprintf "Literal %s too big for type i32" digits
+  | U32TooBig digits -> Printf.sprintf "Literal %s too big for type u32" digits
+  | U8TooBig digits -> Printf.sprintf "Literal %s too big for type u8" digits
 ;;
 
 let format_error ((kind, span) : error) : string =
