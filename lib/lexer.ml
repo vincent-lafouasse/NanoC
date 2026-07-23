@@ -266,6 +266,12 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
   iter (advance lexer) []
 ;;
 
+type raw_int_literal =
+  { digits : string
+  ; suffix : string
+  }
+[@@deriving show]
+
 let gather_int_literal lexer : string =
   let is_digit_separator ch = ch = '_' in
   let is_digit_or_separator = either Char.Ascii.is_digit is_digit_separator in
