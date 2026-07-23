@@ -266,6 +266,17 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
   iter (advance lexer) []
 ;;
 
+let gather_int_literal lexer : string =
+  let start = lexer.position in
+  let rec move_past_digits lexer : t =
+    match get lexer with
+    | '0' .. '9', '_' -> move_past_digits (advance lexer)
+    | _ -> lexer
+  in
+  let after_digits = move_past_digits lexer in
+  failwith "todo"
+;;
+
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
   { Token.kind; lexeme = make_span start lexer }
 ;;
