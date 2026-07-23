@@ -317,6 +317,8 @@ let next_token lexer : (Token.t * t, error) result =
   | Some '*' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.StarAssign
   | Some '/' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.DividesAssign
   | Some '%' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.ModuloAssign
+  (* punctuation *)
+  | Some '-' when peeking_at lexer '>' -> make_hard_token lexer ~len:2 Token.Arrow
   (* -- 1 char hard tokens -- *)
   (* bitwise *)
   | Some '~' -> make_hard_token lexer ~len:1 Token.BitwiseNot
@@ -328,9 +330,24 @@ let next_token lexer : (Token.t * t, error) result =
   (* comparison *)
   | Some '<' -> make_hard_token lexer ~len:1 Token.LessThan
   | Some '>' -> make_hard_token lexer ~len:1 Token.GreaterThan
+  (* algebraic *)
+  | Some '+' -> make_hard_token lexer ~len:1 Token.Plus
+  | Some '-' -> make_hard_token lexer ~len:1 Token.Minus
+  | Some '*' -> make_hard_token lexer ~len:1 Token.Star
+  | Some '/' -> make_hard_token lexer ~len:1 Token.Divides
+  | Some '%' -> make_hard_token lexer ~len:1 Token.Modulo
+  | Some '=' -> make_hard_token lexer ~len:1 Token.Assign
   (* punctuation *)
   | Some '{' -> make_hard_token lexer ~len:1 Token.LBrace
   | Some '}' -> make_hard_token lexer ~len:1 Token.RBrace
+  | Some '(' -> make_hard_token lexer ~len:1 Token.LParen
+  | Some ')' -> make_hard_token lexer ~len:1 Token.RParen
+  | Some '[' -> make_hard_token lexer ~len:1 Token.LBracket
+  | Some ']' -> make_hard_token lexer ~len:1 Token.RBracket
+  | Some ';' -> make_hard_token lexer ~len:1 Token.Semicolon
+  | Some ':' -> make_hard_token lexer ~len:1 Token.Colon
+  | Some ',' -> make_hard_token lexer ~len:1 Token.Comma
+  | Some '.' -> make_hard_token lexer ~len:1 Token.Dot
   (* -- soft tokens -- *)
   | Some '"' -> make_string_literal_token lexer
   | Some '\'' -> make_char_literal_token lexer
