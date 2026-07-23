@@ -267,13 +267,10 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
 ;;
 
 let gather_int_literal lexer : string =
-  let start = lexer.position in
-  let rec move_past_digits lexer : t =
-    match get lexer with
-    | '0' .. '9', '_' -> move_past_digits (advance lexer)
-    | _ -> lexer
-  in
-  let after_digits = move_past_digits lexer in
+  let is_digit_separator ch = ch = '_' in
+  let is_digit_or_separator = either Char.Ascii.is_digit is_digit_separator in
+  let _start = lexer.position in
+  let _after_digits = advance_while is_digit_or_separator lexer in
   failwith "todo"
 ;;
 
