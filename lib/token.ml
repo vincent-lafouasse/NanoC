@@ -51,6 +51,9 @@ type kind =
   | RParen
   | LBrace
   | RBrace
+  | Semicolon
+  | Colon
+  | Arrow
   (* the rest i guess *)
   | Identifier of string
   | StringLiteral of string
