@@ -54,10 +54,10 @@ let skip_to_column0 lexer = advance (advance_while (fun c -> c != '\n') lexer)
 
 let rec advance_by lexer n = if n = 0 then lexer else advance_by (advance lexer) (n - 1)
 
-let looking_at lexer c0 c1 =
-  match get lexer, peek lexer with
-  | Some a, Some b -> a = c0 && b = c1
-  | _ -> false
+let looking_at lexer (s : string) : bool =
+  let n = String.length s in
+  lexer.position.absolute + n <= len lexer
+  && String.sub lexer.input lexer.position.absolute n = s
 ;;
 
 let peeking_at lexer c =
@@ -66,8 +66,8 @@ let peeking_at lexer c =
   | None -> false
 ;;
 
-let is_line_comment_start lexer = looking_at lexer '/' '/'
-let is_block_comment_start lexer = looking_at lexer '/' '*'
+let is_line_comment_start lexer = looking_at lexer "//"
+let is_block_comment_start lexer = looking_at lexer "/*"
 
 let make_span (start : Position.t) (lexer : t) : Span.t =
   { Span.start; stop = lexer.position }
