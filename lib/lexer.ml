@@ -314,18 +314,28 @@ let gather_int_literal lexer : raw_int_literal * t =
 ;;
 
 let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
-  let _raw, _end_lexer = gather_int_literal lexer in
-  let _transmute_error atoi_error int_kind : error_kind =
+  let error_from_kind int_kind digits =
+    match int_kind with
+    | IntPtr -> PtrTooBig digits
+    | IntI32 -> I32TooBig digits
+    | IntU32 -> U32TooBig digits
+    | IntU8 -> U8TooBig digits
+  in
+  let transmute_error atoi_error int_kind : error_kind =
     match atoi_error with
     | Atoi.TooSmall _ ->
       failwith "unreachable: there should never be a negative number here"
-    | Atoi.TooBig digits ->
-      (match int_kind with
-       | IntPtr -> PtrTooBig digits
-       | IntI32 -> I32TooBig digits
-       | IntU32 -> U32TooBig digits
-       | IntU8 -> U8TooBig digits)
+    | Atoi.TooBig digits -> error_from_kind int_kind digits
   in
+  let int_max = function
+    | IntPtr -> 4294967295L
+    | IntU32 -> 4294967295L
+    | IntI32 -> 2147483648L
+    | IntU8 -> 255L
+  in
+  let raw, _end_lexer = gather_int_literal lexer in
+  let _maybe_value = Atoi.atoi64 raw.digits |> Result.map_error transmute_error in
+  let _upper_bound = int_max raw.suffix in
   failwith "todo"
 ;;
 
