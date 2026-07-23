@@ -272,12 +272,32 @@ type raw_int_literal =
   }
 [@@deriving show]
 
-let gather_int_literal lexer : string =
-  let is_digit_separator ch = ch = '_' in
-  let is_digit_or_separator = either Char.Ascii.is_digit is_digit_separator in
-  let _start = lexer.position in
-  let _after_digits = advance_while is_digit_or_separator lexer in
-  failwith "todo"
+let gather_int_digits lexer : string * t =
+  let rec iter lexer (acc : char list) : char list * t =
+    match get lexer with
+    | Some ch when Char.Ascii.is_digit ch -> iter (advance lexer) (ch :: acc)
+    | Some '_' -> iter (advance lexer) acc
+    | _ -> List.rev acc, lexer
+  in
+  let digits, lexer = iter lexer [] in
+  let digits = digits |> List.to_seq |> String.of_seq in
+  digits, lexer
+;;
+
+let gather_int_literal lexer : raw_int_literal * t =
+  let digits, lexer = gather_int_digits lexer in
+  let suffix, lexer =
+    if looking_at lexer "ptr"
+    then "ptr", advance_by lexer 3
+    else if looking_at lexer "u32"
+    then "u32", advance_by lexer 3
+    else if looking_at lexer "i32"
+    then "i32", advance_by lexer 3
+    else if looking_at lexer "u8"
+    then "u8", advance_by lexer 3
+    else "i32", lexer
+  in
+  { digits; suffix }, lexer
 ;;
 
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
