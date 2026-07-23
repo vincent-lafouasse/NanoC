@@ -1,3 +1,4 @@
 *.nc linguist-language=Text
 
 aux/book/book/* linguist-vendored
+aux/rs_old/* linguist-vendored
