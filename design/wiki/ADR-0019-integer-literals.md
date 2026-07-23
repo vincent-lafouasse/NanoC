@@ -2,7 +2,7 @@
 
 **Status:** Open
 **Area:** Language Design
-**Leaning:** syntax settled (i32 default, u suffix); range-check hard-error recommended, not confirmed — leaning toward a u32 magnitude bounds check at lexing, full i32-aware bounds check at parsing
+**Leaning:** syntax mostly settled (i32 default; u/u32/u8/i32 suffixes, u short for u32); range-check hard-error recommended, not confirmed — leaning toward a u32 magnitude bounds check at lexing, full i32-aware bounds check at parsing; a `ptr` suffix for magic addresses deferred until a bare-metal ARM target exists
 
 ## Syntax
 
@@ -26,6 +26,35 @@ There's no stated way to target `u8` specifically. Under strict no-implicit-conv
 literal is `i32` by default, which doesn't type-check against a `u8` context at all.
 Either `u8` needs its own literal form, or this waits on whatever the cast operator ends
 up looking like.
+
+**Leaning:** full-word suffixes for every primitive — `u32`, `u8`, and `i32` (the last
+purely for symmetry; bare digits already default to `i32`) — with the existing `u` suffix
+kept as shorthand for `u32` rather than removed. Answers this question directly: `42u8`.
+Still needs the suffix-matching rule nailed down (longest-match against a fixed set;
+what a not-quite-matching tail like `42u3` or `42u16` means — malformed-suffix error,
+presumably, not two separate tokens, since nothing in the grammar allows an identifier to
+directly abut a digit run with no separator) before it's implementable.
+
+### Deferred — a `ptr` suffix for magic addresses (`0x40020014ptr`)
+
+Motivating case: fixed hardware register addresses in bare-metal/embedded code (e.g. GPIO
+registers on an STM32F4) — standard C practice is
+`(volatile uint32_t *)0x40020014`-style casts for exactly this. Not useful for the current
+target ([RISC-V and xv6](../book/src/intro.md) — chosen to close the design space for the
+MVP, not a permanent restriction) since hosted xv6 user programs get pointers from the
+kernel and never need to name a physical address directly; the case only exists for
+kernel-level or bare-metal code, which is squarely the shape of thing a future ARM port
+(e.g. bare-metal on an STM32F4) would need, and one is on the table "way after MVP."
+
+Cheaper than it first looks whenever it does happen: a `ptr` literal is a compile-time bit
+reinterpretation of a known constant — zero runtime cost, always well-defined — consistent
+with the "well-defined where it's free" thread running through the Tour's Defined Behavior
+table (signed overflow wraps, left-shift of negative is bitwise, etc.). It also doesn't
+need the general cast operator ([ADR-0021](ADR-0021-cast-operator.md)) to land first,
+since it only answers "how do I write a specific known address as `ptr`," not "how do I
+convert an arbitrary `i32` expression to `ptr`" — narrower than a real cast, and would share
+the same magnitude-bound check as the `u32`/`u8` suffixes above. Deferred, not rejected —
+revisit once the ARM port is actually on the table, not before.
 
 ## Open — literal range checking
 
