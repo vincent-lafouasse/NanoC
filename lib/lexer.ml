@@ -377,6 +377,12 @@ let next_token lexer : (Token.t * t, error) result =
     | Error (err, end_lexer) -> Error (err, make_span start end_lexer)
     | Ok (kind, end_lexer) -> Ok (make_token start end_lexer kind, end_lexer)
   in
+  let make_int_literal_token start_lexer =
+    let start = start_lexer.position in
+    match scan_int_literal start_lexer with
+    | Error (err, end_lexer) -> Error (err, make_span start end_lexer)
+    | Ok (kind, end_lexer) -> Ok (make_token start end_lexer kind, end_lexer)
+  in
   let* lexer = skip_trivia lexer in
   let start = lexer.position in
   match get lexer with
@@ -433,6 +439,7 @@ let next_token lexer : (Token.t * t, error) result =
   | Some '"' -> make_string_literal_token lexer
   | Some '\'' -> make_char_literal_token lexer
   | Some c when char_is_ident_start c -> make_ident_token lexer
+  | Some c when Char.Ascii.is_digit c -> make_int_literal_token lexer
   (* -- eof -- *)
   | None -> make_hard_token lexer Token.Eof ~len:0
   (* -- fallthrough -- *)
