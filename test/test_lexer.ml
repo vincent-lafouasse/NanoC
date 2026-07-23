@@ -389,6 +389,126 @@ let test_several_int_literals_in_sequence () =
     ]
 ;;
 
+(* explicit full-word suffixes, not just the `u` shorthand *)
+
+let test_explicit_u32_suffix_literal () =
+  check_tokens "42u32" "42u32" [ Token.UnsignedIntLiteral 42L; Token.Eof ]
+;;
+
+let test_explicit_i32_suffix_literal () =
+  check_tokens "42i32" "42i32" [ Token.IntLiteral 42L; Token.Eof ]
+;;
+
+(* u8 (`ByteLiteral`) *)
+
+let test_zero_byte_literal () =
+  check_tokens "0u8" "0u8" [ Token.ByteLiteral 0L; Token.Eof ]
+;;
+
+let test_byte_literal () = check_tokens "42u8" "42u8" [ Token.ByteLiteral 42L; Token.Eof ]
+
+let test_u8_max_literal () =
+  check_tokens "255u8" "255u8" [ Token.ByteLiteral 255L; Token.Eof ]
+;;
+
+(* ptr *)
+
+let test_zero_ptr_literal () =
+  check_tokens "0ptr" "0ptr" [ Token.PtrLiteral 0L; Token.Eof ]
+;;
+
+let test_ptr_literal () =
+  check_tokens "1024ptr" "1024ptr" [ Token.PtrLiteral 1024L; Token.Eof ]
+;;
+
+let test_ptr_max_literal () =
+  check_tokens "4294967295ptr" "4294967295ptr" [ Token.PtrLiteral 4294967295L; Token.Eof ]
+;;
+
+(* underscore digit separators *)
+
+let test_underscore_separated_literal () =
+  check_tokens "1_000_000" "1_000_000" [ Token.IntLiteral 1_000_000L; Token.Eof ]
+;;
+
+let test_underscore_separated_unsigned_literal () =
+  check_tokens "1_000u" "1_000u" [ Token.UnsignedIntLiteral 1_000L; Token.Eof ]
+;;
+
+(* range checking — one past each type's max is a hard error, at the max is fine
+   (the max cases above already cover "fine"; these cover "one past") *)
+
+let is_i32_too_big = function
+  | Lexer.I32TooBig _ -> true
+  | _ -> false
+;;
+
+let is_u32_too_big = function
+  | Lexer.U32TooBig _ -> true
+  | _ -> false
+;;
+
+let is_u8_too_big = function
+  | Lexer.U8TooBig _ -> true
+  | _ -> false
+;;
+
+let is_ptr_too_big = function
+  | Lexer.PtrTooBig _ -> true
+  | _ -> false
+;;
+
+let test_i32_one_past_i32_min_magnitude_is_too_big () =
+  (* abs(i32::MIN) = 2147483648 is the lexer's bound for a bare/i32-suffixed literal
+     (see design/wiki/ADR-0019-integer-literals.md) — one past that is unconditionally
+     too big, negated or not *)
+  check_error_matches "2147483649" "2147483649" is_i32_too_big
+;;
+
+let test_u32_one_past_max_is_too_big () =
+  check_error_matches "4294967296u" "4294967296u" is_u32_too_big
+;;
+
+let test_u8_one_past_max_is_too_big () = check_error_matches "256u8" "256u8" is_u8_too_big
+
+let test_ptr_one_past_max_is_too_big () =
+  check_error_matches "4294967296ptr" "4294967296ptr" is_ptr_too_big
+;;
+
+(* the deferred i32::MIN leftover case: a bare literal at exactly abs(i32::MIN) must
+   still lex successfully — whether it's actually valid (only when immediately negated)
+   is the parser's job, not the lexer's (see ADR-0019) *)
+let test_i32_min_magnitude_alone_is_accepted_at_lexing () =
+  check_tokens
+    "abs(i32::MIN) magnitude accepted at lexing"
+    "2147483648"
+    [ Token.IntLiteral 2147483648L; Token.Eof ]
+;;
+
+(* a suffix-shaped tail that doesn't match any real suffix isn't malformed — it's just
+   not part of the literal at all. There's no `u16` type, so "42u16" was never a
+   competing valid reading the lexer needs to disambiguate away (unlike "==" vs.
+   "=;=", where both readings are individually valid and maximal munch has to pick
+   one); `42u` is a complete, valid literal and `16` is a complete, valid literal,
+   adjacent with no separator, same as any other two tokens ("42+7" needs no
+   whitespace either). Two adjacent atoms with no operator between them is invalid as
+   an *expression*, but that's the parser's job to reject (no grammar production for
+   `atom atom`), not the lexer's — same phase separation already used for
+   sign-combining around i32::MIN (see ADR-0019). *)
+let test_unmatched_suffix_tail_is_a_separate_token () =
+  check_tokens
+    "42u16 is two tokens, not a malformed suffix"
+    "42u16"
+    [ Token.UnsignedIntLiteral 42L; Token.IntLiteral 16L; Token.Eof ]
+;;
+
+let test_unmatched_short_suffix_tail_is_a_separate_token () =
+  check_tokens
+    "42u3 is two tokens, not a malformed suffix"
+    "42u3"
+    [ Token.UnsignedIntLiteral 42L; Token.IntLiteral 3L; Token.Eof ]
+;;
+
 (* --- operators --- *)
 
 let operators =
@@ -692,6 +812,23 @@ let () =
   test_u32_max_literal ();
   test_int_literal_in_context ();
   test_several_int_literals_in_sequence ();
+  test_explicit_u32_suffix_literal ();
+  test_explicit_i32_suffix_literal ();
+  test_zero_byte_literal ();
+  test_byte_literal ();
+  test_u8_max_literal ();
+  test_zero_ptr_literal ();
+  test_ptr_literal ();
+  test_ptr_max_literal ();
+  test_underscore_separated_literal ();
+  test_underscore_separated_unsigned_literal ();
+  test_i32_one_past_i32_min_magnitude_is_too_big ();
+  test_u32_one_past_max_is_too_big ();
+  test_u8_one_past_max_is_too_big ();
+  test_ptr_one_past_max_is_too_big ();
+  test_i32_min_magnitude_alone_is_accepted_at_lexing ();
+  test_unmatched_suffix_tail_is_a_separate_token ();
+  test_unmatched_short_suffix_tail_is_a_separate_token ();
   test_each_operator ();
   test_operator_sequence ();
   test_bitwise_operator_sequence ();
