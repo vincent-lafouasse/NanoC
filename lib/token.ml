@@ -16,6 +16,12 @@ type kind =
   | BitwiseOr
   | BitwiseAnd
   | BitwiseXor
+  | ShiftLeft
+  | ShiftRight
+  (* logical *)
+  | LogicalNot
+  | LogicalAnd
+  | LogicalOr
   (* comparison *)
   | Equals
   | NotEquals
@@ -31,7 +37,7 @@ type kind =
   | Modulo
   | Assign
   | PlusAssign
-  | LessAssign
+  | MinusAssign
   | ModuloAssign
   | MultipliesAssign
   | DividesAssign
