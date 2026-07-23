@@ -60,6 +60,12 @@ let looking_at lexer c0 c1 =
   | _ -> false
 ;;
 
+let peeking_at lexer c =
+  match peek lexer with
+  | Some ch -> c = ch
+  | None -> false
+;;
+
 let is_line_comment_start lexer = looking_at lexer '/' '/'
 let is_block_comment_start lexer = looking_at lexer '/' '*'
 
@@ -295,24 +301,18 @@ let next_token lexer : (Token.t * t, error) result =
   match get lexer with
   (* -- 2 chars hard tokens -- *)
   (* algebraic *)
-  | Some '+' when looking_at lexer '+' '=' ->
-    make_hard_token lexer Token.PlusAssign ~len:2
-  | Some '-' when looking_at lexer '-' '=' ->
-    make_hard_token lexer Token.MinusAssign ~len:2
-  | Some '*' when looking_at lexer '*' '=' ->
+  | Some '+' when peeking_at lexer '=' -> make_hard_token lexer Token.PlusAssign ~len:2
+  | Some '-' when peeking_at lexer '=' -> make_hard_token lexer Token.MinusAssign ~len:2
+  | Some '*' when peeking_at lexer '=' ->
     make_hard_token lexer Token.MultipliesAssign ~len:2
-  | Some '/' when looking_at lexer '/' '=' ->
-    make_hard_token lexer Token.DividesAssign ~len:2
-  | Some '%' when looking_at lexer '%' '=' ->
-    make_hard_token lexer Token.ModuloAssign ~len:2
+  | Some '/' when peeking_at lexer '=' -> make_hard_token lexer Token.DividesAssign ~len:2
+  | Some '%' when peeking_at lexer '=' -> make_hard_token lexer Token.ModuloAssign ~len:2
   (* logical *)
-  | Some '|' when looking_at lexer '|' '|' -> make_hard_token lexer Token.LogicalOr ~len:2
-  | Some '&' when looking_at lexer '&' '&' ->
-    make_hard_token lexer Token.LogicalAnd ~len:2
+  | Some '|' when peeking_at lexer '|' -> make_hard_token lexer Token.LogicalOr ~len:2
+  | Some '&' when peeking_at lexer '&' -> make_hard_token lexer Token.LogicalAnd ~len:2
   (* bitwise *)
-  | Some '<' when looking_at lexer '<' '<' -> make_hard_token lexer Token.ShiftLeft ~len:2
-  | Some '>' when looking_at lexer '>' '>' ->
-    make_hard_token lexer Token.ShiftRight ~len:2
+  | Some '<' when peeking_at lexer '<' -> make_hard_token lexer Token.ShiftLeft ~len:2
+  | Some '>' when peeking_at lexer '>' -> make_hard_token lexer Token.ShiftRight ~len:2
   (* -- 1 char hard tokens -- *)
   (* logical *)
   | Some '!' -> make_hard_token lexer Token.LogicalNot ~len:1
