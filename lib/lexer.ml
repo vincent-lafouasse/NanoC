@@ -321,8 +321,10 @@ let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
       failwith "unreachable: there should never be a negative number here"
     | Atoi.TooBig digits ->
       (match int_kind with
-       | IntPtr -> failwith "todo"
-       | _ -> failwith "todo")
+       | IntPtr -> PtrTooBig digits
+       | IntI32 -> I32TooBig digits
+       | IntU32 -> U32TooBig digits
+       | IntU8 -> U8TooBig digits)
   in
   failwith "todo"
 ;;
