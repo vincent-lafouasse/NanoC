@@ -305,6 +305,8 @@ let gather_int_literal lexer : raw_int_literal * t =
     then IntI32, advance_by lexer 3
     else if looking_at lexer "u8"
     then IntU8, advance_by lexer 3
+    else if looking_at lexer "u"
+    then IntU32, advance_by lexer 1
     else IntI32, lexer
   in
   { digits; suffix }, lexer
