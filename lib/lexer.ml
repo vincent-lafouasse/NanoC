@@ -297,6 +297,9 @@ let next_token lexer : (Token.t * t, error) result =
   | Some '|' -> make_hard_token lexer Token.BitwiseOr ~len:1
   | Some '&' -> make_hard_token lexer Token.Ampersand ~len:1
   | Some '^' -> make_hard_token lexer Token.BitwiseXor ~len:1
+  | Some '<' when looking_at lexer '<' '<' -> make_hard_token lexer Token.ShiftLeft ~len:2
+  | Some '>' when looking_at lexer '>' '>' ->
+    make_hard_token lexer Token.ShiftRight ~len:2
   | Some '{' -> make_hard_token lexer Token.LBrace ~len:1
   | Some '}' -> make_hard_token lexer Token.RBrace ~len:1
   | Some '"' -> make_string_literal_token lexer
