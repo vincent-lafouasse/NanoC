@@ -62,9 +62,9 @@ type kind =
   | Identifier of string
   | StringLiteral of string
   | CharLiteral of char
-  | IntLiteral of int
-  | UnsignedIntLiteral of int
-  | ByteLiteral of int
+  | IntLiteral of int64
+  | UnsignedIntLiteral of int64
+  | ByteLiteral of int64
   | Eof
 [@@deriving show]
 

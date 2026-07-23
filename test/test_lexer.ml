@@ -349,40 +349,44 @@ let test_unterminated_char_literal_is_an_error () =
 
 (* --- integer literals — default i32, `u` suffix for u32 --- *)
 
-let test_zero_literal () = check_tokens "0" "0" [ Token.IntLiteral 0; Token.Eof ]
-let test_plain_int_literal () = check_tokens "42" "42" [ Token.IntLiteral 42; Token.Eof ]
+let test_zero_literal () = check_tokens "0" "0" [ Token.IntLiteral 0L; Token.Eof ]
+let test_plain_int_literal () = check_tokens "42" "42" [ Token.IntLiteral 42L; Token.Eof ]
 
 let test_i32_max_literal () =
-  check_tokens "2147483647" "2147483647" [ Token.IntLiteral 2147483647; Token.Eof ]
+  check_tokens "2147483647" "2147483647" [ Token.IntLiteral 2147483647L; Token.Eof ]
 ;;
 
 let test_zero_unsigned_literal () =
-  check_tokens "0u" "0u" [ Token.UnsignedIntLiteral 0; Token.Eof ]
+  check_tokens "0u" "0u" [ Token.UnsignedIntLiteral 0L; Token.Eof ]
 ;;
 
 let test_unsigned_suffix_literal () =
-  check_tokens "42u" "42u" [ Token.UnsignedIntLiteral 42; Token.Eof ]
+  check_tokens "42u" "42u" [ Token.UnsignedIntLiteral 42L; Token.Eof ]
 ;;
 
 let test_u32_max_literal () =
   check_tokens
     "4294967295u"
     "4294967295u"
-    [ Token.UnsignedIntLiteral 4294967295; Token.Eof ]
+    [ Token.UnsignedIntLiteral 4294967295L; Token.Eof ]
 ;;
 
 let test_int_literal_in_context () =
   check_tokens
     "int literal amid other tokens"
     "fn { 42 }"
-    [ Token.Fn; Token.LBrace; Token.IntLiteral 42; Token.RBrace; Token.Eof ]
+    [ Token.Fn; Token.LBrace; Token.IntLiteral 42L; Token.RBrace; Token.Eof ]
 ;;
 
 let test_several_int_literals_in_sequence () =
   check_tokens
     "signed and unsigned literals in sequence"
     "42 7u 100"
-    [ Token.IntLiteral 42; Token.UnsignedIntLiteral 7; Token.IntLiteral 100; Token.Eof ]
+    [ Token.IntLiteral 42L
+    ; Token.UnsignedIntLiteral 7L
+    ; Token.IntLiteral 100L
+    ; Token.Eof
+    ]
 ;;
 
 (* --- operators --- *)
@@ -587,7 +591,7 @@ let test_bracket_pair_sequence () =
     "a[0]"
     [ Token.Identifier "a"
     ; Token.LBracket
-    ; Token.IntLiteral 0
+    ; Token.IntLiteral 0L
     ; Token.RBracket
     ; Token.Eof
     ]
@@ -622,7 +626,7 @@ let test_var_decl_colon_semicolon_sequence () =
     ; Token.Colon
     ; Token.I32
     ; Token.Assign
-    ; Token.IntLiteral 0
+    ; Token.IntLiteral 0L
     ; Token.Semicolon
     ; Token.Eof
     ]
