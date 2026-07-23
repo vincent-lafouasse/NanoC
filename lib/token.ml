@@ -51,6 +51,8 @@ type kind =
   | RParen
   | LBrace
   | RBrace
+  | LBracket
+  | RBracket
   | Semicolon
   | Colon
   | Comma
