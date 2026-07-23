@@ -15,6 +15,7 @@ type error_kind =
   | MalformedEscapeSequence of string (* e.g. \x?? or \x4 *)
   | I32TooBig of string
   | U32TooBig of string
+  | PtrTooBig of string
   | U8TooBig of string
 [@@deriving show]
 
@@ -442,6 +443,7 @@ let format_error_kind = function
   | UnknownEscapeSequence c -> Printf.sprintf "Unkown escape sequence \\%s" (char_repr c)
   | MalformedEscapeSequence s -> Printf.sprintf "Malformed escape sequence %s" s
   | I32TooBig digits -> Printf.sprintf "Literal %s too big for type i32" digits
+  | PtrTooBig digits -> Printf.sprintf "Literal %s too big for type ptr" digits
   | U32TooBig digits -> Printf.sprintf "Literal %s too big for type u32" digits
   | U8TooBig digits -> Printf.sprintf "Literal %s too big for type u8" digits
 ;;
