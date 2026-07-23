@@ -30,10 +30,19 @@ up looking like.
 **Leaning:** full-word suffixes for every primitive — `u32`, `u8`, and `i32` (the last
 purely for symmetry; bare digits already default to `i32`) — with the existing `u` suffix
 kept as shorthand for `u32` rather than removed. Answers this question directly: `42u8`.
-Still needs the suffix-matching rule nailed down (longest-match against a fixed set;
-what a not-quite-matching tail like `42u3` or `42u16` means — malformed-suffix error,
-presumably, not two separate tokens, since nothing in the grammar allows an identifier to
-directly abut a digit run with no separator) before it's implementable.
+
+**Settled, correcting an earlier guess here:** a not-quite-matching tail like `42u3` or
+`42u16` is *not* a malformed-suffix error — it's just two separate, individually valid
+tokens (`UnsignedIntLiteral 42` via the `u` shorthand, then `IntLiteral 3`/`16`), same as
+any other two adjacent tokens with no whitespace between them (`42+7` needs none either).
+There's no `u16` type, so "merged" was never a competing valid reading the lexer needed to
+disambiguate away — unlike `==` vs. `=;=`, where both readings really are individually
+valid and maximal munch has to pick one. Two adjacent atoms with no operator between them
+*is* invalid, but as an expression — that's the parser's job to reject (no grammar
+production for `atom atom`), not the lexer's, exactly the same phase separation already
+used for sign-combining around `i32::MIN` below. (An earlier draft of this ADR guessed the
+opposite — "malformed-suffix error, presumably" — before the suffix set was implemented
+and checked against actual behavior; corrected once it was.)
 
 ### Token representation: three constructors, not a tagged payload
 
@@ -179,3 +188,7 @@ instead of an entire range to defer.
   and `IntLiteral`'s lexer-side bound tightens from `u32::MAX` to `abs(i32::MIN)`
   (2147483648), leaving only one exact leftover value — not a range — for the parser to
   resolve, using the same involutive-`Negate`-folding step it already needs for `i32::MIN`.
+- v0.1.0: corrected the earlier "malformed-suffix error, presumably" guess for `42u3`/
+  `42u16` — implemented and checked against actual lexer behavior, it turned out to be an
+  unexamined assumption rather than a real ambiguity. Settled as two separate, individually
+  valid tokens instead, with the invalid-as-an-expression consequence left to the parser.
