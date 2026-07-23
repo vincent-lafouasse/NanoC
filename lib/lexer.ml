@@ -338,10 +338,19 @@ let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
     let err = error_from_kind int_kind digits in
     if value > upper_bound then Error err else Ok value
   in
+  let make_token kind value : Token.t =
+    match kind with
+    (* TODO: create Token.PtrLiteral *)
+    | IntPtr -> Token.IntLiteral value
+    | IntI32 -> Token.IntLiteral value
+    | IntU32 -> Token.UnsignedIntLiteral value
+    | IntU8 -> Token.ByteLiteral value
+  in
   let raw, _end_lexer = gather_int_literal lexer in
-  let _maybe_value =
+  let maybe_value =
     Atoi.atoi64 raw.digits |> Result.map_error transmute_error |> Result.bind check_bounds
   in
+  let _maybe_token = maybe_value |> Result.map (make_token raw.suffix) in
   failwith "todo"
 ;;
 
