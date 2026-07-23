@@ -56,6 +56,7 @@ type kind =
   | Semicolon
   | Colon
   | Comma
+  | Dot
   | Arrow
   (* the rest i guess *)
   | Identifier of string
