@@ -43,16 +43,22 @@ If semantic analysis passes, codegen is deterministic translation. Any codegen f
 
 ### Lexer Details
 
-**File:** `src/lexer.rs`
+**File:** `lib/lexer.ml`
 
-The lexer is complete and well-tested:
-- Scans source bytes into tokens
-- Tracks spans (position, line, column)
-- Binary-search keyword lookup
-- Comprehensive error handling
-- 40+ unit tests
+**Status (v0.2.0): MVP complete.** Scans source into tokens with line/column spans,
+covering every keyword, operator, and punctuation token currently in the language, plus
+all four literal kinds (string, char, int/unsigned/byte/ptr) with their full escape
+tables and lexer-side range checking (see `design/wiki/ADR-0005-string-literals-and-escape-sequences.md`
+and `design/wiki/ADR-0019-integer-literals.md`). Covered by `test/test_lexer.ml` (unit
+tests, one per token kind plus error cases), `test/test_atoi.ml` (the int64
+bounds-checking helper), and `test/test_lexer_integration.ml` (whole realistic program
+snippets tokenized end to end).
 
-**Invariant:** The `KEYWORDS` array must be sorted (checked at runtime in constructor).
+A handful of gaps are known and deliberately deferred rather than blocking: `\dDDD`
+decimal escapes raise instead of returning a proper error, unescaped newlines inside
+string/char literals aren't yet the hard error ADR-0022 settles, and the `constexpr`/
+`unreachable`/`true`/`false` keyword tokens don't exist yet. None of these block moving
+on to the parser.
 
 ### Parser Details
 

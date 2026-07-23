@@ -1,7 +1,7 @@
 # A Tour of NanoC
 
-**Version:** 0.1.0
-**Last Updated:** 2026-07-20
+**Version:** 0.2.0
+**Last Updated:** 2026-07-24
 
 This is a guided walkthrough of NanoC's current design — the settled language, architecture,
 and implementation, as it stands today. It describes what NanoC *is*, not what it might

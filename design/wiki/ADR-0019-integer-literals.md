@@ -171,15 +171,18 @@ instead of an entire range to defer.
 
 - v0.1.0: syntax proposed (default `i32`, `u` suffix for `u32`); range-checking
   recommendation written down for discussion, not yet decided.
-- v0.1.0: noted the `i32::MIN` range-check gotcha (bare literal magnitude one past
+- v0.2.0: leaning settled toward full-word suffixes for every primitive (`u32`, `u8`,
+  `i32`, the last purely for symmetry), `u` kept as shorthand for `u32` — answers the
+  open "how does a `u8`-typed literal get written?" question directly.
+- v0.2.0: noted the `i32::MIN` range-check gotcha (bare literal magnitude one past
   `i32::MAX`, only valid combined with a preceding unary minus) for whenever range-checking
   is implemented.
-- v0.1.0: rejected folding sign into the lexer's literal token (ambiguous — the same "`-`
+- v0.2.0: rejected folding sign into the lexer's literal token (ambiguous — the same "`-`
   followed by digits" shape means either a signed literal or binary subtraction depending
   on the *previous* token, which a forward-only lexer can't see); settled on splitting the
   range check itself instead — a sign-independent `u32`-magnitude bound at lexing, the
   tighter `i32`-aware bound (with the `i32::MIN` exception) at parsing.
-- v0.1.0: settled on three separate token constructors (`IntLiteral`/`UnsignedIntLiteral`/
+- v0.2.0: settled on three separate token constructors (`IntLiteral`/`UnsignedIntLiteral`/
   `ByteLiteral`) over a single tagged-payload constructor, driven by negating an unsigned
   or byte literal becoming a hard error (unlike C) — separate constructors make the
   rejecting match arms exhaustiveness-checked rather than an easily-missed `if` on a tag.
@@ -188,7 +191,7 @@ instead of an entire range to defer.
   and `IntLiteral`'s lexer-side bound tightens from `u32::MAX` to `abs(i32::MIN)`
   (2147483648), leaving only one exact leftover value — not a range — for the parser to
   resolve, using the same involutive-`Negate`-folding step it already needs for `i32::MIN`.
-- v0.1.0: corrected the earlier "malformed-suffix error, presumably" guess for `42u3`/
+- v0.2.0: corrected the earlier "malformed-suffix error, presumably" guess for `42u3`/
   `42u16` — implemented and checked against actual lexer behavior, it turned out to be an
   unexamined assumption rather than a real ambiguity. Settled as two separate, individually
   valid tokens instead, with the invalid-as-an-expression consequence left to the parser.
