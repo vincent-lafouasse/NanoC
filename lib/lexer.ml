@@ -301,29 +301,29 @@ let next_token lexer : (Token.t * t, error) result =
   match get lexer with
   (* -- 2 chars hard tokens -- *)
   (* algebraic *)
-  | Some '+' when peeking_at lexer '=' -> make_hard_token lexer Token.PlusAssign ~len:2
-  | Some '-' when peeking_at lexer '=' -> make_hard_token lexer Token.MinusAssign ~len:2
+  | Some '+' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.PlusAssign
+  | Some '-' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.MinusAssign
   | Some '*' when peeking_at lexer '=' ->
     make_hard_token lexer Token.MultipliesAssign ~len:2
-  | Some '/' when peeking_at lexer '=' -> make_hard_token lexer Token.DividesAssign ~len:2
-  | Some '%' when peeking_at lexer '=' -> make_hard_token lexer Token.ModuloAssign ~len:2
+  | Some '/' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.DividesAssign
+  | Some '%' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.ModuloAssign
   (* logical *)
-  | Some '|' when peeking_at lexer '|' -> make_hard_token lexer Token.LogicalOr ~len:2
-  | Some '&' when peeking_at lexer '&' -> make_hard_token lexer Token.LogicalAnd ~len:2
+  | Some '|' when peeking_at lexer '|' -> make_hard_token lexer ~len:2 Token.LogicalOr
+  | Some '&' when peeking_at lexer '&' -> make_hard_token lexer ~len:2 Token.LogicalAnd
   (* bitwise *)
-  | Some '<' when peeking_at lexer '<' -> make_hard_token lexer Token.ShiftLeft ~len:2
-  | Some '>' when peeking_at lexer '>' -> make_hard_token lexer Token.ShiftRight ~len:2
+  | Some '<' when peeking_at lexer '<' -> make_hard_token lexer ~len:2 Token.ShiftLeft
+  | Some '>' when peeking_at lexer '>' -> make_hard_token lexer ~len:2 Token.ShiftRight
   (* -- 1 char hard tokens -- *)
   (* logical *)
-  | Some '!' -> make_hard_token lexer Token.LogicalNot ~len:1
+  | Some '!' -> make_hard_token lexer ~len:1 Token.LogicalNot
   (* bitwise *)
-  | Some '~' -> make_hard_token lexer Token.BitwiseNot ~len:1
-  | Some '|' -> make_hard_token lexer Token.BitwiseOr ~len:1
-  | Some '&' -> make_hard_token lexer Token.Ampersand ~len:1
-  | Some '^' -> make_hard_token lexer Token.BitwiseXor ~len:1
+  | Some '~' -> make_hard_token lexer ~len:1 Token.BitwiseNot
+  | Some '|' -> make_hard_token lexer ~len:1 Token.BitwiseOr
+  | Some '&' -> make_hard_token lexer ~len:1 Token.Ampersand
+  | Some '^' -> make_hard_token lexer ~len:1 Token.BitwiseXor
   (* punctuation *)
-  | Some '{' -> make_hard_token lexer Token.LBrace ~len:1
-  | Some '}' -> make_hard_token lexer Token.RBrace ~len:1
+  | Some '{' -> make_hard_token lexer ~len:1 Token.LBrace
+  | Some '}' -> make_hard_token lexer ~len:1 Token.RBrace
   (* -- soft tokens -- *)
   | Some '"' -> make_string_literal_token lexer
   | Some '\'' -> make_char_literal_token lexer
