@@ -11,6 +11,11 @@ type kind =
   | Undefined
   | Zeroed
   | While
+  (* type keywords *)
+  | U8
+  | U32
+  | I32
+  | Ptr
   (* bitwise *)
   | BitwiseNot
   | BitwiseOr
@@ -41,11 +46,6 @@ type kind =
   | ModuloAssign
   | StarAssign
   | DividesAssign
-  (* type keywords *)
-  | U8
-  | U32
-  | I32
-  | Ptr
   (* punctuation *)
   | LParen
   | RParen
