@@ -2,7 +2,7 @@
 
 **Status:** Open
 **Area:** Language Design
-**Leaning:** syntax settled (i32 default, u suffix); range-check hard-error recommended, not confirmed
+**Leaning:** syntax settled (i32 default, u suffix); range-check hard-error recommended, not confirmed — leaning toward a u32 magnitude bounds check at lexing, full i32-aware bounds check at parsing
 
 ## Syntax
 
@@ -61,6 +61,41 @@ Whatever implements the range check will need to special-case the AST shape
 literal `n` in isolation — a parser/sema-level pattern match, not something the lexer needs
 to know about.
 
+### Where the check actually lives: split across lexer and parser
+
+Tempting shortcut considered and rejected: have the lexer itself recognize `-` immediately
+followed by digits as a single signed literal token, sidestepping the `i32::MIN` gotcha by
+just never separating sign from magnitude in the first place. Doesn't work — the ambiguity
+isn't in what follows the `-`, it's in what precedes it. `-5` (wants a signed literal) and
+`a - 5` (wants `Identifier a; Minus; IntLiteral 5`) both have `-` immediately followed by a
+digit; only the *previous* token distinguishes them (does it end an expression, making `-`
+binary, or not, making it unary). A single-pass, forward-only lexer has no previous-token
+memory to check that without effectively growing parser-shaped state — and even then it'd
+just be duplicating what the parser's prefix/infix (nud/led) dispatch already decides, with
+strictly less context available. The grammar's existing choice stands: `-` always lexes as
+its own `Minus` token (see [grammar.ebnf](../grammar.ebnf)'s `prefix_op`), sign is never
+part of `INTEGER_LITERAL`.
+
+Given that, the range check itself splits cleanly across two phases by what each phase can
+actually see:
+
+- **At lexing:** check the literal's magnitude fits in 32 bits at all — i.e. reject
+  anything past `u32::MAX` (4294967295), regardless of suffix. This bound holds no matter
+  what precedes the literal; no unary minus makes a 40-digit number fit in 32 bits. Safe
+  and unambiguous with zero context.
+- **At parsing:** check the tighter, sign-aware bound — `i32::MAX` (2147483647) for an
+  unsuffixed literal not immediately preceded by a unary minus, or the full `i32` range
+  (down to `i32::MIN`) when the AST shape is `Negate(IntLiteral n)`. This needs the
+  surrounding syntax the lexer doesn't have.
+
+Considered and rejected as the simpler alternative: skip the lexer-side check entirely and
+let sema/parsing own the whole thing (this is what rustc does — the lexer just captures
+digits). Simpler, one place instead of two, and not meaningfully slower since sema already
+walks the full AST regardless. Still leaning toward the split above instead, since the
+lexer-side bound is free, unambiguous, and catches the pathological case (absurdly long
+digit runs) at the earliest possible point — but this is genuinely a toss-up, not a strong
+conviction either way.
+
 ## History
 
 - v0.1.0: syntax proposed (default `i32`, `u` suffix for `u32`); range-checking
@@ -68,3 +103,8 @@ to know about.
 - v0.1.0: noted the `i32::MIN` range-check gotcha (bare literal magnitude one past
   `i32::MAX`, only valid combined with a preceding unary minus) for whenever range-checking
   is implemented.
+- v0.1.0: rejected folding sign into the lexer's literal token (ambiguous — the same "`-`
+  followed by digits" shape means either a signed literal or binary subtraction depending
+  on the *previous* token, which a forward-only lexer can't see); settled on splitting the
+  range check itself instead — a sign-independent `u32`-magnitude bound at lexing, the
+  tighter `i32`-aware bound (with the `i32::MIN` exception) at parsing.
