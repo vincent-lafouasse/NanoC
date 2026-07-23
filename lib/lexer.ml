@@ -314,44 +314,38 @@ let gather_int_literal lexer : raw_int_literal * t =
 ;;
 
 let scan_int_literal lexer : (Token.kind * t, error_kind * t) result =
-  let error_from_kind int_kind digits =
-    match int_kind with
+  let { digits; suffix }, end_lexer = gather_int_literal lexer in
+  (* the only error case is for the magnitude to overflow *)
+  let err =
+    match suffix with
     | IntPtr -> PtrTooBig digits
     | IntI32 -> I32TooBig digits
     | IntU32 -> U32TooBig digits
     | IntU8 -> U8TooBig digits
   in
-  let transmute_error atoi_error int_kind : error_kind =
-    match atoi_error with
-    | Atoi.TooSmall _ ->
-      failwith "unreachable: there should never be a negative number here"
-    | Atoi.TooBig digits -> error_from_kind int_kind digits
-  in
-  let int_max = function
+  let int_max =
+    match suffix with
     | IntPtr -> 4294967295L
     | IntU32 -> 4294967295L
     | IntI32 -> 2147483648L
     | IntU8 -> 255L
   in
-  let check_bounds int_kind digits value : (int64, error_kind) result =
-    let upper_bound = int_max raw.suffix in
-    let err = error_from_kind int_kind digits in
-    if value > upper_bound then Error err else Ok value
-  in
-  let make_token kind value : Token.t =
-    match kind with
+  let check_bounds value = if value <= int_max then Ok value else Error err in
+  let make_token value : Token.kind =
+    match suffix with
     (* TODO: create Token.PtrLiteral *)
     | IntPtr -> Token.IntLiteral value
     | IntI32 -> Token.IntLiteral value
     | IntU32 -> Token.UnsignedIntLiteral value
     | IntU8 -> Token.ByteLiteral value
   in
-  let raw, _end_lexer = gather_int_literal lexer in
-  let maybe_value =
-    Atoi.atoi64 raw.digits |> Result.map_error transmute_error |> Result.bind check_bounds
-  in
-  let _maybe_token = maybe_value |> Result.map (make_token raw.suffix) in
-  failwith "todo"
+  let res = Atoi.atoi64 digits in
+  let res = res |> Result.map_error (fun _ -> err) in
+  let res = Result.bind res check_bounds in
+  let res = res |> Result.map make_token in
+  match res with
+  | Ok tok -> Ok (tok, end_lexer)
+  | Error err -> Error (err, end_lexer)
 ;;
 
 let make_token (start : Position.t) (lexer : t) (kind : Token.kind) : Token.t =
