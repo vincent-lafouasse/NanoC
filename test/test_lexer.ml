@@ -412,7 +412,7 @@ let operators =
   ; "+=", Token.PlusAssign
   ; "-=", Token.MinusAssign
   ; "%=", Token.ModuloAssign
-  ; "*=", Token.MultipliesAssign
+  ; "*=", Token.StarAssign
   ; "/=", Token.DividesAssign
   ]
 ;;
@@ -485,7 +485,7 @@ let test_plus_assign_is_not_plus_then_assign () =
 ;;
 
 let test_multiplies_assign_is_not_multiplies_then_assign () =
-  check_tokens "*= is not Multiplies;Assign" "*=" [ Token.MultipliesAssign; Token.Eof ]
+  check_tokens "*= is not Multiplies;Assign" "*=" [ Token.StarAssign; Token.Eof ]
 ;;
 
 let test_divides_assign_is_not_divides_then_assign () =

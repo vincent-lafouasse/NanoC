@@ -303,8 +303,7 @@ let next_token lexer : (Token.t * t, error) result =
   (* algebraic *)
   | Some '+' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.PlusAssign
   | Some '-' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.MinusAssign
-  | Some '*' when peeking_at lexer '=' ->
-    make_hard_token lexer Token.MultipliesAssign ~len:2
+  | Some '*' when peeking_at lexer '=' -> make_hard_token lexer Token.StarAssign ~len:2
   | Some '/' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.DividesAssign
   | Some '%' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.ModuloAssign
   (* logical *)

@@ -39,7 +39,7 @@ type kind =
   | PlusAssign
   | MinusAssign
   | ModuloAssign
-  | MultipliesAssign
+  | StarAssign
   | DividesAssign
   (* type keywords *)
   | U8
