@@ -300,18 +300,23 @@ let next_token lexer : (Token.t * t, error) result =
   let start = lexer.position in
   match get lexer with
   (* -- 2 chars hard tokens -- *)
+  (* bitwise *)
+  | Some '<' when peeking_at lexer '<' -> make_hard_token lexer ~len:2 Token.ShiftLeft
+  | Some '>' when peeking_at lexer '>' -> make_hard_token lexer ~len:2 Token.ShiftRight
+  (* logical *)
+  | Some '|' when peeking_at lexer '|' -> make_hard_token lexer ~len:2 Token.LogicalOr
+  | Some '&' when peeking_at lexer '&' -> make_hard_token lexer ~len:2 Token.LogicalAnd
+  (* comparison *)
+  | Some '=' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.Equals
+  | Some '!' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.NotEquals
+  | Some '<' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.LessEquals
+  | Some '>' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.GreaterEquals
   (* algebraic *)
   | Some '+' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.PlusAssign
   | Some '-' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.MinusAssign
   | Some '*' when peeking_at lexer '=' -> make_hard_token lexer Token.StarAssign ~len:2
   | Some '/' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.DividesAssign
   | Some '%' when peeking_at lexer '=' -> make_hard_token lexer ~len:2 Token.ModuloAssign
-  (* logical *)
-  | Some '|' when peeking_at lexer '|' -> make_hard_token lexer ~len:2 Token.LogicalOr
-  | Some '&' when peeking_at lexer '&' -> make_hard_token lexer ~len:2 Token.LogicalAnd
-  (* bitwise *)
-  | Some '<' when peeking_at lexer '<' -> make_hard_token lexer ~len:2 Token.ShiftLeft
-  | Some '>' when peeking_at lexer '>' -> make_hard_token lexer ~len:2 Token.ShiftRight
   (* -- 1 char hard tokens -- *)
   (* logical *)
   | Some '!' -> make_hard_token lexer ~len:1 Token.LogicalNot
