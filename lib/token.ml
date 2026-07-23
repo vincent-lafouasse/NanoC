@@ -29,7 +29,7 @@ type kind =
   | GreaterThan
   | LessEquals
   | GreaterEquals
-  (* algebric *)
+  (* algebraic *)
   | Plus
   | Minus
   | Divides
