@@ -53,6 +53,7 @@ type kind =
   | RBrace
   | Semicolon
   | Colon
+  | Comma
   | Arrow
   (* the rest i guess *)
   | Identifier of string
