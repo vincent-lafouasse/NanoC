@@ -268,7 +268,7 @@ let scan_string_literal lexer : (Token.kind * t, error_kind * t) result =
 
 type raw_int_literal =
   { digits : string
-  ; suffix : string
+  ; suffix : Token.int_suffix
   }
 [@@deriving show]
 
@@ -288,14 +288,14 @@ let gather_int_literal lexer : raw_int_literal * t =
   let digits, lexer = gather_int_digits lexer in
   let suffix, lexer =
     if looking_at lexer "ptr"
-    then "ptr", advance_by lexer 3
+    then Token.IntPtr, advance_by lexer 3
     else if looking_at lexer "u32"
-    then "u32", advance_by lexer 3
+    then Token.IntU32, advance_by lexer 3
     else if looking_at lexer "i32"
-    then "i32", advance_by lexer 3
+    then Token.IntI32, advance_by lexer 3
     else if looking_at lexer "u8"
-    then "u8", advance_by lexer 3
-    else "i32", lexer
+    then Token.IntU8, advance_by lexer 3
+    else Token.IntI32, lexer
   in
   { digits; suffix }, lexer
 ;;

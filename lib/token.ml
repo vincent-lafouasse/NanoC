@@ -1,3 +1,10 @@
+type int_suffix =
+  | IntPtr
+  | IntU8
+  | IntU32
+  | IntI32
+[@@deriving show]
+
 type kind =
   (* keywords *)
   | Fn
