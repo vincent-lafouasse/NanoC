@@ -1,3 +1,5 @@
+open Ast
+
 let tokens_end_with_eof (tokens : Token.t array) : bool =
   let length = Array.length tokens in
   length > 0
@@ -90,88 +92,55 @@ module Precedence = struct
     | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
   ;;
 
+  let of_bin_op op =
+    let open BinaryOp in
+    match op with
+    | Add | Sub -> Term
+    | Mul | Div | Mod -> Factor
+    | BitAnd -> BitwiseAnd
+    | BitOr -> BitwiseOr
+    | BitXor -> BitwiseXor
+    | Lshift | Rshift -> Shift
+    | Eq | Neq -> Equality
+    | Lt | Le | Gt | Ge -> Comparison
+    | LogAnd -> LogicalAnd
+    | LogOr -> LogicalOr
+  ;;
+
   let next = to_int |> Fun.compose (fun n -> n + 1) |> Fun.compose of_int
 end
 
-module Ast = struct
-  module BinaryOp = struct
-    type t =
-      | Add
-      | Sub
-      | Mul
-      | Div
-      | Mod
-      | BitAnd
-      | BitOr
-      | BitXor
-      | Lshift
-      | Rshift
-      | Eq
-      | Neq
-      | Lt
-      | Le
-      | Gt
-      | Ge
-      | LogAnd
-      | LogOr
-    [@@deriving show]
+let token_to_bin_op op =
+  let open BinaryOp in
+  match op with
+  | Token.Plus -> Some Add
+  | Token.Minus -> Some Sub
+  | Token.Star -> Some Mul
+  | Token.Divides -> Some Div
+  | Token.Modulo -> Some Mod
+  | Token.Ampersand -> Some BitAnd
+  | Token.BitwiseOr -> Some BitOr
+  | Token.BitwiseXor -> Some BitXor
+  | Token.ShiftLeft -> Some Lshift
+  | Token.ShiftRight -> Some Rshift
+  | Token.Equals -> Some Eq
+  | Token.NotEquals -> Some Neq
+  | Token.LessThan -> Some Lt
+  | Token.GreaterThan -> Some Gt
+  | Token.LessEquals -> Some Le
+  | Token.GreaterEquals -> Some Ge
+  | Token.LogicalAnd -> Some LogAnd
+  | Token.LogicalOr -> Some LogOr
+  | _ -> None
+;;
 
-    let from_token = function
-      | Token.Plus -> Some Add
-      | Token.Minus -> Some Sub
-      | Token.Star -> Some Mul
-      | Token.Divides -> Some Div
-      | Token.Modulo -> Some Mod
-      | Token.Ampersand -> Some BitAnd
-      | Token.BitwiseOr -> Some BitOr
-      | Token.BitwiseXor -> Some BitXor
-      | Token.ShiftLeft -> Some Lshift
-      | Token.ShiftRight -> Some Rshift
-      | Token.Equals -> Some Eq
-      | Token.NotEquals -> Some Neq
-      | Token.LessThan -> Some Lt
-      | Token.GreaterThan -> Some Gt
-      | Token.LessEquals -> Some Le
-      | Token.GreaterEquals -> Some Ge
-      | Token.LogicalAnd -> Some LogAnd
-      | Token.LogicalOr -> Some LogOr
-      | _ -> None
-    ;;
-
-    let precedence = function
-      | Add | Sub -> Precedence.Term
-      | Mul | Div | Mod -> Precedence.Factor
-      | BitAnd -> Precedence.BitwiseAnd
-      | BitOr -> Precedence.BitwiseOr
-      | BitXor -> Precedence.BitwiseXor
-      | Lshift | Rshift -> Precedence.Shift
-      | Eq | Neq -> Precedence.Equality
-      | Lt | Le | Gt | Ge -> Precedence.Comparison
-      | LogAnd -> Precedence.LogicalAnd
-      | LogOr -> Precedence.LogicalOr
-    ;;
-  end
-
-  module UnaryOp = struct
-    type t =
-      | Negate
-      | LogNot
-      | BitNot
-      | AddrOf
-      | Deref
-    [@@deriving show]
-
-    let from_token = function
-      | Token.Minus -> Some Negate
-      | Token.LogicalNot -> Some LogNot
-      | Token.BitwiseNot -> Some BitNot
-      | Token.Ampersand -> Some AddrOf
-      | Token.Star -> Some Deref
-      | _ -> None
-    ;;
-  end
-
-  type literal = IntLiteral of int64
-
-  type expression = Literal of literal
-end
+let token_to_unary_op op =
+  let open UnaryOp in
+  match op with
+  | Token.Minus -> Some Negate
+  | Token.LogicalNot -> Some LogNot
+  | Token.BitwiseNot -> Some BitNot
+  | Token.Ampersand -> Some AddrOf
+  | Token.Star -> Some Deref
+  | _ -> None
+;;
