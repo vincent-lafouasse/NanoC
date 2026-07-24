@@ -16,6 +16,13 @@ let init source : (t, Lexer.error) result =
   maybe_tokens |> Result.map make_parser
 ;;
 
+let eof parser = parser.index >= parser.length
+
+let advance parser =
+  let index = if eof parser then parser.index else parser.index + 1 in
+  { parser with index }
+;;
+
 module Precedence = struct
   (* higher = tighter binding
      per https://en.cppreference.com/w/c/language/operator_precedence.html
