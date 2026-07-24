@@ -112,6 +112,15 @@ module UnaryOp = struct
     | AddrOf
     | Deref
   [@@deriving show]
+
+  let from_token = function
+    | Token.Minus -> Some Negate
+    | Token.LogicalNot -> Some LogNot
+    | Token.BitwiseNot -> Some BitNot
+    | Token.Ampersand -> Some AddrOf
+    | Token.Star -> Some Deref
+    | _ -> None
+  ;;
 end
 
 type literal = IntLiteral of int64
