@@ -67,6 +67,33 @@ type expr =
 
 let rec s_expr (e : expr) : string =
   let from_parts parts = "(" ^ String.concat " " parts ^ ")" in
+  let _bin_op_repr = function
+    | BinaryOp.Add -> "+"
+    | BinaryOp.Sub -> "-"
+    | BinaryOp.Mul -> "*"
+    | BinaryOp.Div -> "/"
+    | BinaryOp.Mod -> "%"
+    | BinaryOp.BitAnd -> "&"
+    | BinaryOp.BitOr -> "|"
+    | BinaryOp.BitXor -> "^"
+    | BinaryOp.Lshift -> ">>"
+    | BinaryOp.Rshift -> "<<"
+    | BinaryOp.Eq -> "=="
+    | BinaryOp.Neq -> "!="
+    | BinaryOp.Lt -> "<"
+    | BinaryOp.Le -> "<="
+    | BinaryOp.Gt -> ">"
+    | BinaryOp.Ge -> ">="
+    | BinaryOp.LogAnd -> "and"
+    | BinaryOp.LogOr -> "or"
+  in
+  let _unary_op_repr = function
+    | UnaryOp.Negate -> "-"
+    | UnaryOp.LogNot -> "!"
+    | UnaryOp.BitNot -> "~"
+    | UnaryOp.AddrOf -> "addr"
+    | UnaryOp.Deref -> "deref"
+  in
   match e with
   | Literal (IntLiteral value) -> Printf.sprintf "(i32 %Ld)" value
   | Call { callee; args } ->
