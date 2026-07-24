@@ -59,6 +59,48 @@ module Precedence = struct
   let next = to_int |> Fun.compose (fun n -> n + 1) |> Fun.compose of_int
 end
 
+module BinaryOp = struct
+  type t =
+    | Add
+    | Sub
+    | Mul
+    | Div
+    | Mod
+    | BitAnd
+    | BitOr
+    | BitXor
+    | Lshift
+    | Rshift
+    | Eq
+    | Neq
+    | Lt
+    | Le
+    | Gt
+    | Ge
+    | LogAnd
+    | LogOr
+
+  let from_token = function
+    | Token.Plus -> Some Add
+    | Token.Minus -> Some Sub
+    | Token.Star -> Some Mul
+    | Token.Divides -> Some Div
+    | Token.Modulo -> Some Mod
+    | Token.Ampersand -> Some BitAnd
+    | Token.BitwiseOr -> Some BitOr
+    | Token.BitwiseXor -> Some BitXor
+    | Token.ShiftLeft -> Some Lshift
+    | Token.ShiftRight -> Some Rshift
+    | Token.Equals -> Some Eq
+    | Token.NotEquals -> Some Neq
+    | Token.LessThan -> Some Lt
+    | Token.GreaterThan -> Some Gt
+    | Token.LessEquals -> Some Le
+    | Token.GreaterEquals -> Some Ge
+    | _ -> None
+  ;;
+end
+
 type literal = IntLiteral of int64
 
 type expression = Literal of literal
