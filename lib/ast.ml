@@ -38,4 +38,10 @@ type expr =
   | Identifier of string
   | Binary of BinaryOp.t * expr * expr
   | Unary of UnaryOp.t * expr
+  | Syscall of string list
+  | Grouping of expr
+  | Call of expr * expr list
+  | DotAccess of expr * string
+  | ArrowAccess of expr * string
+  | Index of expr * expr
 [@@deriving show]
