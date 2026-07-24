@@ -65,8 +65,14 @@ type expr =
       }
 [@@deriving show]
 
-let s_expr (e : expr) : string =
+let rec s_expr (e : expr) : string =
   match e with
   | Literal (IntLiteral value) -> Printf.sprintf "(i32 %Ld)" value
+  | Call { callee; args } ->
+    let parts = "call" :: s_expr callee :: List.map s_expr args in
+    "(" ^ String.concat " " parts ^ ")"
+  | Syscall args ->
+    let parts = "syscall" :: args in
+    "(" ^ String.concat " " parts ^ ")"
   | _ -> failwith "todo"
 ;;
