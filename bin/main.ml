@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-26"]
+
 open NanoC
 
 let die msg =
@@ -19,7 +21,6 @@ let log_tokens tokens source =
 
 let () =
   let source = "fn undefined zeroed struct u8 aaa bbb _420" in
-  let () = print_endline ("source:\n" ^ source ^ "\n") in
-  let tokens = tokenize_or_die source in
-  log_tokens tokens source
+  let parser = Parser.init source in
+  ()
 ;;
