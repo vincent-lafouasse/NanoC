@@ -102,6 +102,19 @@ module BinaryOp = struct
     | Token.LogicalOr -> Some LogOr
     | _ -> None
   ;;
+
+  let precedence = function
+    | Add | Sub -> Precedence.Term
+    | Mul | Div | Mod -> Precedence.Factor
+    | BitAnd -> Precedence.BitwiseAnd
+    | BitOr -> Precedence.BitwiseOr
+    | BitXor -> Precedence.BitwiseXor
+    | Lshift | Rshift -> Precedence.Shift
+    | Eq | Neq -> Precedence.Equality
+    | Lt | Le | Gt | Ge -> Precedence.Comparison
+    | LogAnd -> Precedence.LogicalAnd
+    | LogOr -> Precedence.LogicalOr
+  ;;
 end
 
 module UnaryOp = struct
