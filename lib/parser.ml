@@ -1,3 +1,12 @@
+let tokens_end_with_eof (tokens : Token.t array) : bool =
+  let length = Array.length tokens in
+  length > 0
+  &&
+  match tokens.(length - 1).kind with
+  | Token.Eof -> true
+  | _ -> false
+;;
+
 type t =
   { source : string
   ; tokens : Token.t array
