@@ -17,6 +17,7 @@ module Precedence = struct
     | Factor (* * / % *)
     | Prefix (* ! ~ - & *)
     | Postfix (* -> . [] () *)
+  [@@deriving show]
 
   let to_int = function
     | None -> 0
