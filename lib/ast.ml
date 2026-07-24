@@ -31,6 +31,11 @@ module UnaryOp = struct
   [@@deriving show]
 end
 
-type literal = IntLiteral of int64
+type literal = IntLiteral of int64 [@@deriving show]
 
-type expression = Literal of literal
+type expr =
+  | Literal of literal
+  | Identifier of string
+  | Binary of BinaryOp.t * expr * expr
+  | Unary of UnaryOp.t * expr
+[@@deriving show]
