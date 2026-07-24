@@ -51,7 +51,11 @@ let check_sexp_equal name expected got =
   then (
     incr failures;
     Printf.printf
-      "FAIL %s:\n  expected: %S\n  got:      %S\n  expected tokens: %s\n  got tokens:      %s\n"
+      "FAIL %s:\n\
+      \  expected: %S\n\
+      \  got:      %S\n\
+      \  expected tokens: %s\n\
+      \  got tokens:      %s\n"
       name
       expected
       got

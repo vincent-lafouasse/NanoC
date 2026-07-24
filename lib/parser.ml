@@ -8,6 +8,13 @@ type t =
   }
 [@@deriving show]
 
+type error =
+  | UnexpectedToken of
+      { expected : string
+      ; found : Token.t
+      }
+[@@deriving show]
+
 let init source : (t, Lexer.error) result =
   let maybe_tokens = Lexer.tokenize source in
   let check (tokens : Token.t array) : Token.t array =
