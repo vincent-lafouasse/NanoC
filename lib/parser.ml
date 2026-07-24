@@ -110,9 +110,9 @@ module Precedence = struct
   let next = to_int |> Fun.compose (fun n -> n + 1) |> Fun.compose of_int
 end
 
-let token_to_bin_op op =
+let match_binary token =
   let open BinaryOp in
-  match op with
+  match token with
   | Token.Plus -> Some Add
   | Token.Minus -> Some Sub
   | Token.Star -> Some Mul
@@ -134,9 +134,9 @@ let token_to_bin_op op =
   | _ -> None
 ;;
 
-let token_to_unary_op op =
+let match_unary token =
   let open UnaryOp in
-  match op with
+  match token with
   | Token.Minus -> Some Negate
   | Token.LogicalNot -> Some LogNot
   | Token.BitwiseNot -> Some BitNot
