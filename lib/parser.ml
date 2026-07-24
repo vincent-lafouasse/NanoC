@@ -1,3 +1,10 @@
+type t =
+  { source : string
+  ; tokens : Token.t array
+  ; index : int
+  }
+[@@deriving show]
+
 module Precedence = struct
   (* higher = tighter binding
      per https://en.cppreference.com/w/c/language/operator_precedence.html
