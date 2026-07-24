@@ -79,6 +79,7 @@ module BinaryOp = struct
     | Ge
     | LogAnd
     | LogOr
+  [@@deriving show]
 
   let from_token = function
     | Token.Plus -> Some Add
@@ -108,6 +109,7 @@ module UnaryOp = struct
     | BitNot
     | AddrOf
     | Deref
+  [@@deriving show]
 end
 
 type literal = IntLiteral of int64
