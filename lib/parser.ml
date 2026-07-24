@@ -2,8 +2,19 @@ type t =
   { source : string
   ; tokens : Token.t array
   ; index : int
+  ; length : int
   }
 [@@deriving show]
+
+let init source : (t, Lexer.error) result =
+  let maybe_tokens = Lexer.tokenize source in
+  let make_parser tokens : t =
+    let index = 0 in
+    let length = Array.length tokens in
+    { source; tokens; index; length }
+  in
+  maybe_tokens |> Result.map make_parser
+;;
 
 module Precedence = struct
   (* higher = tighter binding
