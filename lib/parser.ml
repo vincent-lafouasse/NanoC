@@ -1,14 +1,5 @@
 open Ast
 
-let tokens_end_with_eof (tokens : Token.t array) : bool =
-  let length = Array.length tokens in
-  length > 0
-  &&
-  match tokens.(length - 1).kind with
-  | Token.Eof -> true
-  | _ -> false
-;;
-
 type t =
   { source : string
   ; tokens : Token.t array
@@ -19,12 +10,23 @@ type t =
 
 let init source : (t, Lexer.error) result =
   let maybe_tokens = Lexer.tokenize source in
+  let check (tokens : Token.t array) : Token.t array =
+    let length = Array.length tokens in
+    let eof_ok =
+      length > 0
+      &&
+      match tokens.(length - 1).kind with
+      | Token.Eof -> true
+      | _ -> false
+    in
+    if eof_ok then tokens else failwith "no EOF at end of tokens somehow"
+  in
   let make_parser tokens : t =
     let index = 0 in
     let length = Array.length tokens in
     { source; tokens; index; length }
   in
-  maybe_tokens |> Result.map make_parser
+  maybe_tokens |> Result.map check |> Result.map make_parser
 ;;
 
 let eof parser = parser.index >= parser.length
