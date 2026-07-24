@@ -4,6 +4,8 @@ local*
 
 grammar/src
 
+aux/rs_old
+
 **/*.o
 **/*.a
 **/*.dylib
