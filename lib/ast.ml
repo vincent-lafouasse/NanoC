@@ -66,7 +66,7 @@ type expr =
 [@@deriving show]
 
 let rec s_expr (e : expr) : string =
-  let from_parts parts = "(" ^ String.concat " " parts ^ ")" in
+  let from_list parts = "(" ^ String.concat " " parts ^ ")" in
   let bin_op_repr = function
     | BinaryOp.Add -> "+"
     | BinaryOp.Sub -> "-"
@@ -102,10 +102,10 @@ let rec s_expr (e : expr) : string =
   | Unary { op; operand } -> Printf.sprintf "(%s %s)" (unary_op_repr op) (s_expr operand)
   | Syscall args ->
     let parts = "syscall" :: args in
-    from_parts parts
+    from_list parts
   | Grouping expr -> Printf.sprintf "(grp %s)" (s_expr expr)
   | Call { callee; args } ->
     let parts = "call" :: s_expr callee :: List.map s_expr args in
-    from_parts parts
+    from_list parts
   | _ -> failwith "todo"
 ;;
