@@ -98,6 +98,8 @@ module BinaryOp = struct
     | Token.GreaterThan -> Some Gt
     | Token.LessEquals -> Some Le
     | Token.GreaterEquals -> Some Ge
+    | Token.LogicalAnd -> Some LogAnd
+    | Token.LogicalOr -> Some LogOr
     | _ -> None
   ;;
 end
