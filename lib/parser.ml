@@ -35,6 +35,26 @@ module Precedence = struct
     | Prefix -> 12
     | Postfix -> 13
   ;;
+
+  let of_int = function
+    | n when n < 0 -> None
+    | 0 -> None
+    | 1 -> Assignment
+    | 2 -> LogicalOr
+    | 3 -> LogicalAnd
+    | 4 -> BitwiseOr
+    | 5 -> BitwiseXor
+    | 6 -> BitwiseAnd
+    | 7 -> Equality
+    | 8 -> Comparison
+    | 9 -> Shift
+    | 10 -> Term
+    | 11 -> Factor
+    | 12 -> Prefix
+    | 13 -> Postfix
+    | n when n > 13 -> Postfix
+    | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
+  ;;
 end
 
 type literal = IntLiteral of int64
