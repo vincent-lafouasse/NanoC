@@ -17,7 +17,7 @@ type error =
 
 let init source : (t, Lexer.error) result =
   let maybe_tokens = Lexer.tokenize source in
-  let check (tokens : Token.t array) : Token.t array =
+  let sanity_check (tokens : Token.t array) : Token.t array =
     let length = Array.length tokens in
     let eof_ok =
       length > 0
@@ -33,7 +33,7 @@ let init source : (t, Lexer.error) result =
     let length = Array.length tokens in
     { source; tokens; index; length }
   in
-  maybe_tokens |> Result.map check |> Result.map make_parser
+  maybe_tokens |> Result.map sanity_check |> Result.map make_parser
 ;;
 
 let eof parser = parser.index >= parser.length
