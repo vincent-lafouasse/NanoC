@@ -45,3 +45,9 @@ type expr =
   | ArrowAccess of { target : expr; field : string }
   | Index of { target : expr; index : expr }
 [@@deriving show]
+
+let s_expr (e : expr) : string =
+  match e with
+  | Literal (IntLiteral value) -> Printf.sprintf "(i32 %Ld)" value
+  | _ -> failwith "todo"
+;;
