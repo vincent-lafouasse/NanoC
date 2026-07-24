@@ -45,7 +45,7 @@ type expr =
       { op : UnaryOp.t
       ; operand : expr
       }
-  | Syscall of string list
+  | Syscall of expr list
   | Grouping of expr
   | Call of
       { callee : expr
@@ -99,7 +99,7 @@ let rec s_expr (e : expr) : string =
     | Identifier id -> [ "id"; id ]
     | Binary { op; lhs; rhs } -> [ bin_op_repr op; s_expr lhs; s_expr rhs ]
     | Unary { op; operand } -> [ unary_op_repr op; s_expr operand ]
-    | Syscall args -> "syscall" :: args
+    | Syscall args -> "syscall" :: List.map s_expr args
     | Grouping expr -> [ "grp"; s_expr expr ]
     | Call { callee; args } -> "call" :: s_expr callee :: List.map s_expr args
     | DotAccess { target; field } -> [ "."; s_expr target; field ]
