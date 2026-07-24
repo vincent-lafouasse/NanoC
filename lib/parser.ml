@@ -101,6 +101,15 @@ module BinaryOp = struct
   ;;
 end
 
+module UnaryOp = struct
+  type t =
+    | Negate
+    | LogNot
+    | BitNot
+    | AddrOf
+    | Deref
+end
+
 type literal = IntLiteral of int64
 
 type expression = Literal of literal
