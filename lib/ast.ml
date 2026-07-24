@@ -67,7 +67,7 @@ type expr =
 
 let rec s_expr (e : expr) : string =
   let from_parts parts = "(" ^ String.concat " " parts ^ ")" in
-  let _bin_op_repr = function
+  let bin_op_repr = function
     | BinaryOp.Add -> "+"
     | BinaryOp.Sub -> "-"
     | BinaryOp.Mul -> "*"
@@ -87,7 +87,7 @@ let rec s_expr (e : expr) : string =
     | BinaryOp.LogAnd -> "and"
     | BinaryOp.LogOr -> "or"
   in
-  let _unary_op_repr = function
+  let unary_op_repr = function
     | UnaryOp.Negate -> "-"
     | UnaryOp.LogNot -> "!"
     | UnaryOp.BitNot -> "~"
@@ -96,11 +96,16 @@ let rec s_expr (e : expr) : string =
   in
   match e with
   | Literal (IntLiteral value) -> Printf.sprintf "(i32 %Ld)" value
-  | Call { callee; args } ->
-    let parts = "call" :: s_expr callee :: List.map s_expr args in
-    from_parts parts
+  | Identifier id -> Printf.sprintf "(id %s)" id
+  | Binary { op; lhs; rhs } ->
+    Printf.sprintf "(%s %s %s)" (bin_op_repr op) (s_expr lhs) (s_expr rhs)
+  | Unary { op; operand } -> Printf.sprintf "(%s %s)" (unary_op_repr op) (s_expr operand)
   | Syscall args ->
     let parts = "syscall" :: args in
+    from_parts parts
+  | Grouping expr -> Printf.sprintf "(grp %s)" (s_expr expr)
+  | Call { callee; args } ->
+    let parts = "call" :: s_expr callee :: List.map s_expr args in
     from_parts parts
   | _ -> failwith "todo"
 ;;
