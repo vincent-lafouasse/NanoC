@@ -66,7 +66,6 @@ type expr =
 [@@deriving show]
 
 let rec s_expr (e : expr) : string =
-  let from_list parts = "(" ^ String.concat " " parts ^ ")" in
   let bin_op_repr = function
     | BinaryOp.Add -> "+"
     | BinaryOp.Sub -> "-"
@@ -94,20 +93,18 @@ let rec s_expr (e : expr) : string =
     | UnaryOp.AddrOf -> "addr"
     | UnaryOp.Deref -> "deref"
   in
-  match e with
-  | Literal (IntLiteral value) -> Printf.sprintf "(i32 %Ld)" value
-  | Identifier id -> Printf.sprintf "(id %s)" id
-  | Binary { op; lhs; rhs } ->
-    Printf.sprintf "(%s %s %s)" (bin_op_repr op) (s_expr lhs) (s_expr rhs)
-  | Unary { op; operand } -> Printf.sprintf "(%s %s)" (unary_op_repr op) (s_expr operand)
-  | Syscall args ->
-    let parts = "syscall" :: args in
-    from_list parts
-  | Grouping expr -> Printf.sprintf "(grp %s)" (s_expr expr)
-  | Call { callee; args } ->
-    let parts = "call" :: s_expr callee :: List.map s_expr args in
-    from_list parts
-  | DotAccess { target; field } -> Printf.sprintf "(. %s %s)" (s_expr target) field
-  | ArrowAccess { target; field } -> Printf.sprintf "(-> %s %s)" (s_expr target) field
-  | Index { target; index } -> Printf.sprintf "(idx %s %s)" (s_expr target) (s_expr index)
+  let parts =
+    match e with
+    | Literal (IntLiteral value) -> [ "i32"; Int64.to_string value ]
+    | Identifier id -> [ "id"; id ]
+    | Binary { op; lhs; rhs } -> [ bin_op_repr op; s_expr lhs; s_expr rhs ]
+    | Unary { op; operand } -> [ unary_op_repr op; s_expr operand ]
+    | Syscall args -> "syscall" :: args
+    | Grouping expr -> [ "grp"; s_expr expr ]
+    | Call { callee; args } -> "call" :: s_expr callee :: List.map s_expr args
+    | DotAccess { target; field } -> [ "."; s_expr target; field ]
+    | ArrowAccess { target; field } -> [ "->"; s_expr target; field ]
+    | Index { target; index } -> [ "idx"; s_expr target; s_expr index ]
+  in
+  "(" ^ String.concat " " parts ^ ")"
 ;;
