@@ -56,7 +56,7 @@ module Precedence = struct
     | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
   ;;
 
-  let next prec = prec |> to_int |> (fun n -> n + 1) |> of_int
+  let next = to_int |> Fun.compose (fun n -> n + 1) |> Fun.compose of_int
 end
 
 type literal = IntLiteral of int64
