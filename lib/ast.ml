@@ -107,5 +107,7 @@ let rec s_expr (e : expr) : string =
   | Call { callee; args } ->
     let parts = "call" :: s_expr callee :: List.map s_expr args in
     from_list parts
-  | _ -> failwith "todo"
+  | DotAccess { target; field } -> Printf.sprintf "(. %s %s)" (s_expr target) field
+  | ArrowAccess { target; field } -> Printf.sprintf "(-> %s %s)" (s_expr target) field
+  | Index { target; index } -> Printf.sprintf "(idx %s %s)" (s_expr target) (s_expr index)
 ;;
