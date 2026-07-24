@@ -55,6 +55,8 @@ module Precedence = struct
     | n when n > 13 -> Postfix
     | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
   ;;
+
+  let next prec = prec |> to_int |> (fun n -> n + 1) |> of_int
 end
 
 type literal = IntLiteral of int64
