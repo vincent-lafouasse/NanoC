@@ -31,7 +31,14 @@ module UnaryOp = struct
   [@@deriving show]
 end
 
-type literal = IntLiteral of int64 [@@deriving show]
+type literal =
+  | IntLiteral of int64
+  | UnsignedIntLiteral of int64
+  | ByteLiteral of int64
+  | PtrLiteral of int64
+  | StringLiteral of string
+  | CharLiteral of char
+[@@deriving show]
 
 type expr =
   | Literal of literal
@@ -96,6 +103,11 @@ let rec s_expr (e : expr) : string =
   let parts =
     match e with
     | Literal (IntLiteral value) -> [ "i32"; Int64.to_string value ]
+    | Literal (UnsignedIntLiteral value) -> [ "u32"; Int64.to_string value ]
+    | Literal (ByteLiteral value) -> [ "u8"; Int64.to_string value ]
+    | Literal (PtrLiteral value) -> [ "ptr"; Int64.to_string value ]
+    | Literal (StringLiteral s) -> [ "str"; s ]
+    | Literal (CharLiteral c) -> [ "char"; String.make 1 c ]
     | Identifier id -> [ "id"; id ]
     | Binary { op; lhs; rhs } -> [ bin_op_repr op; s_expr lhs; s_expr rhs ]
     | Unary { op; operand } -> [ unary_op_repr op; s_expr operand ]
