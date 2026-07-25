@@ -73,12 +73,12 @@ let parse_expr_atom parser : (expr * t, error) result =
 ;;
 
 module Precedence = struct
-  (* higher = tighter binding
-     per https://en.cppreference.com/w/c/language/operator_precedence.html
-  *)
+  (* Expression-only precedence levels, higher = tighter binding.
+     Assignment is not here: it is a statement, not an expression
+     (ADR-0003, ADR-0009). The statement parser handles "lvalue = expr ;"
+     directly, outside the Pratt loop. *)
   type t =
     | None
-    | Assignment (* = *)
     | LogicalOr (*  || *)
     | LogicalAnd (* && *)
     | BitwiseOr (* | *)
@@ -89,44 +89,42 @@ module Precedence = struct
     | Shift (* << >> *)
     | Term (* + - *)
     | Factor (* * / % *)
-    | Prefix (* ! ~ - & *)
+    | Prefix (* ! ~ - & * *)
     | Postfix (* -> . [] () *)
   [@@deriving show]
 
   let to_int = function
     | None -> 0
-    | Assignment -> 1
-    | LogicalOr -> 2
-    | LogicalAnd -> 3
-    | BitwiseOr -> 4
-    | BitwiseXor -> 5
-    | BitwiseAnd -> 6
-    | Equality -> 7
-    | Comparison -> 8
-    | Shift -> 9
-    | Term -> 10
-    | Factor -> 11
-    | Prefix -> 12
-    | Postfix -> 13
+    | LogicalOr -> 1
+    | LogicalAnd -> 2
+    | BitwiseOr -> 3
+    | BitwiseXor -> 4
+    | BitwiseAnd -> 5
+    | Equality -> 6
+    | Comparison -> 7
+    | Shift -> 8
+    | Term -> 9
+    | Factor -> 10
+    | Prefix -> 11
+    | Postfix -> 12
   ;;
 
   let of_int = function
     | n when n < 0 -> None
     | 0 -> None
-    | 1 -> Assignment
-    | 2 -> LogicalOr
-    | 3 -> LogicalAnd
-    | 4 -> BitwiseOr
-    | 5 -> BitwiseXor
-    | 6 -> BitwiseAnd
-    | 7 -> Equality
-    | 8 -> Comparison
-    | 9 -> Shift
-    | 10 -> Term
-    | 11 -> Factor
-    | 12 -> Prefix
-    | 13 -> Postfix
-    | n when n > 13 -> Postfix
+    | 1 -> LogicalOr
+    | 2 -> LogicalAnd
+    | 3 -> BitwiseOr
+    | 4 -> BitwiseXor
+    | 5 -> BitwiseAnd
+    | 6 -> Equality
+    | 7 -> Comparison
+    | 8 -> Shift
+    | 9 -> Term
+    | 10 -> Factor
+    | 11 -> Prefix
+    | 12 -> Postfix
+    | n when n > 12 -> Postfix
     | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
   ;;
 

@@ -113,21 +113,20 @@ lvalue = expression ;
 expression = pratt_expr ;
 
 (* Pratt-parsed sub-expressions.
- * Precedence table, low to high:
- *   (1  assignment — floor only; assignment is a statement, this slot
- *                    is used when parsing the RHS to avoid over-consuming)
- *    2  ||
- *    3  &&
- *    4  |
- *    5  ^
- *    6  &
- *    7  == !=
- *    8  < <= > >=
- *    9  << >>
- *   10  + -
- *   11  * / %
- *   12  unary prefix:  ! ~ - (negate)  & (address-of)  * (deref)
- *   13  postfix:       -> .  []  ()                                          *)
+ * Precedence table, low to high (expression operators only;
+ * assignment is a statement -- ADR-0003 -- so it has no slot here):
+ *    1  ||
+ *    2  &&
+ *    3  |
+ *    4  ^
+ *    5  &
+ *    6  == !=
+ *    7  < <= > >=
+ *    8  << >>
+ *    9  + -
+ *   10  * / %
+ *   11  unary prefix:  ! ~ - (negate)  & (address-of)  * (deref)
+ *   12  postfix:       -> .  []  ()                                          *)
 pratt_expr = atom
            | pratt_expr bin_op pratt_expr
            | prefix_op pratt_expr
