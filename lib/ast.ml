@@ -73,6 +73,12 @@ type expr =
 [@@deriving show]
 
 let rec s_expr (e : expr) : string =
+  let s_expr_char (c : char) : string =
+    let code = Char.code c in
+    if code >= 0x21 && code <= 0x7E
+    then Printf.sprintf "'%c'" c
+    else Printf.sprintf "'\\x%02X'" code
+  in
   let bin_op_repr = function
     | BinaryOp.Add -> "+"
     | BinaryOp.Sub -> "-"
@@ -82,41 +88,41 @@ let rec s_expr (e : expr) : string =
     | BinaryOp.BitAnd -> "&"
     | BinaryOp.BitOr -> "|"
     | BinaryOp.BitXor -> "^"
-    | BinaryOp.Lshift -> ">>"
-    | BinaryOp.Rshift -> "<<"
+    | BinaryOp.Lshift -> "<<"
+    | BinaryOp.Rshift -> ">>"
     | BinaryOp.Eq -> "=="
     | BinaryOp.Neq -> "!="
     | BinaryOp.Lt -> "<"
     | BinaryOp.Le -> "<="
     | BinaryOp.Gt -> ">"
     | BinaryOp.Ge -> ">="
-    | BinaryOp.LogAnd -> "and"
-    | BinaryOp.LogOr -> "or"
+    | BinaryOp.LogAnd -> "&&"
+    | BinaryOp.LogOr -> "||"
   in
   let unary_op_repr = function
     | UnaryOp.Negate -> "-"
     | UnaryOp.LogNot -> "!"
     | UnaryOp.BitNot -> "~"
-    | UnaryOp.AddrOf -> "addr"
-    | UnaryOp.Deref -> "deref"
+    | UnaryOp.AddrOf -> "&"
+    | UnaryOp.Deref -> "*"
   in
-  let parts =
-    match e with
-    | Literal (IntLiteral value) -> [ "i32"; Int64.to_string value ]
-    | Literal (UnsignedIntLiteral value) -> [ "u32"; Int64.to_string value ]
-    | Literal (ByteLiteral value) -> [ "u8"; Int64.to_string value ]
-    | Literal (PtrLiteral value) -> [ "ptr"; Int64.to_string value ]
-    | Literal (StringLiteral s) -> [ "str"; s ]
-    | Literal (CharLiteral c) -> [ "char"; String.make 1 c ]
-    | Identifier id -> [ "id"; id ]
-    | Binary { op; lhs; rhs } -> [ bin_op_repr op; s_expr lhs; s_expr rhs ]
-    | Unary { op; operand } -> [ unary_op_repr op; s_expr operand ]
-    | Syscall args -> "syscall" :: List.map s_expr args
-    | Grouping expr -> [ "grp"; s_expr expr ]
-    | Call { callee; args } -> "call" :: s_expr callee :: List.map s_expr args
-    | DotAccess { target; field } -> [ "."; s_expr target; field ]
-    | ArrowAccess { target; field } -> [ "->"; s_expr target; field ]
-    | Index { target; index } -> [ "idx"; s_expr target; s_expr index ]
-  in
-  "(" ^ String.concat " " parts ^ ")"
+  match e with
+  | Literal (IntLiteral value) -> Int64.to_string value ^ "i32"
+  | Literal (UnsignedIntLiteral value) -> Int64.to_string value ^ "u32"
+  | Literal (ByteLiteral value) -> Int64.to_string value ^ "u8"
+  | Literal (PtrLiteral value) -> Int64.to_string value ^ "ptr"
+  | Literal (StringLiteral s) -> "\"" ^ s ^ "\""
+  | Literal (CharLiteral c) -> s_expr_char c
+  | Identifier id -> id
+  | Binary { op; lhs; rhs } ->
+    "(" ^ bin_op_repr op ^ " " ^ s_expr lhs ^ " " ^ s_expr rhs ^ ")"
+  | Unary { op; operand } -> "(" ^ unary_op_repr op ^ " " ^ s_expr operand ^ ")"
+  | Syscall args -> "(syscall " ^ String.concat " " (List.map s_expr args) ^ ")"
+  | Grouping expr -> "(group " ^ s_expr expr ^ ")"
+  | Call { callee; args } ->
+    let parts = "call" :: s_expr callee :: List.map s_expr args in
+    "(" ^ String.concat " " parts ^ ")"
+  | DotAccess { target; field } -> "(. " ^ s_expr target ^ " " ^ field ^ ")"
+  | ArrowAccess { target; field } -> "(-> " ^ s_expr target ^ " " ^ field ^ ")"
+  | Index { target; index } -> "([] " ^ s_expr target ^ " " ^ s_expr index ^ ")"
 ;;

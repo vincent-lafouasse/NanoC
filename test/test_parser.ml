@@ -138,12 +138,9 @@ let check_atom_sexp name source expected_sexp =
      | Ok (expr, _parser') -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
 ;;
 
-let test_atom_identifier () = check_atom_sexp "identifier atom" "foo" "(id foo)"
-let test_atom_int_literal () = check_atom_sexp "int literal atom" "42" "(i32 42)"
-
-let test_atom_string_literal () =
-  check_atom_sexp "string literal atom" {|"hi"|} "(str hi)"
-;;
+let test_atom_identifier () = check_atom_sexp "identifier atom" "foo" "foo"
+let test_atom_int_literal () = check_atom_sexp "int literal atom" "42" "42i32"
+let test_atom_string_literal () = check_atom_sexp "string literal atom" {|"hi"|} {|"hi"|}
 
 let () =
   test_identical_strings_are_equal ();
