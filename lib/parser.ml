@@ -59,7 +59,9 @@ let expect parser (expected : Token.kind) : (t, error) result =
     Error (UnexpectedToken { expected; found }))
 ;;
 
-(* atoms can be parsed without (recursive) calls to parse_expr *)
+(* atoms can be parsed without (recursive) calls to parse_expr
+   literally only identifiers and literals
+*)
 let parse_expr_atom parser : (expr * t, error) result =
   let token = get parser in
   match token.kind with
