@@ -173,7 +173,7 @@ let rec parse_expr _parser : (expr * t, error) result = Error XXX_Unimplemented_
 
 and parse_unary_expr parser : (expr * t, error) result =
   let token = get parser in
-  let maybe_base_expr =
+  let maybe_base_expr : (expr * t, error) result =
     match match_unary token.kind with
     | Some op ->
       let maybe_operand = parse_unary_expr (advance parser) in
@@ -182,7 +182,7 @@ and parse_unary_expr parser : (expr * t, error) result =
   in
   Result.bind maybe_base_expr parse_postfix
 
-and parse_postfix parser expr : (expr * t, error) result = failwith "todo"
+and parse_postfix (parser, expr) : (expr * t, error) result = failwith "todo"
 
 (* anything indivisible, so e.g. identifiers and literals, but also things such
    as syscalls (they in some way have the highest precedence, acting at the
