@@ -108,12 +108,52 @@ let test_multiline_matches_single_line () =
     "(+ (/ 1 2) (- 3 4))"
 ;;
 
+(* --- Parser.parse_expr_atom ---
+
+   Ported from aux/rs_old/src/parser.rs's parse_atom tests, adapted to NanoC's actual
+   settled design rather than transliterated verbatim: no 0x/0b literal syntax (ADR-0019 —
+   NanoC is decimal-only), and numeric literals split into IntLiteral/UnsignedIntLiteral/
+   ByteLiteral/PtrLiteral rather than one generic Number, mirroring Token.kind. Written
+   against what parse_expr_atom *should* do once implemented — most of these are expected
+   to fail red today, since only the Identifier case is implemented (see the
+   XXX_Unimplemented_XXX stub in parser.ml). *)
+
+let check_atom_sexp name source expected_sexp =
+  match Parser.init source with
+  | Error e ->
+    incr failures;
+    Printf.printf
+      "FAIL %s: lexer error while initializing parser: %s\n"
+      name
+      (Lexer.format_error e)
+  | Ok parser ->
+    (match Parser.parse_expr_atom parser with
+     | Error e ->
+       incr failures;
+       Printf.printf
+         "FAIL %s:\n  source: %S\n  parse_expr_atom returned an error: %s\n"
+         name
+         source
+         (Parser.show_error e)
+     | Ok (expr, _parser') -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
+;;
+
+let test_atom_identifier () = check_atom_sexp "identifier atom" "foo" "(id foo)"
+let test_atom_int_literal () = check_atom_sexp "int literal atom" "42" "(i32 42)"
+
+let test_atom_string_literal () =
+  check_atom_sexp "string literal atom" {|"hi"|} "(str hi)"
+;;
+
 let () =
   test_identical_strings_are_equal ();
   test_whitespace_runs_collapse_to_a_separator ();
   test_not_fully_whitespace_agnostic ();
   test_whitespace_optional_around_parens ();
   test_multiline_matches_single_line ();
+  test_atom_identifier ();
+  test_atom_int_literal ();
+  test_atom_string_literal ();
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
