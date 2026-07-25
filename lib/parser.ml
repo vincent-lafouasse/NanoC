@@ -67,7 +67,7 @@ let parse_expr_atom parser : (expr * t, error) result =
     let parser = advance parser in
     let expr = Identifier id in
     Ok (expr, parser)
-  | _ -> failwith "todo"
+  | _ -> Error XXX_Unimplemented_XXX
 ;;
 
 module Precedence = struct
