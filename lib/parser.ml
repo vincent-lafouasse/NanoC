@@ -177,3 +177,5 @@ let match_unary (token : Token.kind) : UnaryOp.t option =
   | Star -> Some Deref
   | _ -> None
 ;;
+
+let parse_expr _parser : (expr * t, error) result = Error XXX_Unimplemented_XXX
