@@ -79,7 +79,7 @@ module Precedence = struct
 
      Assignment is not here: it is a statement, not an expression
      (ADR-0003, ADR-0009).
-     *)
+  *)
   type t =
     | None
     | LogicalOr (*  || *)
