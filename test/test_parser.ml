@@ -458,8 +458,8 @@ let test_postfix_complex () =
 (* --- grouping --- *)
 
 let test_grouping_basic () =
-  check_expr_sexp "(x)" "(x)" "(group x)";
-  check_expr_sexp "(42)" "(42)" "(group 42i32)"
+  check_atom_sexp "(x)" "(x)" "(group x)";
+  check_atom_sexp "(42)" "(42)" "(group 42i32)"
 ;;
 
 let test_grouping_overrides_precedence () =
@@ -544,18 +544,18 @@ let test_integration_hash_table () =
 let test_syscall_no_args_is_error () = check_expr_error "syscall()" "syscall()"
 
 let test_syscall_one_arg () =
-  check_expr_sexp "syscall(60)" "syscall(60)" "(syscall 60i32)"
+  check_atom_sexp "syscall(60)" "syscall(60)" "(syscall 60i32)"
 ;;
 
 let test_syscall_multiple_args () =
-  check_expr_sexp
+  check_atom_sexp
     "syscall(1, 1, buf, len)"
     "syscall(1, 1, buf, len)"
     "(syscall 1i32 1i32 buf len)"
 ;;
 
 let test_syscall_expr_args () =
-  check_expr_sexp
+  check_atom_sexp
     "syscall(SYS_WRITE, STDOUT, &msg, n * 4)"
     "syscall(SYS_WRITE, STDOUT, &msg, n * 4)"
     "(syscall SYS_WRITE STDOUT (& msg) (* n 4i32))"
@@ -577,8 +577,8 @@ let test_syscall_is_atom () =
 ;;
 
 let test_syscall_realistic () =
-  check_expr_sexp "syscall(SYS_EXIT, 0)" "syscall(SYS_EXIT, 0)" "(syscall SYS_EXIT 0i32)";
-  check_expr_sexp
+  check_atom_sexp "syscall(SYS_EXIT, 0)" "syscall(SYS_EXIT, 0)" "(syscall SYS_EXIT 0i32)";
+  check_atom_sexp
     "syscall(SYS_WRITE, STDOUT, &dist, 4)"
     "syscall(SYS_WRITE, STDOUT, &dist, 4)"
     "(syscall SYS_WRITE STDOUT (& dist) 4i32)";

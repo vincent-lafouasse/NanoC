@@ -59,8 +59,9 @@ let expect parser (expected : Token.kind) : (t, error) result =
     Error (UnexpectedToken { expected; found }))
 ;;
 
-(* atoms can be parsed without (recursive) calls to parse_expr
-   literally only identifiers and literals
+(* anything indivisible, so e.g. identifiers and literals, but also things such
+   as syscalls (they in some way have the highest precedence, acting at the
+   keyword level), but also groupings
 *)
 let parse_expr_atom parser : (expr * t, error) result =
   let token = get parser in
