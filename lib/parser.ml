@@ -169,7 +169,19 @@ let match_unary (token : Token.kind) : UnaryOp.t option =
   | _ -> None
 ;;
 
-let parse_expr _parser : (expr * t, error) result = Error XXX_Unimplemented_XXX
+let rec parse_expr _parser : (expr * t, error) result = Error XXX_Unimplemented_XXX
+
+and parse_unary_expr parser : (expr * t, error) result =
+  let token = get parser in
+  let maybe_base_expr =
+    match match_unary token.kind with
+    | Some op ->
+      let maybe_operand = parse_unary_expr (advance parser) in
+      Result.map (fun (operand, parser) -> Unary { op; operand }, parser) maybe_operand
+    | None -> parse_expr_atom parser
+  in
+  let maybe_postfix = failwith "wait no the parser is in `maybe_base_expr`" in
+  failwith ""
 
 (* anything indivisible, so e.g. identifiers and literals, but also things such
    as syscalls (they in some way have the highest precedence, acting at the
