@@ -128,6 +128,8 @@ module Precedence = struct
     | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
   ;;
 
+  let less_than lhs rhs = to_int lhs < to_int rhs
+
   let of_bin_op (op : BinaryOp.t) =
     match op with
     | Add | Sub -> Term
