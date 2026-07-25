@@ -180,9 +180,10 @@ and parse_unary_expr parser : (expr * t, error) result =
       Result.map (fun (operand, parser) -> Unary { op; operand }, parser) maybe_operand
     | None -> parse_expr_atom parser
   in
-  match maybe_base_expr with
-  | Error e -> Error e
-  | Ok (e, parser) -> failwith "todo"
+  Result.bind maybe_base_expr parse_postfix
+
+and parse_postfix parser expr : (expr * t, error) result =
+  failwith "todo"
 
 (* anything indivisible, so e.g. identifiers and literals, but also things such
    as syscalls (they in some way have the highest precedence, acting at the
