@@ -19,7 +19,9 @@ let init source : (t, Lexer.error) result =
   let maybe_tokens = Lexer.tokenize source in
   let sanity_check (tokens : Token.t array) : Token.t array =
     (* check if eof at the end. i use the Eof token as my eof condition so
-       it really needs to be there *)
+       it really needs to be there
+       this just function is just identity with an assert
+     *)
     let length = Array.length tokens in
     let eof_ok =
       length > 0
