@@ -36,7 +36,9 @@ let init source : (t, Lexer.error) result =
   maybe_tokens |> Result.map sanity_check |> Result.map make_parser
 ;;
 
-let eof parser = parser.index >= parser.length
+let get parser : Token.t = parser.tokens.(parser.index)
+
+let eof parser = (get parser).kind = Token.Eof
 
 let advance parser =
   let index = if eof parser then parser.index else parser.index + 1 in
