@@ -13,6 +13,7 @@ type error =
       { expected : string
       ; found : Token.t
       }
+  | XXX_Unimplemented_XXX
 [@@deriving show]
 
 let init source : (t, Lexer.error) result =
