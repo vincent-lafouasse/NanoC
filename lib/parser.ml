@@ -49,6 +49,15 @@ let advance parser =
   { parser with index }
 ;;
 
+let expect parser (expected : Token.kind) : (t, error) result =
+  let found = get parser in
+  if found.kind = expected
+  then Ok (advance parser)
+  else (
+    let expected = Token.show_kind expected in
+    Error (UnexpectedToken { expected; found }))
+;;
+
 module Precedence = struct
   (* higher = tighter binding
      per https://en.cppreference.com/w/c/language/operator_precedence.html
