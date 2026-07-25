@@ -58,6 +58,17 @@ let expect parser (expected : Token.kind) : (t, error) result =
     Error (UnexpectedToken { expected; found }))
 ;;
 
+(* atoms can be parsed without (recursive) calls to parse_expr *)
+let parse_expr_atom parser : (expr * t, error) result =
+  let token = get parser in
+  match token.kind with
+  | Identifier id ->
+    let parser = advance parser in
+    let expr = Identifier id in
+    Ok (expr, parser)
+  | _ -> failwith "todo"
+;;
+
 module Precedence = struct
   (* higher = tighter binding
      per https://en.cppreference.com/w/c/language/operator_precedence.html
