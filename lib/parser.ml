@@ -127,8 +127,7 @@ module Precedence = struct
     | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
   ;;
 
-  let of_bin_op op =
-    let open BinaryOp in
+  let of_bin_op (op : BinaryOp.t) =
     match op with
     | Add | Sub -> Term
     | Mul | Div | Mod -> Factor
@@ -145,37 +144,35 @@ module Precedence = struct
   let next = to_int |> Fun.compose (fun n -> n + 1) |> Fun.compose of_int
 end
 
-let match_binary token =
-  let open BinaryOp in
+let match_binary (token : Token.kind) : BinaryOp.t option =
   match token with
-  | Token.Plus -> Some Add
-  | Token.Minus -> Some Sub
-  | Token.Star -> Some Mul
-  | Token.Divides -> Some Div
-  | Token.Modulo -> Some Mod
-  | Token.Ampersand -> Some BitAnd
-  | Token.BitwiseOr -> Some BitOr
-  | Token.BitwiseXor -> Some BitXor
-  | Token.ShiftLeft -> Some Lshift
-  | Token.ShiftRight -> Some Rshift
-  | Token.Equals -> Some Eq
-  | Token.NotEquals -> Some Neq
-  | Token.LessThan -> Some Lt
-  | Token.GreaterThan -> Some Gt
-  | Token.LessEquals -> Some Le
-  | Token.GreaterEquals -> Some Ge
-  | Token.LogicalAnd -> Some LogAnd
-  | Token.LogicalOr -> Some LogOr
+  | Plus -> Some Add
+  | Minus -> Some Sub
+  | Star -> Some Mul
+  | Divides -> Some Div
+  | Modulo -> Some Mod
+  | Ampersand -> Some BitAnd
+  | BitwiseOr -> Some BitOr
+  | BitwiseXor -> Some BitXor
+  | ShiftLeft -> Some Lshift
+  | ShiftRight -> Some Rshift
+  | Equals -> Some Eq
+  | NotEquals -> Some Neq
+  | LessThan -> Some Lt
+  | GreaterThan -> Some Gt
+  | LessEquals -> Some Le
+  | GreaterEquals -> Some Ge
+  | LogicalAnd -> Some LogAnd
+  | LogicalOr -> Some LogOr
   | _ -> None
 ;;
 
-let match_unary token =
-  let open UnaryOp in
+let match_unary (token : Token.kind) : UnaryOp.t option =
   match token with
-  | Token.Minus -> Some Negate
-  | Token.LogicalNot -> Some LogNot
-  | Token.BitwiseNot -> Some BitNot
-  | Token.Ampersand -> Some AddrOf
-  | Token.Star -> Some Deref
+  | Minus -> Some Negate
+  | LogicalNot -> Some LogNot
+  | BitwiseNot -> Some BitNot
+  | Ampersand -> Some AddrOf
+  | Star -> Some Deref
   | _ -> None
 ;;
