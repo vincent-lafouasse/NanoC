@@ -74,9 +74,11 @@ let parse_expr_atom parser : (expr * t, error) result =
 
 module Precedence = struct
   (* Expression-only precedence levels, higher = tighter binding.
+     per https://en.cppreference.com/w/c/language/operator_precedence.html
+
      Assignment is not here: it is a statement, not an expression
-     (ADR-0003, ADR-0009). The statement parser handles "lvalue = expr ;"
-     directly, outside the Pratt loop. *)
+     (ADR-0003, ADR-0009).
+     *)
   type t =
     | None
     | LogicalOr (*  || *)
