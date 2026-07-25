@@ -59,51 +59,6 @@ let expect parser (expected : Token.kind) : (t, error) result =
     Error (UnexpectedToken { expected; found }))
 ;;
 
-(* anything indivisible, so e.g. identifiers and literals, but also things such
-   as syscalls (they in some way have the highest precedence, acting at the
-   keyword level), but also groupings
-*)
-let parse_expr_atom parser : (expr * t, error) result =
-  let token = get parser in
-  match token.kind with
-  | Identifier id ->
-    let parser = advance parser in
-    let expr = Identifier id in
-    Ok (expr, parser)
-  | StringLiteral s ->
-    let parser = advance parser in
-    let expr = Literal (StringLiteral s) in
-    Ok (expr, parser)
-  | CharLiteral ch ->
-    let parser = advance parser in
-    let expr = Literal (CharLiteral ch) in
-    Ok (expr, parser)
-  | IntLiteral i ->
-    let parser = advance parser in
-    let expr = Literal (IntLiteral i) in
-    Ok (expr, parser)
-  | UnsignedIntLiteral u ->
-    let parser = advance parser in
-    let expr = Literal (UnsignedIntLiteral u) in
-    Ok (expr, parser)
-  | ByteLiteral b ->
-    let parser = advance parser in
-    let expr = Literal (ByteLiteral b) in
-    Ok (expr, parser)
-  | PtrLiteral p ->
-    let parser = advance parser in
-    let expr = Literal (PtrLiteral p) in
-    Ok (expr, parser)
-  | _ ->
-    let err =
-      UnexpectedToken
-        { expected = "expression atom: variable, literal, system call, or grouping"
-        ; found = token
-        }
-    in
-    Error err
-;;
-
 module Precedence = struct
   (* Expression-only precedence levels, higher = tighter binding.
      per https://en.cppreference.com/w/c/language/operator_precedence.html
@@ -215,3 +170,48 @@ let match_unary (token : Token.kind) : UnaryOp.t option =
 ;;
 
 let parse_expr _parser : (expr * t, error) result = Error XXX_Unimplemented_XXX
+
+(* anything indivisible, so e.g. identifiers and literals, but also things such
+   as syscalls (they in some way have the highest precedence, acting at the
+   keyword level), but also groupings
+*)
+and parse_expr_atom parser : (expr * t, error) result =
+  let token = get parser in
+  match token.kind with
+  | Identifier id ->
+    let parser = advance parser in
+    let expr = Identifier id in
+    Ok (expr, parser)
+  | StringLiteral s ->
+    let parser = advance parser in
+    let expr = Literal (StringLiteral s) in
+    Ok (expr, parser)
+  | CharLiteral ch ->
+    let parser = advance parser in
+    let expr = Literal (CharLiteral ch) in
+    Ok (expr, parser)
+  | IntLiteral i ->
+    let parser = advance parser in
+    let expr = Literal (IntLiteral i) in
+    Ok (expr, parser)
+  | UnsignedIntLiteral u ->
+    let parser = advance parser in
+    let expr = Literal (UnsignedIntLiteral u) in
+    Ok (expr, parser)
+  | ByteLiteral b ->
+    let parser = advance parser in
+    let expr = Literal (ByteLiteral b) in
+    Ok (expr, parser)
+  | PtrLiteral p ->
+    let parser = advance parser in
+    let expr = Literal (PtrLiteral p) in
+    Ok (expr, parser)
+  | _ ->
+    let err =
+      UnexpectedToken
+        { expected = "expression atom: variable, literal, system call, or grouping"
+        ; found = token
+        }
+    in
+    Error err
+;;
