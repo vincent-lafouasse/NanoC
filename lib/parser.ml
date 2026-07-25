@@ -70,7 +70,38 @@ let parse_expr_atom parser : (expr * t, error) result =
     let parser = advance parser in
     let expr = Identifier id in
     Ok (expr, parser)
-  | _ -> Error XXX_Unimplemented_XXX
+  | StringLiteral s ->
+    let parser = advance parser in
+    let expr = Literal (StringLiteral s) in
+    Ok (expr, parser)
+  | CharLiteral ch ->
+    let parser = advance parser in
+    let expr = Literal (CharLiteral ch) in
+    Ok (expr, parser)
+  | IntLiteral i ->
+    let parser = advance parser in
+    let expr = Literal (IntLiteral i) in
+    Ok (expr, parser)
+  | UnsignedIntLiteral u ->
+    let parser = advance parser in
+    let expr = Literal (UnsignedIntLiteral u) in
+    Ok (expr, parser)
+  | ByteLiteral b ->
+    let parser = advance parser in
+    let expr = Literal (ByteLiteral b) in
+    Ok (expr, parser)
+  | PtrLiteral p ->
+    let parser = advance parser in
+    let expr = Literal (PtrLiteral p) in
+    Ok (expr, parser)
+  | _ ->
+    let err =
+      UnexpectedToken
+        { expected = "expression atom: variable, literal, system call, or grouping"
+        ; found = token
+        }
+    in
+    Error err
 ;;
 
 module Precedence = struct
