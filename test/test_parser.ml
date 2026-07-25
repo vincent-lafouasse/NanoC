@@ -89,8 +89,6 @@ let test_whitespace_runs_collapse_to_a_separator () =
 ;;
 
 let test_not_fully_whitespace_agnostic () =
-  (* "( abc )" is one atom "abc", not three atoms "a" "b" "c" — whitespace is a
-     separator, not something silently deleted from inside an atom's boundaries *)
   check_sexp_not_equal "( abc ) is not (a b c)" "(a b c)" "( abc )"
 ;;
 
@@ -108,15 +106,7 @@ let test_multiline_matches_single_line () =
     "(+ (/ 1 2) (- 3 4))"
 ;;
 
-(* --- Parser.parse_expr_atom ---
-
-   Ported from aux/rs_old/src/parser.rs's parse_atom tests, adapted to NanoC's actual
-   settled design rather than transliterated verbatim: no 0x/0b literal syntax (ADR-0019 —
-   NanoC is decimal-only), and numeric literals split into IntLiteral/UnsignedIntLiteral/
-   ByteLiteral/PtrLiteral rather than one generic Number, mirroring Token.kind. Written
-   against what parse_expr_atom *should* do once implemented — most of these are expected
-   to fail red today, since only the Identifier case is implemented (see the
-   XXX_Unimplemented_XXX stub in parser.ml). *)
+(* --- Parser.parse_expr_atom --- *)
 
 let check_atom_sexp name source expected_sexp =
   match Parser.init source with
@@ -138,19 +128,665 @@ let check_atom_sexp name source expected_sexp =
      | Ok (expr, _parser') -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
 ;;
 
-let test_atom_identifier () = check_atom_sexp "identifier atom" "foo" "foo"
-let test_atom_int_literal () = check_atom_sexp "int literal atom" "42" "42i32"
-let test_atom_string_literal () = check_atom_sexp "string literal atom" {|"hi"|} {|"hi"|}
+let test_atom_identifier () =
+  check_atom_sexp "identifier" "foo" "foo";
+  check_atom_sexp "underscore identifier" "_private" "_private";
+  check_atom_sexp "alphanumeric identifier" "x123" "x123"
+;;
+
+let test_atom_int_literal () =
+  check_atom_sexp "int literal 42" "42" "42i32";
+  check_atom_sexp "int literal 0" "0" "0i32";
+  check_atom_sexp "int literal i32 max" "2147483647" "2147483647i32"
+;;
+
+let test_atom_string_literal () =
+  check_atom_sexp "string hello" {|"hello"|} {|"hello"|};
+  check_atom_sexp "string empty" {|""|} {|""|}
+;;
+
+let test_atom_char_literal () =
+  check_atom_sexp "char a" "'a'" "'a'";
+  check_atom_sexp "char Z" "'Z'" "'Z'";
+  check_atom_sexp "char 0" "'0'" "'0'"
+;;
+
+let test_atom_char_escapes () =
+  check_atom_sexp "char \\n" {|'\n'|} "'\\x0A'";
+  check_atom_sexp "char \\t" {|'\t'|} "'\\x09'";
+  check_atom_sexp "char \\0" {|'\0'|} "'\\x00'";
+  check_atom_sexp "char \\'" {|'\''|} "'''";
+  check_atom_sexp "char \\\\" {|'\\'|} "'\\'"
+;;
+
+let test_atom_char_hex_escape () =
+  check_atom_sexp "char \\x41 = A" {|'\x41'|} "'A'";
+  check_atom_sexp "char \\xFF" {|'\xFF'|} "'\\xFF'";
+  check_atom_sexp "char \\x00" {|'\x00'|} "'\\x00'"
+;;
+
+(* --- Parser.parse_expr ---
+
+   Ported from aux/rs_old/src/parser.rs's parse_expr tests. Adapted to NanoC's OCaml
+   implementation: no 0x/0b literals (ADR-0019), s-expr atoms carry type suffixes
+   (42i32, 255u32, etc.), and s-expr operators use their source symbols rather than
+   English names. All tests are expected to fail red today -- parse_expr returns
+   XXX_Unimplemented_XXX. *)
+
+let check_expr_sexp name source expected_sexp =
+  match Parser.init source with
+  | Error e ->
+    incr failures;
+    Printf.printf "FAIL %s: lexer error: %s\n" name (Lexer.format_error e)
+  | Ok parser ->
+    (match Parser.parse_expr parser with
+     | Error e ->
+       incr failures;
+       Printf.printf
+         "FAIL %s:\n  source: %S\n  error: %s\n"
+         name
+         source
+         (Parser.show_error e)
+     | Ok (expr, _) -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
+;;
+
+let check_expr_error name source =
+  match Parser.init source with
+  | Error _ -> ()
+  | Ok parser ->
+    (match Parser.parse_expr parser with
+     | Error _ -> ()
+     | Ok (expr, _) ->
+       incr failures;
+       Printf.printf "FAIL %s: expected error, got: %s\n" name (Ast.s_expr expr))
+;;
+
+(* --- simple binary --- *)
+
+let test_expr_simple_binary () =
+  check_expr_sexp "1 + 2" "1 + 2" "(+ 1i32 2i32)";
+  check_expr_sexp "3 * 4" "3 * 4" "(* 3i32 4i32)";
+  check_expr_sexp "x - y" "x - y" "(- x y)"
+;;
+
+(* --- precedence --- *)
+
+let test_expr_precedence () =
+  check_expr_sexp "1 + 2 * 3" "1 + 2 * 3" "(+ 1i32 (* 2i32 3i32))";
+  check_expr_sexp "1 * 2 + 3" "1 * 2 + 3" "(+ (* 1i32 2i32) 3i32)";
+  check_expr_sexp "a * b + c * d" "a * b + c * d" "(+ (* a b) (* c d))"
+;;
+
+(* --- left associativity --- *)
+
+let test_expr_left_associative () =
+  check_expr_sexp "1 + 2 + 3" "1 + 2 + 3" "(+ (+ 1i32 2i32) 3i32)";
+  check_expr_sexp "10 - 5 - 2" "10 - 5 - 2" "(- (- 10i32 5i32) 2i32)";
+  check_expr_sexp "a * b * c" "a * b * c" "(* (* a b) c)"
+;;
+
+(* --- prefix in expressions --- *)
+
+let test_expr_with_prefix () =
+  check_expr_sexp "-1 + 2" "-1 + 2" "(+ (- 1i32) 2i32)";
+  check_expr_sexp "1 + -2" "1 + -2" "(+ 1i32 (- 2i32))";
+  check_expr_sexp "!a && b" "!a && b" "(&& (! a) b)";
+  check_expr_sexp "*p + 5" "*p + 5" "(+ (* p) 5i32)"
+;;
+
+(* --- bitwise --- *)
+
+let test_expr_bitwise () =
+  check_expr_sexp "a | b" "a | b" "(| a b)";
+  check_expr_sexp "x & y" "x & y" "(& x y)";
+  check_expr_sexp "a ^ b" "a ^ b" "(^ a b)";
+  check_expr_sexp "a | b & c" "a | b & c" "(| a (& b c))"
+;;
+
+(* --- comparison --- *)
+
+let test_expr_comparison () =
+  check_expr_sexp "x == y" "x == y" "(== x y)";
+  check_expr_sexp "a < b" "a < b" "(< a b)";
+  check_expr_sexp "x <= y" "x <= y" "(<= x y)";
+  check_expr_sexp "a + b < c * d" "a + b < c * d" "(< (+ a b) (* c d))"
+;;
+
+(* --- logical --- *)
+
+let test_expr_logical () =
+  check_expr_sexp "a && b" "a && b" "(&& a b)";
+  check_expr_sexp "x || y" "x || y" "(|| x y)";
+  check_expr_sexp "a && b || c" "a && b || c" "(|| (&& a b) c)";
+  check_expr_sexp "a < b && c > d" "a < b && c > d" "(&& (< a b) (> c d))"
+;;
+
+(* --- shifts --- *)
+
+let test_expr_shifts () =
+  check_expr_sexp "x << 2" "x << 2" "(<< x 2i32)";
+  check_expr_sexp "y >> 1" "y >> 1" "(>> y 1i32)";
+  check_expr_sexp "a + b << 2" "a + b << 2" "(<< (+ a b) 2i32)"
+;;
+
+(* --- complex --- *)
+
+let test_expr_complex () =
+  check_expr_sexp "1 + 2 * 3 - 4" "1 + 2 * 3 - 4" "(- (+ 1i32 (* 2i32 3i32)) 4i32)";
+  check_expr_sexp "a * b + c / d" "a * b + c / d" "(+ (* a b) (/ c d))";
+  check_expr_sexp "x & 255 == 0" "x & 255 == 0" "(& x (== 255i32 0i32))"
+;;
+
+(* --- precedence: each pair of adjacent levels --- *)
+
+let test_prec_logical_or_vs_and () =
+  check_expr_sexp "a || b && c" "a || b && c" "(|| a (&& b c))";
+  check_expr_sexp "a || b || c" "a || b || c" "(|| (|| a b) c)"
+;;
+
+let test_prec_logical_and_vs_bitwise_or () =
+  check_expr_sexp "a && b | c" "a && b | c" "(&& a (| b c))";
+  check_expr_sexp "a && b && c" "a && b && c" "(&& (&& a b) c)"
+;;
+
+let test_prec_bitwise_or_vs_xor () =
+  check_expr_sexp "a | b ^ c" "a | b ^ c" "(| a (^ b c))"
+;;
+
+let test_prec_bitwise_xor_vs_and () =
+  check_expr_sexp "a ^ b & c" "a ^ b & c" "(^ a (& b c))"
+;;
+
+let test_prec_bitwise_and_vs_equality () =
+  check_expr_sexp "a & b == c" "a & b == c" "(& a (== b c))";
+  check_expr_sexp "a & b != c" "a & b != c" "(& a (!= b c))";
+  check_expr_sexp "x & mask == value" "x & mask == value" "(& x (== mask value))"
+;;
+
+let test_prec_equality_vs_comparison () =
+  check_expr_sexp "a == b < c" "a == b < c" "(== a (< b c))";
+  check_expr_sexp "a != b >= c" "a != b >= c" "(!= a (>= b c))"
+;;
+
+let test_prec_comparison_vs_shift () =
+  check_expr_sexp "a < b << c" "a < b << c" "(< a (<< b c))";
+  check_expr_sexp "a > b >> c" "a > b >> c" "(> a (>> b c))"
+;;
+
+let test_prec_shift_vs_add () =
+  check_expr_sexp "a << b + c" "a << b + c" "(<< a (+ b c))";
+  check_expr_sexp "a >> b - c" "a >> b - c" "(>> a (- b c))"
+;;
+
+let test_prec_add_vs_factor () =
+  check_expr_sexp "a + b * c" "a + b * c" "(+ a (* b c))";
+  check_expr_sexp "a - b / c" "a - b / c" "(- a (/ b c))";
+  check_expr_sexp "a - b % c" "a - b % c" "(- a (% b c))"
+;;
+
+let test_prec_unary_binds_tightest () =
+  check_expr_sexp "-a * b" "-a * b" "(* (- a) b)";
+  check_expr_sexp "~a + b" "~a + b" "(+ (~ a) b)";
+  check_expr_sexp "!a || b" "!a || b" "(|| (! a) b)";
+  check_expr_sexp "*a == b" "*a == b" "(== (* a) b)";
+  check_expr_sexp "a + -b" "a + -b" "(+ a (- b))";
+  check_expr_sexp "a * -b * c" "a * -b * c" "(* (* a (- b)) c)"
+;;
+
+let test_prec_long_chains () =
+  check_expr_sexp "a + b + c + d + e" "a + b + c + d + e" "(+ (+ (+ (+ a b) c) d) e)";
+  check_expr_sexp "a * b * c * d" "a * b * c * d" "(* (* (* a b) c) d)";
+  check_expr_sexp "a + b - c + d - e" "a + b - c + d - e" "(- (+ (- (+ a b) c) d) e)"
+;;
+
+let test_prec_full_hierarchy () =
+  check_expr_sexp
+    "full hierarchy"
+    "a || b && c | d ^ e & f == g < h << i + j * k"
+    "(|| a (&& b (| c (^ d (& e (== f (< g (<< h (+ i (* j k))))))))))"
+;;
+
+(* --- function calls --- *)
+
+let test_function_call_no_args () = check_expr_sexp "foo()" "foo()" "(call foo)"
+
+let test_function_call_one_arg () = check_expr_sexp "foo(x)" "foo(x)" "(call foo x)"
+
+let test_function_call_multiple_args () =
+  check_expr_sexp "foo(a, b, c)" "foo(a, b, c)" "(call foo a b c)"
+;;
+
+let test_function_call_expr_args () =
+  check_expr_sexp
+    "foo(a + b, c * d, !flag)"
+    "foo(a + b, c * d, !flag)"
+    "(call foo (+ a b) (* c d) (! flag))"
+;;
+
+let test_function_call_nested () =
+  check_expr_sexp
+    "foo(bar(x), baz(y, z))"
+    "foo(bar(x), baz(y, z))"
+    "(call foo (call bar x) (call baz y z))"
+;;
+
+let test_function_call_in_expression () =
+  check_expr_sexp "foo(a) + bar(b)" "foo(a) + bar(b)" "(+ (call foo a) (call bar b))";
+  check_expr_sexp "foo(x) * 2 + 1" "foo(x) * 2 + 1" "(+ (* (call foo x) 2i32) 1i32)"
+;;
+
+(* --- arrow access --- *)
+
+let test_arrow_field_access () = check_expr_sexp "p->x" "p->x" "(-> p x)"
+
+let test_arrow_chained () =
+  check_expr_sexp "p->next->val" "p->next->val" "(-> (-> p next) val)";
+  check_expr_sexp "a->b->c->d" "a->b->c->d" "(-> (-> (-> a b) c) d)"
+;;
+
+let test_arrow_in_expression () =
+  check_expr_sexp "p->x + p->y" "p->x + p->y" "(+ (-> p x) (-> p y))";
+  check_expr_sexp
+    "p->x * p->x + p->y * p->y"
+    "p->x * p->x + p->y * p->y"
+    "(+ (* (-> p x) (-> p x)) (* (-> p y) (-> p y)))"
+;;
+
+(* --- dot access --- *)
+
+let test_dot_field_access () =
+  check_expr_sexp "s.x" "s.x" "(. s x)";
+  check_expr_sexp "s.x + s.y" "s.x + s.y" "(+ (. s x) (. s y))"
+;;
+
+(* --- array indexing --- *)
+
+let test_array_index () =
+  check_expr_sexp "arr[i]" "arr[i]" "([] arr i)";
+  check_expr_sexp "arr[i + 1]" "arr[i + 1]" "([] arr (+ i 1i32))"
+;;
+
+let test_array_index_chained () =
+  check_expr_sexp "matrix[i][j]" "matrix[i][j]" "([] ([] matrix i) j)"
+;;
+
+let test_array_index_in_expression () =
+  check_expr_sexp
+    "arr[i] + arr[i + 1]"
+    "arr[i] + arr[i + 1]"
+    "(+ ([] arr i) ([] arr (+ i 1i32)))"
+;;
+
+(* --- mixed postfix --- *)
+
+let test_postfix_mixed () =
+  check_expr_sexp "arr[i]->x" "arr[i]->x" "(-> ([] arr i) x)";
+  check_expr_sexp "get_point()->x" "get_point()->x" "(-> (call get_point) x)";
+  check_expr_sexp "vtable[i](x)" "vtable[i](x)" "(call ([] vtable i) x)"
+;;
+
+(* --- unary on postfix --- *)
+
+let test_unary_on_postfix () =
+  check_expr_sexp "*get_ptr()" "*get_ptr()" "(* (call get_ptr))";
+  check_expr_sexp "&p->x" "&p->x" "(& (-> p x))";
+  check_expr_sexp "-p->val" "-p->val" "(- (-> p val))";
+  check_expr_sexp "!arr[i]" "!arr[i]" "(! ([] arr i))"
+;;
+
+(* --- complex postfix --- *)
+
+let test_postfix_complex () =
+  check_expr_sexp
+    "p->x * p->y + foo(a, b->z) == get_val(arr[i])"
+    "p->x * p->y + foo(a, b->z) == get_val(arr[i])"
+    "(== (+ (* (-> p x) (-> p y)) (call foo a (-> b z))) (call get_val ([] arr i)))";
+  check_expr_sexp
+    "!is_valid(p->data) && count > 0"
+    "!is_valid(p->data) && count > 0"
+    "(&& (! (call is_valid (-> p data))) (> count 0i32))";
+  check_expr_sexp
+    {|buf[len - 1] != '\0'|}
+    {|buf[len - 1] != '\0'|}
+    {|(!= ([] buf (- len 1i32)) '\x00')|};
+  check_expr_sexp
+    "&arr[i] + stride * j"
+    "&arr[i] + stride * j"
+    "(+ (& ([] arr i)) (* stride j))"
+;;
+
+(* --- grouping --- *)
+
+let test_grouping_basic () =
+  check_expr_sexp "(x)" "(x)" "(group x)";
+  check_expr_sexp "(42)" "(42)" "(group 42i32)"
+;;
+
+let test_grouping_overrides_precedence () =
+  check_expr_sexp "(a + b) * c" "(a + b) * c" "(* (group (+ a b)) c)";
+  check_expr_sexp "a * (b + c)" "a * (b + c)" "(* a (group (+ b c)))";
+  check_expr_sexp "(a || b) && c" "(a || b) && c" "(&& (group (|| a b)) c)"
+;;
+
+let test_grouping_nested () =
+  check_expr_sexp "((a + b))" "((a + b))" "(group (group (+ a b)))";
+  check_expr_sexp "(a + (b * c))" "(a + (b * c))" "(group (+ a (group (* b c))))"
+;;
+
+let test_grouping_with_postfix () =
+  check_expr_sexp
+    "(get_node())->next"
+    "(get_node())->next"
+    "(-> (group (call get_node)) next)";
+  check_expr_sexp "(*p).field" "(*p).field" "(. (group (* p)) field)";
+  check_expr_sexp
+    "(fn_table[op])(x, y)"
+    "(fn_table[op])(x, y)"
+    "(call (group ([] fn_table op)) x y)"
+;;
+
+(* --- integration: linked list --- *)
+
+let test_integration_linked_list () =
+  check_expr_sexp
+    "node->next != 0 && node->val > threshold"
+    "node->next != 0 && node->val > threshold"
+    "(&& (!= (-> node next) 0i32) (> (-> node val) threshold))";
+  check_expr_sexp
+    "node->next->next->data[0]"
+    "node->next->next->data[0]"
+    "([] (-> (-> (-> node next) next) data) 0i32)"
+;;
+
+(* --- integration: bit manipulation --- *)
+
+let test_integration_bit_manipulation () =
+  check_expr_sexp
+    "(reg >> shift) & mask"
+    "(reg >> shift) & mask"
+    "(& (group (>> reg shift)) mask)";
+  check_expr_sexp
+    "flags | (1 << bit_pos)"
+    "flags | (1 << bit_pos)"
+    "(| flags (group (<< 1i32 bit_pos)))";
+  check_expr_sexp "val & ~(1 << n)" "val & ~(1 << n)" "(& val (~ (group (<< 1i32 n))))";
+  check_expr_sexp "(hi << 8) | lo" "(hi << 8) | lo" "(| (group (<< hi 8i32)) lo)"
+;;
+
+(* --- integration: buffer bounds --- *)
+
+let test_integration_buffer_bounds () =
+  check_expr_sexp
+    {|i >= 0 && i < len && buf[i] != '\0'|}
+    {|i >= 0 && i < len && buf[i] != '\0'|}
+    {|(&& (&& (>= i 0i32) (< i len)) (!= ([] buf i) '\x00'))|};
+  check_expr_sexp
+    "*(base + offset * stride)"
+    "*(base + offset * stride)"
+    "(* (group (+ base (* offset stride))))"
+;;
+
+(* --- integration: hash table --- *)
+
+let test_integration_hash_table () =
+  check_expr_sexp
+    "hash_fn(key) % table->capacity"
+    "hash_fn(key) % table->capacity"
+    "(% (call hash_fn key) (-> table capacity))";
+  check_expr_sexp
+    "table->buckets[hash_fn(key) % table->capacity]->value"
+    "table->buckets[hash_fn(key) % table->capacity]->value"
+    "(-> ([] (-> table buckets) (% (call hash_fn key) (-> table capacity))) value)"
+;;
+
+(* --- syscall --- *)
+
+let test_syscall_no_args_is_error () = check_expr_error "syscall()" "syscall()"
+
+let test_syscall_one_arg () =
+  check_expr_sexp "syscall(60)" "syscall(60)" "(syscall 60i32)"
+;;
+
+let test_syscall_multiple_args () =
+  check_expr_sexp
+    "syscall(1, 1, buf, len)"
+    "syscall(1, 1, buf, len)"
+    "(syscall 1i32 1i32 buf len)"
+;;
+
+let test_syscall_expr_args () =
+  check_expr_sexp
+    "syscall(SYS_WRITE, STDOUT, &msg, n * 4)"
+    "syscall(SYS_WRITE, STDOUT, &msg, n * 4)"
+    "(syscall SYS_WRITE STDOUT (& msg) (* n 4i32))"
+;;
+
+let test_syscall_is_atom () =
+  check_expr_sexp
+    "syscall(60, 0) + 1"
+    "syscall(60, 0) + 1"
+    "(+ (syscall 60i32 0i32) 1i32)";
+  check_expr_sexp
+    "!syscall(1, fd, buf, len)"
+    "!syscall(1, fd, buf, len)"
+    "(! (syscall 1i32 fd buf len))";
+  check_expr_sexp
+    "syscall(1, 1, s, 16) < 0"
+    "syscall(1, 1, s, 16) < 0"
+    "(< (syscall 1i32 1i32 s 16i32) 0i32)"
+;;
+
+let test_syscall_realistic () =
+  check_expr_sexp "syscall(SYS_EXIT, 0)" "syscall(SYS_EXIT, 0)" "(syscall SYS_EXIT 0i32)";
+  check_expr_sexp
+    "syscall(SYS_WRITE, STDOUT, &dist, 4)"
+    "syscall(SYS_WRITE, STDOUT, &dist, 4)"
+    "(syscall SYS_WRITE STDOUT (& dist) 4i32)";
+  check_expr_sexp
+    "syscall(SYS_WRITE, STDOUT, s, 16) < 0 && errno != 0"
+    "syscall(SYS_WRITE, STDOUT, s, 16) < 0 && errno != 0"
+    "(&& (< (syscall SYS_WRITE STDOUT s 16i32) 0i32) (!= errno 0i32))"
+;;
+
+(* --- error cases --- *)
+
+let test_expr_error_empty_parens () = check_expr_error "empty parens" "()"
+
+let test_expr_error_missing_closing_paren () =
+  check_expr_error "missing closing paren" "(a + b"
+;;
+
+let test_expr_error_missing_closing_bracket () =
+  check_expr_error "missing closing bracket" "arr[i"
+;;
+
+let test_expr_error_dangling_binary_op () = check_expr_error "dangling binary op" "a +"
+
+let test_expr_error_dangling_prefix_at_end () =
+  check_expr_error "dangling prefix: a + -" "a + -";
+  check_expr_error "dangling prefix: a + !" "a + !"
+;;
+
+let test_expr_error_leading_nonprefix_op () =
+  check_expr_error "leading /" "/ a";
+  check_expr_error "leading %" "% a";
+  check_expr_error "leading ==" "== a";
+  check_expr_error "leading <<" "<< a";
+  check_expr_error "leading ||" "|| a"
+;;
+
+let test_expr_error_double_binary_op () =
+  check_expr_error "a + / b" "a + / b";
+  check_expr_error "a == == b" "a == == b"
+;;
+
+let test_expr_error_empty_brackets () = check_expr_error "arr[]" "arr[]"
+
+let test_expr_error_arrow_missing_field () =
+  check_expr_error "p->42" "p->42";
+  check_expr_error "p->" "p->"
+;;
+
+let test_expr_error_dot_missing_field () =
+  check_expr_error "s.42" "s.42";
+  check_expr_error "s." "s."
+;;
+
+let test_call_missing_comma () =
+  check_expr_error "foo(a b)" "foo(a b)";
+  check_expr_error "foo(a + b c * d)" "foo(a + b c * d)"
+;;
+
+let test_call_trailing_comma () = check_expr_error "foo(a, b,)" "foo(a, b,)"
+
+let test_syscall_missing_comma () = check_expr_error "syscall(1 2)" "syscall(1 2)"
+
+let test_syscall_trailing_comma () = check_expr_error "syscall(1,)" "syscall(1,)"
+
+(* --- prefix/binary ambiguity --- *)
+
+let test_ampersand_prefix_then_binary () = check_expr_sexp "&a & b" "&a & b" "(& (& a) b)"
+
+let test_star_prefix_then_binary () = check_expr_sexp "*a * b" "*a * b" "(* (* a) b)"
+
+let test_minus_prefix_then_binary () = check_expr_sexp "-a - b" "-a - b" "(- (- a) b)"
+
+let test_double_deref_then_mul () =
+  check_expr_sexp "**pp * x" "**pp * x" "(* (* (* pp)) x)"
+;;
+
+let test_addr_of_deref_then_bitwise_and () =
+  check_expr_sexp "&*p & mask" "&*p & mask" "(& (& (* p)) mask)"
+;;
+
+(* --- additional operator coverage --- *)
+
+let test_expr_div () = check_expr_sexp "a / b" "a / b" "(/ a b)"
+
+let test_expr_mod () = check_expr_sexp "a % b" "a % b" "(% a b)"
+
+let test_expr_neq () = check_expr_sexp "a != b" "a != b" "(!= a b)"
+
+let test_expr_shift_left_associative () =
+  check_expr_sexp "a << b << c" "a << b << c" "(<< (<< a b) c)";
+  check_expr_sexp "a >> b >> c" "a >> b >> c" "(>> (>> a b) c)"
+;;
+
+let test_expr_comparison_same_level () =
+  check_expr_sexp "a < b > c" "a < b > c" "(> (< a b) c)";
+  check_expr_sexp "a <= b >= c" "a <= b >= c" "(>= (<= a b) c)"
+;;
+
+let test_expr_equality_left_associative () =
+  check_expr_sexp "a == b != c" "a == b != c" "(!= (== a b) c)"
+;;
+
+(* --- runner --- *)
 
 let () =
+  (* comparator self-tests *)
   test_identical_strings_are_equal ();
   test_whitespace_runs_collapse_to_a_separator ();
   test_not_fully_whitespace_agnostic ();
   test_whitespace_optional_around_parens ();
   test_multiline_matches_single_line ();
+  (* atoms *)
   test_atom_identifier ();
   test_atom_int_literal ();
   test_atom_string_literal ();
+  test_atom_char_literal ();
+  test_atom_char_escapes ();
+  test_atom_char_hex_escape ();
+  (* simple binary *)
+  test_expr_simple_binary ();
+  (* precedence *)
+  test_expr_precedence ();
+  test_expr_left_associative ();
+  test_expr_with_prefix ();
+  test_expr_bitwise ();
+  test_expr_comparison ();
+  test_expr_logical ();
+  test_expr_shifts ();
+  test_expr_complex ();
+  (* precedence: each pair of adjacent levels *)
+  test_prec_logical_or_vs_and ();
+  test_prec_logical_and_vs_bitwise_or ();
+  test_prec_bitwise_or_vs_xor ();
+  test_prec_bitwise_xor_vs_and ();
+  test_prec_bitwise_and_vs_equality ();
+  test_prec_equality_vs_comparison ();
+  test_prec_comparison_vs_shift ();
+  test_prec_shift_vs_add ();
+  test_prec_add_vs_factor ();
+  test_prec_unary_binds_tightest ();
+  test_prec_long_chains ();
+  test_prec_full_hierarchy ();
+  (* function calls *)
+  test_function_call_no_args ();
+  test_function_call_one_arg ();
+  test_function_call_multiple_args ();
+  test_function_call_expr_args ();
+  test_function_call_nested ();
+  test_function_call_in_expression ();
+  (* field access *)
+  test_arrow_field_access ();
+  test_arrow_chained ();
+  test_arrow_in_expression ();
+  test_dot_field_access ();
+  (* indexing *)
+  test_array_index ();
+  test_array_index_chained ();
+  test_array_index_in_expression ();
+  (* postfix *)
+  test_postfix_mixed ();
+  test_unary_on_postfix ();
+  test_postfix_complex ();
+  (* grouping *)
+  test_grouping_basic ();
+  test_grouping_overrides_precedence ();
+  test_grouping_nested ();
+  test_grouping_with_postfix ();
+  (* integration *)
+  test_integration_linked_list ();
+  test_integration_bit_manipulation ();
+  test_integration_buffer_bounds ();
+  test_integration_hash_table ();
+  (* syscall *)
+  test_syscall_no_args_is_error ();
+  test_syscall_one_arg ();
+  test_syscall_multiple_args ();
+  test_syscall_expr_args ();
+  test_syscall_is_atom ();
+  test_syscall_realistic ();
+  (* error cases *)
+  test_expr_error_empty_parens ();
+  test_expr_error_missing_closing_paren ();
+  test_expr_error_missing_closing_bracket ();
+  test_expr_error_dangling_binary_op ();
+  test_expr_error_dangling_prefix_at_end ();
+  test_expr_error_leading_nonprefix_op ();
+  test_expr_error_double_binary_op ();
+  test_expr_error_empty_brackets ();
+  test_expr_error_arrow_missing_field ();
+  test_expr_error_dot_missing_field ();
+  test_call_missing_comma ();
+  test_call_trailing_comma ();
+  test_syscall_missing_comma ();
+  test_syscall_trailing_comma ();
+  (* prefix/binary ambiguity *)
+  test_ampersand_prefix_then_binary ();
+  test_star_prefix_then_binary ();
+  test_minus_prefix_then_binary ();
+  test_double_deref_then_mul ();
+  test_addr_of_deref_then_bitwise_and ();
+  (* additional operator coverage *)
+  test_expr_div ();
+  test_expr_mod ();
+  test_expr_neq ();
+  test_expr_shift_left_associative ();
+  test_expr_comparison_same_level ();
+  test_expr_equality_left_associative ();
+  (* done *)
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
