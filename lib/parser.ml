@@ -191,34 +191,13 @@ and parse_postfix (parser, expr) : (expr * t, error) result = failwith "todo"
 and parse_expr_atom parser : (expr * t, error) result =
   let token = get parser in
   match token.kind with
-  | Identifier id ->
-    let parser = advance parser in
-    let expr = Identifier id in
-    Ok (expr, parser)
-  | StringLiteral s ->
-    let parser = advance parser in
-    let expr = Literal (StringLiteral s) in
-    Ok (expr, parser)
-  | CharLiteral ch ->
-    let parser = advance parser in
-    let expr = Literal (CharLiteral ch) in
-    Ok (expr, parser)
-  | IntLiteral i ->
-    let parser = advance parser in
-    let expr = Literal (IntLiteral i) in
-    Ok (expr, parser)
-  | UnsignedIntLiteral u ->
-    let parser = advance parser in
-    let expr = Literal (UnsignedIntLiteral u) in
-    Ok (expr, parser)
-  | ByteLiteral b ->
-    let parser = advance parser in
-    let expr = Literal (ByteLiteral b) in
-    Ok (expr, parser)
-  | PtrLiteral p ->
-    let parser = advance parser in
-    let expr = Literal (PtrLiteral p) in
-    Ok (expr, parser)
+  | Identifier id -> Ok (Identifier id, advance parser)
+  | StringLiteral s -> Ok (Literal (StringLiteral s), advance parser)
+  | CharLiteral ch -> Ok (Literal (CharLiteral ch), advance parser)
+  | IntLiteral i -> Ok (Literal (IntLiteral i), advance parser)
+  | UnsignedIntLiteral u -> Ok (Literal (UnsignedIntLiteral u), advance parser)
+  | ByteLiteral b -> Ok (Literal (ByteLiteral b), advance parser)
+  | PtrLiteral p -> Ok (Literal (PtrLiteral p), advance parser)
   | _ ->
     let err =
       UnexpectedToken
