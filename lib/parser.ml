@@ -179,7 +179,12 @@ and parse_paren_args parser : (expr list * t, error) result =
          let err = UnexpectedToken { expected; found } in
          Error err)
   in
-  Result.bind (expect parser Token.LParen) (fun parser -> gather_args parser [])
+  let parse_rest parser =
+    match (get parser).kind with
+    | RParen -> Ok ([], advance parser)
+    | _ -> gather_args parser []
+  in
+  Result.bind (expect parser Token.LParen) parse_rest
 
 (* anything indivisible, so e.g. identifiers and literals, but also things such
    as syscalls (they in some way have the highest precedence, acting at the
