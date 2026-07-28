@@ -213,13 +213,11 @@ and parse_expr_atom parser : (expr * t, error) result =
   | ByteLiteral b -> Ok (Literal (ByteLiteral b), advance parser)
   | PtrLiteral p -> Ok (Literal (PtrLiteral p), advance parser)
   | Syscall ->
-    Result.map
-      (fun (args, parser) -> Syscall args, parser)
-      (parse_paren_args (advance parser))
+    parse_paren_args (advance parser)
+    |> Result.map (fun (args, parser) -> Syscall args, parser)
   | LParen ->
-    Result.map
-      (fun (expr, parser) -> Grouping expr, advance parser)
-      (parse_expr (advance parser))
+    parse_expr (advance parser)
+    |> Result.map (fun (expr, parser) -> Grouping expr, advance parser)
   | _ ->
     let err =
       UnexpectedToken
