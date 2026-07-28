@@ -1,16 +1,5 @@
 open NanoC
 
-let failures = ref 0
-let results : (string * bool) list ref = ref []
-let current_test = ref ""
-
-let run name f =
-  current_test := name;
-  let before = !failures in
-  f ();
-  results := (name, !failures = before) :: !results
-;;
-
 (* --- whitespace-agnostic S-expression comparison ---
 
    Not "delete every whitespace character and compare" — that would wrongly consider
@@ -57,36 +46,25 @@ let show_tokens tokens = "[" ^ String.concat "; " tokens ^ "]"
 
 let check_sexp_equal name expected got =
   if not (sexp_equal expected got)
-  then (
-    incr failures;
-    Printf.printf
-      "FAIL [%s] %s:\n\
-      \  expected: %S\n\
-      \  got:      %S\n\
-      \  expected tokens: %s\n\
-      \  got tokens:      %s\n"
-      !current_test
+  then
+    Harness.fail
       name
+      "\n  expected: %S\n  got:      %S\n  expected tokens: %s\n  got tokens:      %s"
       expected
       got
       (show_tokens (tokens_of_sexp expected))
-      (show_tokens (tokens_of_sexp got)))
+      (show_tokens (tokens_of_sexp got))
 ;;
 
 let check_sexp_not_equal name a b =
   if sexp_equal a b
-  then (
-    incr failures;
-    Printf.printf
-      "FAIL [%s] %s: expected NOT equivalent, but they were:\n\
-      \  a: %S\n\
-      \  b: %S\n\
-      \  tokens: %s\n"
-      !current_test
+  then
+    Harness.fail
       name
+      "expected NOT equivalent, but they were:\n  a: %S\n  b: %S\n  tokens: %s"
       a
       b
-      (show_tokens (tokens_of_sexp a)))
+      (show_tokens (tokens_of_sexp a))
 ;;
 
 (* --- self-tests for the comparator itself --- *)
@@ -125,20 +103,13 @@ let test_multiline_matches_single_line () =
 let check_atom_sexp name source expected_sexp =
   match Parser.init source with
   | Error e ->
-    incr failures;
-    Printf.printf
-      "FAIL [%s] %s: lexer error while initializing parser: %s\n"
-      !current_test
-      name
-      (Lexer.format_error e)
+    Harness.fail name "lexer error while initializing parser: %s" (Lexer.format_error e)
   | Ok parser ->
     (match Parser.parse_expr_atom parser with
      | Error e ->
-       incr failures;
-       Printf.printf
-         "FAIL [%s] %s:\n  source: %S\n  parse_expr_atom returned an error: %s\n"
-         !current_test
+       Harness.fail
          name
+         "\n  source: %S\n  parse_expr_atom returned an error: %s"
          source
          (Parser.show_error e)
      | Ok (expr, _parser') -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
@@ -191,23 +162,11 @@ let test_atom_char_hex_escape () =
 
 let check_expr_sexp name source expected_sexp =
   match Parser.init source with
-  | Error e ->
-    incr failures;
-    Printf.printf
-      "FAIL [%s] %s: lexer error: %s\n"
-      !current_test
-      name
-      (Lexer.format_error e)
+  | Error e -> Harness.fail name "lexer error: %s" (Lexer.format_error e)
   | Ok parser ->
     (match Parser.parse_expr parser with
      | Error e ->
-       incr failures;
-       Printf.printf
-         "FAIL [%s] %s:\n  source: %S\n  error: %s\n"
-         !current_test
-         name
-         source
-         (Parser.show_error e)
+       Harness.fail name "\n  source: %S\n  error: %s" source (Parser.show_error e)
      | Ok (expr, _) -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
 ;;
 
@@ -217,13 +176,7 @@ let check_expr_error name source =
   | Ok parser ->
     (match Parser.parse_expr parser with
      | Error _ -> ()
-     | Ok (expr, _) ->
-       incr failures;
-       Printf.printf
-         "FAIL [%s] %s: expected error, got: %s\n"
-         !current_test
-         name
-         (Ast.s_expr expr))
+     | Ok (expr, _) -> Harness.fail name "expected error, got: %s" (Ast.s_expr expr))
 ;;
 
 (* --- simple binary --- *)
@@ -710,121 +663,117 @@ let test_expr_equality_left_associative () =
 
 let () =
   (* comparator self-tests *)
-  run "test_identical_strings_are_equal" test_identical_strings_are_equal;
-  run
+  Harness.run "test_identical_strings_are_equal" test_identical_strings_are_equal;
+  Harness.run
     "test_whitespace_runs_collapse_to_a_separator"
     test_whitespace_runs_collapse_to_a_separator;
-  run "test_not_fully_whitespace_agnostic" test_not_fully_whitespace_agnostic;
-  run "test_whitespace_optional_around_parens" test_whitespace_optional_around_parens;
-  run "test_multiline_matches_single_line" test_multiline_matches_single_line;
+  Harness.run "test_not_fully_whitespace_agnostic" test_not_fully_whitespace_agnostic;
+  Harness.run
+    "test_whitespace_optional_around_parens"
+    test_whitespace_optional_around_parens;
+  Harness.run "test_multiline_matches_single_line" test_multiline_matches_single_line;
   (* atoms *)
-  run "test_atom_identifier" test_atom_identifier;
-  run "test_atom_int_literal" test_atom_int_literal;
-  run "test_atom_string_literal" test_atom_string_literal;
-  run "test_atom_char_literal" test_atom_char_literal;
-  run "test_atom_char_escapes" test_atom_char_escapes;
-  run "test_atom_char_hex_escape" test_atom_char_hex_escape;
+  Harness.run "test_atom_identifier" test_atom_identifier;
+  Harness.run "test_atom_int_literal" test_atom_int_literal;
+  Harness.run "test_atom_string_literal" test_atom_string_literal;
+  Harness.run "test_atom_char_literal" test_atom_char_literal;
+  Harness.run "test_atom_char_escapes" test_atom_char_escapes;
+  Harness.run "test_atom_char_hex_escape" test_atom_char_hex_escape;
   (* simple binary *)
-  run "test_expr_simple_binary" test_expr_simple_binary;
+  Harness.run "test_expr_simple_binary" test_expr_simple_binary;
   (* precedence *)
-  run "test_expr_precedence" test_expr_precedence;
-  run "test_expr_left_associative" test_expr_left_associative;
-  run "test_expr_with_prefix" test_expr_with_prefix;
-  run "test_expr_bitwise" test_expr_bitwise;
-  run "test_expr_comparison" test_expr_comparison;
-  run "test_expr_logical" test_expr_logical;
-  run "test_expr_shifts" test_expr_shifts;
-  run "test_expr_complex" test_expr_complex;
+  Harness.run "test_expr_precedence" test_expr_precedence;
+  Harness.run "test_expr_left_associative" test_expr_left_associative;
+  Harness.run "test_expr_with_prefix" test_expr_with_prefix;
+  Harness.run "test_expr_bitwise" test_expr_bitwise;
+  Harness.run "test_expr_comparison" test_expr_comparison;
+  Harness.run "test_expr_logical" test_expr_logical;
+  Harness.run "test_expr_shifts" test_expr_shifts;
+  Harness.run "test_expr_complex" test_expr_complex;
   (* precedence: each pair of adjacent levels *)
-  run "test_prec_logical_or_vs_and" test_prec_logical_or_vs_and;
-  run "test_prec_logical_and_vs_bitwise_or" test_prec_logical_and_vs_bitwise_or;
-  run "test_prec_bitwise_or_vs_xor" test_prec_bitwise_or_vs_xor;
-  run "test_prec_bitwise_xor_vs_and" test_prec_bitwise_xor_vs_and;
-  run "test_prec_bitwise_and_vs_equality" test_prec_bitwise_and_vs_equality;
-  run "test_prec_equality_vs_comparison" test_prec_equality_vs_comparison;
-  run "test_prec_comparison_vs_shift" test_prec_comparison_vs_shift;
-  run "test_prec_shift_vs_add" test_prec_shift_vs_add;
-  run "test_prec_add_vs_factor" test_prec_add_vs_factor;
-  run "test_prec_unary_binds_tightest" test_prec_unary_binds_tightest;
-  run "test_prec_long_chains" test_prec_long_chains;
-  run "test_prec_full_hierarchy" test_prec_full_hierarchy;
+  Harness.run "test_prec_logical_or_vs_and" test_prec_logical_or_vs_and;
+  Harness.run "test_prec_logical_and_vs_bitwise_or" test_prec_logical_and_vs_bitwise_or;
+  Harness.run "test_prec_bitwise_or_vs_xor" test_prec_bitwise_or_vs_xor;
+  Harness.run "test_prec_bitwise_xor_vs_and" test_prec_bitwise_xor_vs_and;
+  Harness.run "test_prec_bitwise_and_vs_equality" test_prec_bitwise_and_vs_equality;
+  Harness.run "test_prec_equality_vs_comparison" test_prec_equality_vs_comparison;
+  Harness.run "test_prec_comparison_vs_shift" test_prec_comparison_vs_shift;
+  Harness.run "test_prec_shift_vs_add" test_prec_shift_vs_add;
+  Harness.run "test_prec_add_vs_factor" test_prec_add_vs_factor;
+  Harness.run "test_prec_unary_binds_tightest" test_prec_unary_binds_tightest;
+  Harness.run "test_prec_long_chains" test_prec_long_chains;
+  Harness.run "test_prec_full_hierarchy" test_prec_full_hierarchy;
   (* function calls *)
-  run "test_function_call_no_args" test_function_call_no_args;
-  run "test_function_call_one_arg" test_function_call_one_arg;
-  run "test_function_call_multiple_args" test_function_call_multiple_args;
-  run "test_function_call_expr_args" test_function_call_expr_args;
-  run "test_function_call_nested" test_function_call_nested;
-  run "test_function_call_in_expression" test_function_call_in_expression;
+  Harness.run "test_function_call_no_args" test_function_call_no_args;
+  Harness.run "test_function_call_one_arg" test_function_call_one_arg;
+  Harness.run "test_function_call_multiple_args" test_function_call_multiple_args;
+  Harness.run "test_function_call_expr_args" test_function_call_expr_args;
+  Harness.run "test_function_call_nested" test_function_call_nested;
+  Harness.run "test_function_call_in_expression" test_function_call_in_expression;
   (* field access *)
-  run "test_arrow_field_access" test_arrow_field_access;
-  run "test_arrow_chained" test_arrow_chained;
-  run "test_arrow_in_expression" test_arrow_in_expression;
-  run "test_dot_field_access" test_dot_field_access;
+  Harness.run "test_arrow_field_access" test_arrow_field_access;
+  Harness.run "test_arrow_chained" test_arrow_chained;
+  Harness.run "test_arrow_in_expression" test_arrow_in_expression;
+  Harness.run "test_dot_field_access" test_dot_field_access;
   (* indexing *)
-  run "test_array_index" test_array_index;
-  run "test_array_index_chained" test_array_index_chained;
-  run "test_array_index_in_expression" test_array_index_in_expression;
+  Harness.run "test_array_index" test_array_index;
+  Harness.run "test_array_index_chained" test_array_index_chained;
+  Harness.run "test_array_index_in_expression" test_array_index_in_expression;
   (* postfix *)
-  run "test_postfix_mixed" test_postfix_mixed;
-  run "test_unary_on_postfix" test_unary_on_postfix;
-  run "test_postfix_complex" test_postfix_complex;
+  Harness.run "test_postfix_mixed" test_postfix_mixed;
+  Harness.run "test_unary_on_postfix" test_unary_on_postfix;
+  Harness.run "test_postfix_complex" test_postfix_complex;
   (* grouping *)
-  run "test_grouping_basic" test_grouping_basic;
-  run "test_grouping_overrides_precedence" test_grouping_overrides_precedence;
-  run "test_grouping_nested" test_grouping_nested;
-  run "test_grouping_with_postfix" test_grouping_with_postfix;
+  Harness.run "test_grouping_basic" test_grouping_basic;
+  Harness.run "test_grouping_overrides_precedence" test_grouping_overrides_precedence;
+  Harness.run "test_grouping_nested" test_grouping_nested;
+  Harness.run "test_grouping_with_postfix" test_grouping_with_postfix;
   (* integration *)
-  run "test_integration_linked_list" test_integration_linked_list;
-  run "test_integration_bit_manipulation" test_integration_bit_manipulation;
-  run "test_integration_buffer_bounds" test_integration_buffer_bounds;
-  run "test_integration_hash_table" test_integration_hash_table;
+  Harness.run "test_integration_linked_list" test_integration_linked_list;
+  Harness.run "test_integration_bit_manipulation" test_integration_bit_manipulation;
+  Harness.run "test_integration_buffer_bounds" test_integration_buffer_bounds;
+  Harness.run "test_integration_hash_table" test_integration_hash_table;
   (* syscall *)
-  run "test_syscall_no_args_is_error" test_syscall_no_args_is_error;
-  run "test_syscall_one_arg" test_syscall_one_arg;
-  run "test_syscall_multiple_args" test_syscall_multiple_args;
-  run "test_syscall_expr_args" test_syscall_expr_args;
-  run "test_syscall_is_atom" test_syscall_is_atom;
-  run "test_syscall_realistic" test_syscall_realistic;
+  Harness.run "test_syscall_no_args_is_error" test_syscall_no_args_is_error;
+  Harness.run "test_syscall_one_arg" test_syscall_one_arg;
+  Harness.run "test_syscall_multiple_args" test_syscall_multiple_args;
+  Harness.run "test_syscall_expr_args" test_syscall_expr_args;
+  Harness.run "test_syscall_is_atom" test_syscall_is_atom;
+  Harness.run "test_syscall_realistic" test_syscall_realistic;
   (* error cases *)
-  run "test_expr_error_empty_parens" test_expr_error_empty_parens;
-  run "test_expr_error_missing_closing_paren" test_expr_error_missing_closing_paren;
-  run "test_expr_error_missing_closing_bracket" test_expr_error_missing_closing_bracket;
-  run "test_expr_error_dangling_binary_op" test_expr_error_dangling_binary_op;
-  run "test_expr_error_dangling_prefix_at_end" test_expr_error_dangling_prefix_at_end;
-  run "test_expr_error_leading_nonprefix_op" test_expr_error_leading_nonprefix_op;
-  run "test_expr_error_double_binary_op" test_expr_error_double_binary_op;
-  run "test_expr_error_empty_brackets" test_expr_error_empty_brackets;
-  run "test_expr_error_arrow_missing_field" test_expr_error_arrow_missing_field;
-  run "test_expr_error_dot_missing_field" test_expr_error_dot_missing_field;
-  run "test_call_missing_comma" test_call_missing_comma;
-  run "test_call_trailing_comma" test_call_trailing_comma;
-  run "test_syscall_missing_comma" test_syscall_missing_comma;
-  run "test_syscall_trailing_comma" test_syscall_trailing_comma;
+  Harness.run "test_expr_error_empty_parens" test_expr_error_empty_parens;
+  Harness.run
+    "test_expr_error_missing_closing_paren"
+    test_expr_error_missing_closing_paren;
+  Harness.run
+    "test_expr_error_missing_closing_bracket"
+    test_expr_error_missing_closing_bracket;
+  Harness.run "test_expr_error_dangling_binary_op" test_expr_error_dangling_binary_op;
+  Harness.run
+    "test_expr_error_dangling_prefix_at_end"
+    test_expr_error_dangling_prefix_at_end;
+  Harness.run "test_expr_error_leading_nonprefix_op" test_expr_error_leading_nonprefix_op;
+  Harness.run "test_expr_error_double_binary_op" test_expr_error_double_binary_op;
+  Harness.run "test_expr_error_empty_brackets" test_expr_error_empty_brackets;
+  Harness.run "test_expr_error_arrow_missing_field" test_expr_error_arrow_missing_field;
+  Harness.run "test_expr_error_dot_missing_field" test_expr_error_dot_missing_field;
+  Harness.run "test_call_missing_comma" test_call_missing_comma;
+  Harness.run "test_call_trailing_comma" test_call_trailing_comma;
+  Harness.run "test_syscall_missing_comma" test_syscall_missing_comma;
+  Harness.run "test_syscall_trailing_comma" test_syscall_trailing_comma;
   (* prefix/binary ambiguity *)
-  run "test_ampersand_prefix_then_binary" test_ampersand_prefix_then_binary;
-  run "test_star_prefix_then_binary" test_star_prefix_then_binary;
-  run "test_minus_prefix_then_binary" test_minus_prefix_then_binary;
-  run "test_double_deref_then_mul" test_double_deref_then_mul;
-  run "test_addr_of_deref_then_bitwise_and" test_addr_of_deref_then_bitwise_and;
+  Harness.run "test_ampersand_prefix_then_binary" test_ampersand_prefix_then_binary;
+  Harness.run "test_star_prefix_then_binary" test_star_prefix_then_binary;
+  Harness.run "test_minus_prefix_then_binary" test_minus_prefix_then_binary;
+  Harness.run "test_double_deref_then_mul" test_double_deref_then_mul;
+  Harness.run "test_addr_of_deref_then_bitwise_and" test_addr_of_deref_then_bitwise_and;
   (* additional operator coverage *)
-  run "test_expr_div" test_expr_div;
-  run "test_expr_mod" test_expr_mod;
-  run "test_expr_neq" test_expr_neq;
-  run "test_expr_shift_left_associative" test_expr_shift_left_associative;
-  run "test_expr_comparison_same_level" test_expr_comparison_same_level;
-  run "test_expr_equality_left_associative" test_expr_equality_left_associative;
+  Harness.run "test_expr_div" test_expr_div;
+  Harness.run "test_expr_mod" test_expr_mod;
+  Harness.run "test_expr_neq" test_expr_neq;
+  Harness.run "test_expr_shift_left_associative" test_expr_shift_left_associative;
+  Harness.run "test_expr_comparison_same_level" test_expr_comparison_same_level;
+  Harness.run "test_expr_equality_left_associative" test_expr_equality_left_associative;
   (* done *)
-  (* recap *)
-  print_endline "\n--- recap ---";
-  List.iter
-    (fun (name, passed) ->
-       if passed
-       then Printf.printf "\027[32m✓ %s\027[0m\n" name
-       else Printf.printf "\027[31m✗ %s\027[0m\n" name)
-    (List.rev !results);
-  if !failures > 0
-  then (
-    Printf.printf "%d test(s) failed\n" !failures;
-    exit 1)
-  else print_endline "all tests passed"
+  Harness.summarize ()
 ;;

@@ -1,7 +1,5 @@
 open NanoC
 
-let failures = ref 0
-
 let show_kinds kinds =
   kinds |> Array.to_list |> List.map Token.show_kind |> String.concat "; "
 ;;
@@ -10,43 +8,38 @@ let show_kinds kinds =
 let check_tokens name source expected_kinds =
   let expected_kinds = Array.of_list expected_kinds in
   match Lexer.tokenize source with
-  | Error e ->
-    incr failures;
-    Printf.printf "FAIL %s: lexer error: %s\n" name (Lexer.format_error e)
+  | Error e -> Harness.fail name "lexer error: %s" (Lexer.format_error e)
   | Ok tokens ->
     let kinds = Array.map (fun (tok : Token.t) -> tok.kind) tokens in
     if kinds <> expected_kinds
-    then (
-      incr failures;
-      Printf.printf
-        "FAIL %s:\n  source:   %S\n  expected: [%s]\n  got:      [%s]\n"
+    then
+      Harness.fail
         name
+        "\n  source:   %S\n  expected: [%s]\n  got:      [%s]"
         source
         (show_kinds expected_kinds)
-        (show_kinds kinds))
+        (show_kinds kinds)
 ;;
 
 (* this only cares about the error kind, not its span — same rationale as check_tokens *)
 let check_error name source expected_kind =
   match Lexer.tokenize source with
   | Ok tokens ->
-    incr failures;
-    Printf.printf
-      "FAIL %s:\n  source:   %S\n  expected error: %s\n  got tokens: [%s]\n"
+    Harness.fail
       name
+      "\n  source:   %S\n  expected error: %s\n  got tokens: [%s]"
       source
       (Lexer.show_error_kind expected_kind)
       (show_kinds (Array.map (fun (tok : Token.t) -> tok.kind) tokens))
   | Error (kind, _span) ->
     if kind <> expected_kind
-    then (
-      incr failures;
-      Printf.printf
-        "FAIL %s:\n  source:   %S\n  expected error: %s\n  got error:      %s\n"
+    then
+      Harness.fail
         name
+        "\n  source:   %S\n  expected error: %s\n  got error:      %s"
         source
         (Lexer.show_error_kind expected_kind)
-        (Lexer.show_error_kind kind))
+        (Lexer.show_error_kind kind)
 ;;
 
 (* like check_error, but only checks the error's shape via a predicate rather
@@ -56,21 +49,19 @@ let check_error name source expected_kind =
 let check_error_matches name source predicate =
   match Lexer.tokenize source with
   | Ok tokens ->
-    incr failures;
-    Printf.printf
-      "FAIL %s:\n  source:   %S\n  expected an error, got tokens: [%s]\n"
+    Harness.fail
       name
+      "\n  source:   %S\n  expected an error, got tokens: [%s]"
       source
       (show_kinds (Array.map (fun (tok : Token.t) -> tok.kind) tokens))
   | Error (kind, _span) ->
     if not (predicate kind)
-    then (
-      incr failures;
-      Printf.printf
-        "FAIL %s:\n  source:   %S\n  got error: %s (did not match expected shape)\n"
+    then
+      Harness.fail
         name
+        "\n  source:   %S\n  got error: %s (did not match expected shape)"
         source
-        (Lexer.show_error_kind kind))
+        (Lexer.show_error_kind kind)
 ;;
 
 let keywords =
@@ -769,97 +760,153 @@ let test_function_return_arrow_sequence () =
 ;;
 
 let () =
-  test_each_keyword ();
-  test_keyword_sequence ();
-  test_keyword_prefix_is_identifier ();
-  test_plain_identifier ();
-  test_eof_on_empty_input ();
-  test_keywords_are_case_sensitive ();
-  test_line_comment_is_skipped ();
-  test_line_comment_stops_at_newline ();
-  test_block_comment_is_skipped ();
-  test_block_comment_can_span_lines ();
-  test_block_comment_with_no_whitespace ();
-  test_interleaved_trivia ();
-  test_unterminated_block_comment_is_an_error ();
-  test_plain_string_literal ();
-  test_empty_string_literal ();
-  test_string_literal_with_spaces_and_punctuation ();
-  test_string_literal_in_context ();
-  test_unterminated_string_literal_is_an_error ();
-  test_each_named_escape ();
-  test_multiple_escapes_in_one_string ();
-  test_each_hex_escape ();
-  test_hex_escape_too_short_is_malformed ();
-  test_hex_escape_with_no_digits_is_malformed ();
-  test_hex_escape_invalid_digits_is_malformed ();
-  test_hex_escape_one_invalid_digit_is_malformed ();
-  test_each_unknown_escape ();
-  test_no_octal_escapes ();
-  test_plain_char_literal ();
-  test_char_literal_digit ();
-  test_char_literal_space ();
-  test_each_char_literal_escape ();
-  test_char_literal_in_context ();
-  test_empty_char_literal_is_an_error ();
-  test_multi_char_literal_is_an_error ();
-  test_unterminated_char_literal_is_an_error ();
-  test_zero_literal ();
-  test_plain_int_literal ();
-  test_i32_max_literal ();
-  test_zero_unsigned_literal ();
-  test_unsigned_suffix_literal ();
-  test_u32_max_literal ();
-  test_int_literal_in_context ();
-  test_several_int_literals_in_sequence ();
-  test_explicit_u32_suffix_literal ();
-  test_explicit_i32_suffix_literal ();
-  test_zero_byte_literal ();
-  test_byte_literal ();
-  test_u8_max_literal ();
-  test_zero_ptr_literal ();
-  test_ptr_literal ();
-  test_ptr_max_literal ();
-  test_underscore_separated_literal ();
-  test_underscore_separated_unsigned_literal ();
-  test_i32_one_past_i32_min_magnitude_is_too_big ();
-  test_u32_one_past_max_is_too_big ();
-  test_u8_one_past_max_is_too_big ();
-  test_ptr_one_past_max_is_too_big ();
-  test_i32_min_magnitude_alone_is_accepted_at_lexing ();
-  test_unmatched_suffix_tail_is_a_separate_token ();
-  test_unmatched_short_suffix_tail_is_a_separate_token ();
-  test_each_operator ();
-  test_operator_sequence ();
-  test_bitwise_operator_sequence ();
-  test_logical_operator_sequence ();
-  test_comparison_operator_sequence ();
-  test_equals_is_not_two_assigns ();
-  test_less_equals_is_not_less_then_assign ();
-  test_greater_equals_is_not_greater_then_assign ();
-  test_plus_assign_is_not_plus_then_assign ();
-  test_multiplies_assign_is_not_multiplies_then_assign ();
-  test_divides_assign_is_not_divides_then_assign ();
-  test_modulo_assign_is_not_modulo_then_assign ();
-  test_minus_assign_is_not_minus_then_assign ();
-  test_logical_and_is_not_two_bitwise_ands ();
-  test_logical_or_is_not_two_bitwise_ors ();
-  test_shift_left_is_not_two_less_thans ();
-  test_shift_right_is_not_two_greater_thans ();
-  test_plus_then_assign_with_space_is_two_tokens ();
-  test_bitwise_and_then_and_with_space_is_two_tokens ();
-  test_less_than_then_less_than_with_space_is_two_tokens ();
-  test_operator_in_context ();
-  test_each_punctuation ();
-  test_paren_pair_sequence ();
-  test_bracket_pair_sequence ();
-  test_comma_separated_sequence ();
-  test_dot_field_access_sequence ();
-  test_var_decl_colon_semicolon_sequence ();
-  test_function_return_arrow_sequence ();
-  if !failures > 0
-  then (
-    Printf.printf "%d test(s) failed\n" !failures;
-    exit 1)
-  else print_endline "all tests passed"
+  Harness.run "test_each_keyword" test_each_keyword;
+  Harness.run "test_keyword_sequence" test_keyword_sequence;
+  Harness.run "test_keyword_prefix_is_identifier" test_keyword_prefix_is_identifier;
+  Harness.run "test_plain_identifier" test_plain_identifier;
+  Harness.run "test_eof_on_empty_input" test_eof_on_empty_input;
+  Harness.run "test_keywords_are_case_sensitive" test_keywords_are_case_sensitive;
+  Harness.run "test_line_comment_is_skipped" test_line_comment_is_skipped;
+  Harness.run "test_line_comment_stops_at_newline" test_line_comment_stops_at_newline;
+  Harness.run "test_block_comment_is_skipped" test_block_comment_is_skipped;
+  Harness.run "test_block_comment_can_span_lines" test_block_comment_can_span_lines;
+  Harness.run
+    "test_block_comment_with_no_whitespace"
+    test_block_comment_with_no_whitespace;
+  Harness.run "test_interleaved_trivia" test_interleaved_trivia;
+  Harness.run
+    "test_unterminated_block_comment_is_an_error"
+    test_unterminated_block_comment_is_an_error;
+  Harness.run "test_plain_string_literal" test_plain_string_literal;
+  Harness.run "test_empty_string_literal" test_empty_string_literal;
+  Harness.run
+    "test_string_literal_with_spaces_and_punctuation"
+    test_string_literal_with_spaces_and_punctuation;
+  Harness.run "test_string_literal_in_context" test_string_literal_in_context;
+  Harness.run
+    "test_unterminated_string_literal_is_an_error"
+    test_unterminated_string_literal_is_an_error;
+  Harness.run "test_each_named_escape" test_each_named_escape;
+  Harness.run "test_multiple_escapes_in_one_string" test_multiple_escapes_in_one_string;
+  Harness.run "test_each_hex_escape" test_each_hex_escape;
+  Harness.run
+    "test_hex_escape_too_short_is_malformed"
+    test_hex_escape_too_short_is_malformed;
+  Harness.run
+    "test_hex_escape_with_no_digits_is_malformed"
+    test_hex_escape_with_no_digits_is_malformed;
+  Harness.run
+    "test_hex_escape_invalid_digits_is_malformed"
+    test_hex_escape_invalid_digits_is_malformed;
+  Harness.run
+    "test_hex_escape_one_invalid_digit_is_malformed"
+    test_hex_escape_one_invalid_digit_is_malformed;
+  Harness.run "test_each_unknown_escape" test_each_unknown_escape;
+  Harness.run "test_no_octal_escapes" test_no_octal_escapes;
+  Harness.run "test_plain_char_literal" test_plain_char_literal;
+  Harness.run "test_char_literal_digit" test_char_literal_digit;
+  Harness.run "test_char_literal_space" test_char_literal_space;
+  Harness.run "test_each_char_literal_escape" test_each_char_literal_escape;
+  Harness.run "test_char_literal_in_context" test_char_literal_in_context;
+  Harness.run "test_empty_char_literal_is_an_error" test_empty_char_literal_is_an_error;
+  Harness.run "test_multi_char_literal_is_an_error" test_multi_char_literal_is_an_error;
+  Harness.run
+    "test_unterminated_char_literal_is_an_error"
+    test_unterminated_char_literal_is_an_error;
+  Harness.run "test_zero_literal" test_zero_literal;
+  Harness.run "test_plain_int_literal" test_plain_int_literal;
+  Harness.run "test_i32_max_literal" test_i32_max_literal;
+  Harness.run "test_zero_unsigned_literal" test_zero_unsigned_literal;
+  Harness.run "test_unsigned_suffix_literal" test_unsigned_suffix_literal;
+  Harness.run "test_u32_max_literal" test_u32_max_literal;
+  Harness.run "test_int_literal_in_context" test_int_literal_in_context;
+  Harness.run
+    "test_several_int_literals_in_sequence"
+    test_several_int_literals_in_sequence;
+  Harness.run "test_explicit_u32_suffix_literal" test_explicit_u32_suffix_literal;
+  Harness.run "test_explicit_i32_suffix_literal" test_explicit_i32_suffix_literal;
+  Harness.run "test_zero_byte_literal" test_zero_byte_literal;
+  Harness.run "test_byte_literal" test_byte_literal;
+  Harness.run "test_u8_max_literal" test_u8_max_literal;
+  Harness.run "test_zero_ptr_literal" test_zero_ptr_literal;
+  Harness.run "test_ptr_literal" test_ptr_literal;
+  Harness.run "test_ptr_max_literal" test_ptr_max_literal;
+  Harness.run "test_underscore_separated_literal" test_underscore_separated_literal;
+  Harness.run
+    "test_underscore_separated_unsigned_literal"
+    test_underscore_separated_unsigned_literal;
+  Harness.run
+    "test_i32_one_past_i32_min_magnitude_is_too_big"
+    test_i32_one_past_i32_min_magnitude_is_too_big;
+  Harness.run "test_u32_one_past_max_is_too_big" test_u32_one_past_max_is_too_big;
+  Harness.run "test_u8_one_past_max_is_too_big" test_u8_one_past_max_is_too_big;
+  Harness.run "test_ptr_one_past_max_is_too_big" test_ptr_one_past_max_is_too_big;
+  Harness.run
+    "test_i32_min_magnitude_alone_is_accepted_at_lexing"
+    test_i32_min_magnitude_alone_is_accepted_at_lexing;
+  Harness.run
+    "test_unmatched_suffix_tail_is_a_separate_token"
+    test_unmatched_suffix_tail_is_a_separate_token;
+  Harness.run
+    "test_unmatched_short_suffix_tail_is_a_separate_token"
+    test_unmatched_short_suffix_tail_is_a_separate_token;
+  Harness.run "test_each_operator" test_each_operator;
+  Harness.run "test_operator_sequence" test_operator_sequence;
+  Harness.run "test_bitwise_operator_sequence" test_bitwise_operator_sequence;
+  Harness.run "test_logical_operator_sequence" test_logical_operator_sequence;
+  Harness.run "test_comparison_operator_sequence" test_comparison_operator_sequence;
+  Harness.run "test_equals_is_not_two_assigns" test_equals_is_not_two_assigns;
+  Harness.run
+    "test_less_equals_is_not_less_then_assign"
+    test_less_equals_is_not_less_then_assign;
+  Harness.run
+    "test_greater_equals_is_not_greater_then_assign"
+    test_greater_equals_is_not_greater_then_assign;
+  Harness.run
+    "test_plus_assign_is_not_plus_then_assign"
+    test_plus_assign_is_not_plus_then_assign;
+  Harness.run
+    "test_multiplies_assign_is_not_multiplies_then_assign"
+    test_multiplies_assign_is_not_multiplies_then_assign;
+  Harness.run
+    "test_divides_assign_is_not_divides_then_assign"
+    test_divides_assign_is_not_divides_then_assign;
+  Harness.run
+    "test_modulo_assign_is_not_modulo_then_assign"
+    test_modulo_assign_is_not_modulo_then_assign;
+  Harness.run
+    "test_minus_assign_is_not_minus_then_assign"
+    test_minus_assign_is_not_minus_then_assign;
+  Harness.run
+    "test_logical_and_is_not_two_bitwise_ands"
+    test_logical_and_is_not_two_bitwise_ands;
+  Harness.run
+    "test_logical_or_is_not_two_bitwise_ors"
+    test_logical_or_is_not_two_bitwise_ors;
+  Harness.run
+    "test_shift_left_is_not_two_less_thans"
+    test_shift_left_is_not_two_less_thans;
+  Harness.run
+    "test_shift_right_is_not_two_greater_thans"
+    test_shift_right_is_not_two_greater_thans;
+  Harness.run
+    "test_plus_then_assign_with_space_is_two_tokens"
+    test_plus_then_assign_with_space_is_two_tokens;
+  Harness.run
+    "test_bitwise_and_then_and_with_space_is_two_tokens"
+    test_bitwise_and_then_and_with_space_is_two_tokens;
+  Harness.run
+    "test_less_than_then_less_than_with_space_is_two_tokens"
+    test_less_than_then_less_than_with_space_is_two_tokens;
+  Harness.run "test_operator_in_context" test_operator_in_context;
+  Harness.run "test_each_punctuation" test_each_punctuation;
+  Harness.run "test_paren_pair_sequence" test_paren_pair_sequence;
+  Harness.run "test_bracket_pair_sequence" test_bracket_pair_sequence;
+  Harness.run "test_comma_separated_sequence" test_comma_separated_sequence;
+  Harness.run "test_dot_field_access_sequence" test_dot_field_access_sequence;
+  Harness.run
+    "test_var_decl_colon_semicolon_sequence"
+    test_var_decl_colon_semicolon_sequence;
+  Harness.run "test_function_return_arrow_sequence" test_function_return_arrow_sequence;
+  Harness.summarize ()
 ;;

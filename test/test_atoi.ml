@@ -1,23 +1,19 @@
 open NanoC
 
-let failures = ref 0
-
 let check_ok name source expected =
   match Atoi.atoi64 source with
   | Ok got when got = expected -> ()
   | Ok got ->
-    incr failures;
-    Printf.printf
-      "FAIL %s:\n  source:   %S\n  expected: Ok %Ld\n  got:      Ok %Ld\n"
+    Harness.fail
       name
+      "\n  source:   %S\n  expected: Ok %Ld\n  got:      Ok %Ld"
       source
       expected
       got
   | Error e ->
-    incr failures;
-    Printf.printf
-      "FAIL %s:\n  source:   %S\n  expected: Ok %Ld\n  got error: %s\n"
+    Harness.fail
       name
+      "\n  source:   %S\n  expected: Ok %Ld\n  got error: %s"
       source
       expected
       (Atoi.show_error e)
@@ -26,23 +22,21 @@ let check_ok name source expected =
 let check_error name source expected =
   match Atoi.atoi64 source with
   | Ok got ->
-    incr failures;
-    Printf.printf
-      "FAIL %s:\n  source:   %S\n  expected error: %s\n  got: Ok %Ld\n"
+    Harness.fail
       name
+      "\n  source:   %S\n  expected error: %s\n  got: Ok %Ld"
       source
       (Atoi.show_error expected)
       got
   | Error e ->
     if e <> expected
-    then (
-      incr failures;
-      Printf.printf
-        "FAIL %s:\n  source:   %S\n  expected error: %s\n  got error:      %s\n"
+    then
+      Harness.fail
         name
+        "\n  source:   %S\n  expected error: %s\n  got error:      %s"
         source
         (Atoi.show_error expected)
-        (Atoi.show_error e))
+        (Atoi.show_error e)
 ;;
 
 let test_zero () = check_ok "zero" "0" 0L
@@ -93,20 +87,22 @@ let test_wildly_oversized_value_is_too_big () =
 ;;
 
 let () =
-  test_zero ();
-  test_plain_value ();
-  test_leading_zeros_are_stripped ();
-  test_negative_value ();
-  test_negative_zero ();
-  test_int64_max_fits ();
-  test_int64_min_fits ();
-  test_int64_max_plus_one_is_too_big ();
-  test_int64_min_minus_one_is_too_small ();
-  test_leading_zeros_dont_cause_a_false_overflow ();
-  test_wildly_oversized_value_is_too_big ();
-  if !failures > 0
-  then (
-    Printf.printf "%d test(s) failed\n" !failures;
-    exit 1)
-  else print_endline "all tests passed"
+  Harness.run "test_zero" test_zero;
+  Harness.run "test_plain_value" test_plain_value;
+  Harness.run "test_leading_zeros_are_stripped" test_leading_zeros_are_stripped;
+  Harness.run "test_negative_value" test_negative_value;
+  Harness.run "test_negative_zero" test_negative_zero;
+  Harness.run "test_int64_max_fits" test_int64_max_fits;
+  Harness.run "test_int64_min_fits" test_int64_min_fits;
+  Harness.run "test_int64_max_plus_one_is_too_big" test_int64_max_plus_one_is_too_big;
+  Harness.run
+    "test_int64_min_minus_one_is_too_small"
+    test_int64_min_minus_one_is_too_small;
+  Harness.run
+    "test_leading_zeros_dont_cause_a_false_overflow"
+    test_leading_zeros_dont_cause_a_false_overflow;
+  Harness.run
+    "test_wildly_oversized_value_is_too_big"
+    test_wildly_oversized_value_is_too_big;
+  Harness.summarize ()
 ;;

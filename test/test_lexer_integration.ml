@@ -7,8 +7,6 @@
 
 open NanoC
 
-let failures = ref 0
-
 let show_kinds kinds =
   kinds |> Array.to_list |> List.map Token.show_kind |> String.concat "; "
 ;;
@@ -16,20 +14,17 @@ let show_kinds kinds =
 let check_tokens name source expected_kinds =
   let expected_kinds = Array.of_list expected_kinds in
   match Lexer.tokenize source with
-  | Error e ->
-    incr failures;
-    Printf.printf "FAIL %s: lexer error: %s\n" name (Lexer.format_error e)
+  | Error e -> Harness.fail name "lexer error: %s" (Lexer.format_error e)
   | Ok tokens ->
     let kinds = Array.map (fun (tok : Token.t) -> tok.kind) tokens in
     if kinds <> expected_kinds
-    then (
-      incr failures;
-      Printf.printf
-        "FAIL %s:\n  source:   %S\n  expected: [%s]\n  got:      [%s]\n"
+    then
+      Harness.fail
         name
+        "\n  source:   %S\n  expected: [%s]\n  got:      [%s]"
         source
         (show_kinds expected_kinds)
-        (show_kinds kinds))
+        (show_kinds kinds)
 ;;
 
 (* --- snippet 1: a full program — structs, functions, pointers, arithmetic, a
@@ -828,13 +823,9 @@ let test_comments_snippet () =
 ;;
 
 let () =
-  test_program_snippet ();
-  test_literals_snippet ();
-  test_operators_snippet ();
-  test_comments_snippet ();
-  if !failures > 0
-  then (
-    Printf.printf "%d test(s) failed\n" !failures;
-    exit 1)
-  else print_endline "all tests passed"
+  Harness.run "test_program_snippet" test_program_snippet;
+  Harness.run "test_literals_snippet" test_literals_snippet;
+  Harness.run "test_operators_snippet" test_operators_snippet;
+  Harness.run "test_comments_snippet" test_comments_snippet;
+  Harness.summarize ()
 ;;
