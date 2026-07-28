@@ -69,7 +69,7 @@ module Precedence = struct
      (ADR-0003, ADR-0009).
 
      Prefix and Postfix were removed since they are taken care of by
-     `parse_expr_atom`, not by precedence climbing
+     `parse_unary_expr`, not by precedence climbing
   *)
   type t =
     | None
