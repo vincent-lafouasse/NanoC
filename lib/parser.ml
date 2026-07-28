@@ -184,6 +184,25 @@ and parse_unary_expr parser : (expr * t, error) result =
 
 and parse_postfix (parser, expr) : (expr * t, error) result = failwith "todo"
 
+(* assumes parser is positioned on the opening LParen *)
+and parse_paren_args parser callee : (expr * t, error) result =
+  let res = expect parser Token.LParen in
+  let rec gather_args parser acc : (expr list * t, error) result =
+    match parse_expr parser with
+    | Error err -> Error err
+    | Ok (expr, parser) ->
+      let new_acc = expr :: acc in
+      let token = get parser in
+      (match token.kind with
+       | Colon -> gather_args (advance parser) new_acc
+       | RParen -> Ok (List.rev new_acc, advance parser)
+       | _ ->
+         Error
+           (UnexpectedToken
+              { expected = "parse_paren_args: Rparen or Colon"; found = token }))
+  in
+  Error XXX_Unimplemented_XXX
+
 (* anything indivisible, so e.g. identifiers and literals, but also things such
    as syscalls (they in some way have the highest precedence, acting at the
    keyword level), but also groupings
