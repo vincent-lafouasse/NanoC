@@ -168,15 +168,24 @@ and parse_unary_expr parser : (expr * t, error) result =
 and parse_postfix (expr, parser) : (expr * t, error) result =
   let token = get parser in
   match token.kind with
+  | Arrow -> Error XXX_Unimplemented_XXX
+  | LBracket -> Error XXX_Unimplemented_XXX
   | LParen ->
     let function_call =
       parse_paren_args parser
       |> Result.map (fun (args, parser) -> Call { callee = expr; args }, parser)
     in
     Result.bind function_call parse_postfix
-  | Dot -> Error XXX_Unimplemented_XXX
-  | Arrow -> Error XXX_Unimplemented_XXX
-  | LBracket -> Error XXX_Unimplemented_XXX
+  | Dot ->
+    let parser = advance parser in
+    let token = get parser in
+    (match token.kind with
+     | Identifier field ->
+       parse_postfix (DotAccess { target = expr; field }, advance parser)
+     | _ ->
+       let expected = "parse_postfix: struct field name" in
+       let found = token in
+       Error (UnexpectedToken { expected; found }))
   | _ -> Ok (expr, parser)
 
 (* assumes parser is positioned on the opening LParen *)
