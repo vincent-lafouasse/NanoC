@@ -147,7 +147,11 @@ let match_unary (token : Token.kind) : UnaryOp.t option =
   | _ -> None
 ;;
 
-let rec parse_expr parser : (expr * t, error) result = parse_expr_atom parser
+let rec parse_expr parser : (expr * t, error) result = pratt_parse parser Precedence.None
+
+and pratt_parse parser precedence : (expr * t, error) result =
+  (* DUMMY *)
+  parse_expr_atom parser
 
 and parse_unary_expr parser : (expr * t, error) result =
   let token = get parser in
