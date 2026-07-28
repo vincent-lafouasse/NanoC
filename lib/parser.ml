@@ -190,7 +190,17 @@ and parse_unary_expr parser : (expr * t, error) result =
 and parse_postfix (expr, parser) : (expr * t, error) result =
   let token = get parser in
   match token.kind with
-  | LBracket -> Error XXX_Unimplemented_XXX
+  | LBracket ->
+    let parser = advance parser in
+    let maybe_index = parse_expr parser in
+    Result.bind maybe_index (fun (index, parser) ->
+      let token = get parser in
+      match token.kind with
+      | RBracket -> Ok (Index { target = expr; index }, advance parser)
+      | _ ->
+        let expected = "parse postfix: left bracket at end of index" in
+        let found = token in
+        Error (UnexpectedToken { expected; found }))
   | LParen ->
     let function_call =
       parse_paren_args parser
