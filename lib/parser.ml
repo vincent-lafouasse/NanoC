@@ -151,7 +151,7 @@ let rec parse_expr parser : (expr * t, error) result = pratt_parse parser Preced
 
 and pratt_parse parser precedence : (expr * t, error) result =
   (* DUMMY *)
-  parse_expr_atom parser
+  parse_unary_expr parser
 
 and parse_unary_expr parser : (expr * t, error) result =
   let token = get parser in
@@ -174,9 +174,9 @@ and parse_postfix (expr, parser) : (expr * t, error) result =
       |> Result.map (fun (args, parser) -> Call { callee = expr; args }, parser)
     in
     Result.bind function_call parse_postfix
-  | Dot -> failwith "dot todo"
-  | Arrow -> failwith "arrow todo"
-  | LBracket -> failwith "indexing todo"
+  | Dot -> Error XXX_Unimplemented_XXX
+  | Arrow -> Error XXX_Unimplemented_XXX
+  | LBracket -> Error XXX_Unimplemented_XXX
   | _ -> Ok (expr, parser)
 
 (* assumes parser is positioned on the opening LParen *)
