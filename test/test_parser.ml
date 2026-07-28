@@ -2,8 +2,10 @@ open NanoC
 
 let failures = ref 0
 let results : (string * bool) list ref = ref []
+let current_test = ref ""
 
 let run name f =
+  current_test := name;
   let before = !failures in
   f ();
   results := (name, !failures = before) :: !results
@@ -58,11 +60,12 @@ let check_sexp_equal name expected got =
   then (
     incr failures;
     Printf.printf
-      "FAIL %s:\n\
+      "FAIL [%s] %s:\n\
       \  expected: %S\n\
       \  got:      %S\n\
       \  expected tokens: %s\n\
       \  got tokens:      %s\n"
+      !current_test
       name
       expected
       got
@@ -75,7 +78,11 @@ let check_sexp_not_equal name a b =
   then (
     incr failures;
     Printf.printf
-      "FAIL %s: expected NOT equivalent, but they were:\n  a: %S\n  b: %S\n  tokens: %s\n"
+      "FAIL [%s] %s: expected NOT equivalent, but they were:\n\
+      \  a: %S\n\
+      \  b: %S\n\
+      \  tokens: %s\n"
+      !current_test
       name
       a
       b
@@ -120,7 +127,8 @@ let check_atom_sexp name source expected_sexp =
   | Error e ->
     incr failures;
     Printf.printf
-      "FAIL %s: lexer error while initializing parser: %s\n"
+      "FAIL [%s] %s: lexer error while initializing parser: %s\n"
+      !current_test
       name
       (Lexer.format_error e)
   | Ok parser ->
@@ -128,7 +136,8 @@ let check_atom_sexp name source expected_sexp =
      | Error e ->
        incr failures;
        Printf.printf
-         "FAIL %s:\n  source: %S\n  parse_expr_atom returned an error: %s\n"
+         "FAIL [%s] %s:\n  source: %S\n  parse_expr_atom returned an error: %s\n"
+         !current_test
          name
          source
          (Parser.show_error e)
@@ -184,13 +193,18 @@ let check_expr_sexp name source expected_sexp =
   match Parser.init source with
   | Error e ->
     incr failures;
-    Printf.printf "FAIL %s: lexer error: %s\n" name (Lexer.format_error e)
+    Printf.printf
+      "FAIL [%s] %s: lexer error: %s\n"
+      !current_test
+      name
+      (Lexer.format_error e)
   | Ok parser ->
     (match Parser.parse_expr parser with
      | Error e ->
        incr failures;
        Printf.printf
-         "FAIL %s:\n  source: %S\n  error: %s\n"
+         "FAIL [%s] %s:\n  source: %S\n  error: %s\n"
+         !current_test
          name
          source
          (Parser.show_error e)
@@ -205,7 +219,11 @@ let check_expr_error name source =
      | Error _ -> ()
      | Ok (expr, _) ->
        incr failures;
-       Printf.printf "FAIL %s: expected error, got: %s\n" name (Ast.s_expr expr))
+       Printf.printf
+         "FAIL [%s] %s: expected error, got: %s\n"
+         !current_test
+         name
+         (Ast.s_expr expr))
 ;;
 
 (* --- simple binary --- *)
