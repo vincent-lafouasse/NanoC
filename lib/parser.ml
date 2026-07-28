@@ -216,6 +216,10 @@ and parse_expr_atom parser : (expr * t, error) result =
     Result.map
       (fun (args, parser) -> Syscall args, parser)
       (parse_paren_args (advance parser))
+  | LParen ->
+    Result.map
+      (fun (expr, parser) -> Grouping expr, advance parser)
+      (parse_expr (advance parser))
   | _ ->
     let err =
       UnexpectedToken
