@@ -164,6 +164,7 @@ and parse_unary_expr parser : (expr * t, error) result =
   in
   Result.bind maybe_base_expr parse_postfix
 
+(* postfixes are: function call, struct access, and array indexing *)
 and parse_postfix (parser, expr) : (expr * t, error) result = failwith "todo"
 
 (* assumes parser is positioned on the opening LParen *)
