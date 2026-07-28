@@ -15,6 +15,7 @@ type error =
       { expected : string
       ; found : Token.t
       }
+  | SyscallHasNoArgs (* syscall should always have the syscall number *)
   | XXX_Unimplemented_XXX
 [@@deriving show]
 
@@ -269,8 +270,10 @@ and parse_expr_atom parser : (expr * t, error) result =
   | ByteLiteral b -> Ok (Literal (ByteLiteral b), advance parser)
   | PtrLiteral p -> Ok (Literal (PtrLiteral p), advance parser)
   | Syscall ->
-    parse_paren_args (advance parser)
-    |> Result.map (fun (args, parser) -> Syscall args, parser)
+    (match parse_paren_args (advance parser) with
+     | Ok ([], parser) -> Error SyscallHasNoArgs
+     | Ok (args, parser) -> Ok (Syscall args, parser)
+     | Error e -> Error e)
   | LParen ->
     let inner =
       parse_expr (advance parser)
