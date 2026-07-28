@@ -199,9 +199,10 @@ and parse_paren_args parser callee : (expr * t, error) result =
        | Colon -> gather_args (advance parser) new_acc
        | RParen -> Ok (List.rev new_acc, advance parser)
        | _ ->
-         Error
-           (UnexpectedToken
-              { expected = "parse_paren_args: Rparen or Colon"; found = token }))
+         let expected = "parse_paren_args: Rparen or Colon" in
+         let found = token in
+         let err = UnexpectedToken { expected; found } in
+         Error err)
   in
   Error XXX_Unimplemented_XXX
 
