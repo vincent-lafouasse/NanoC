@@ -152,24 +152,7 @@ let rec parse_expr parser : (expr * t, error) result = pratt_parse parser Preced
 and pratt_parse parser min_precedence : (expr * t, error) result =
   match parse_unary_expr parser with
   | Error e -> Error e
-  | Ok (left, parser) ->
-    let token = get parser in
-    (match match_binary token.kind with
-     | None -> Ok (left, parser)
-     | Some op ->
-       let precedence = Precedence.of_bin_op op in
-       if precedence < min_precedence
-       then
-         (* stop binding *)
-         Ok (left, parser)
-       else (* keep binding *)
-         (
-         match pratt_parse (advance parser) (Precedence.next precedence) with
-         | Error err -> Error err
-         | Ok (right, parser) ->
-           let new_left = Binary { op; lhs = left; rhs = right } in
-           (* i'm suposed to recurse here *)
-           Error XXX_Unimplemented_XXX))
+  | Ok (left, parser) -> climb parser min_precedence left
 
 (* assumes it's past lhs, probably on a binary operator *)
 and climb parser min_precedence lhs : (expr * t, error) result =
@@ -181,15 +164,14 @@ and climb parser min_precedence lhs : (expr * t, error) result =
     if precedence < min_precedence
     then
       (* stop binding *)
-      Ok (left, parser)
+      Ok (lhs, parser)
     else (* keep binding *)
       (
       match pratt_parse (advance parser) (Precedence.next precedence) with
       | Error err -> Error err
-      | Ok (right, parser) ->
-        let new_left = Binary { op; lhs = left; rhs = right } in
-        (* i'm suposed to recurse here *)
-        Error XXX_Unimplemented_XXX)
+      | Ok (rhs, parser) ->
+        let new_left = Binary { op; lhs; rhs } in
+        climb parser min_precedence new_left)
 
 (* Prefix and Postfix have highest precedence so they're worth parsing outside of
    the Pratt precedence climbing *)
