@@ -8,6 +8,7 @@
 ; _build, and _build itself gets pruned of untracked files between runs) --
 ; %{workspace_root} is dune's own answer to "where is the project root",
 ; known at build time regardless of how the resulting binary is later invoked
+
 (rule
  (target build_root.ml)
  (action
