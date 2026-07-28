@@ -168,6 +168,12 @@ and parse_unary_expr parser : (expr * t, error) result =
 and parse_postfix (expr, parser) : (expr * t, error) result =
   let token = get parser in
   match token.kind with
+  | LParen ->
+    let function_call =
+      parse_paren_args parser
+      |> Result.map (fun (args, parser) -> Call { callee = expr; args }, parser)
+    in
+    Result.bind function_call parse_postfix
   | Dot -> failwith "dot todo"
   | Arrow -> failwith "arrow todo"
   | LBracket -> failwith "indexing todo"
