@@ -153,6 +153,8 @@ and pratt_parse parser precedence : (expr * t, error) result =
   (* DUMMY *)
   parse_unary_expr parser
 
+(* Prefix and Postfix have highest precedence so they're worth parsing outside of
+   the Pratt precedence climbing *)
 and parse_unary_expr parser : (expr * t, error) result =
   let token = get parser in
   let maybe_base_expr : (expr * t, error) result =
