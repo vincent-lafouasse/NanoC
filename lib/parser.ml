@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-26"]
+
 open Ast
 
 type t =
