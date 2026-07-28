@@ -176,7 +176,7 @@ and parse_unary_expr parser : (expr * t, error) result =
     match match_unary token.kind with
     | Some op ->
       let maybe_operand = parse_unary_expr (advance parser) in
-      Result.map (fun (operand, parser) -> Unary { op; operand }, parser) maybe_operand
+      maybe_operand |> Result.map (fun (operand, parser) -> Unary { op; operand }, parser)
     | None -> parse_expr_atom parser
   in
   Result.bind maybe_base_expr parse_postfix
