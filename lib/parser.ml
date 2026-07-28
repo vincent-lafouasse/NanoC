@@ -84,42 +84,21 @@ module Precedence = struct
     | Postfix (* -> . [] () *)
   [@@deriving show]
 
-  let to_int = function
-    | None -> 0
-    | LogicalOr -> 1
-    | LogicalAnd -> 2
-    | BitwiseOr -> 3
-    | BitwiseXor -> 4
-    | BitwiseAnd -> 5
-    | Equality -> 6
-    | Comparison -> 7
-    | Shift -> 8
-    | Term -> 9
-    | Factor -> 10
-    | Prefix -> 11
-    | Postfix -> 12
+  let next = function
+    | None -> LogicalOr
+    | LogicalOr -> LogicalAnd
+    | LogicalAnd -> BitwiseOr
+    | BitwiseOr -> BitwiseXor
+    | BitwiseXor -> BitwiseAnd
+    | BitwiseAnd -> Equality
+    | Equality -> Comparison
+    | Comparison -> Shift
+    | Shift -> Term
+    | Term -> Factor
+    | Factor -> Prefix
+    | Prefix -> Postfix
+    | Postfix -> Postfix
   ;;
-
-  let of_int = function
-    | n when n < 0 -> None
-    | 0 -> None
-    | 1 -> LogicalOr
-    | 2 -> LogicalAnd
-    | 3 -> BitwiseOr
-    | 4 -> BitwiseXor
-    | 5 -> BitwiseAnd
-    | 6 -> Equality
-    | 7 -> Comparison
-    | 8 -> Shift
-    | 9 -> Term
-    | 10 -> Factor
-    | 11 -> Prefix
-    | 12 -> Postfix
-    | n when n > 12 -> Postfix
-    | n -> failwith (Printf.sprintf "Precedence.of_int: unreachable, n = %d" n)
-  ;;
-
-  let less_than lhs rhs = to_int lhs < to_int rhs
 
   let of_bin_op (op : BinaryOp.t) =
     match op with
@@ -134,8 +113,6 @@ module Precedence = struct
     | LogAnd -> LogicalAnd
     | LogOr -> LogicalOr
   ;;
-
-  let next = to_int |> Fun.compose (fun n -> n + 1) |> Fun.compose of_int
 end
 
 let match_binary (token : Token.kind) : BinaryOp.t option =
