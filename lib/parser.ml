@@ -150,8 +150,15 @@ let match_unary (token : Token.kind) : UnaryOp.t option =
 let rec parse_expr parser : (expr * t, error) result = pratt_parse parser Precedence.None
 
 and pratt_parse parser precedence : (expr * t, error) result =
-  (* DUMMY *)
-  parse_unary_expr parser
+  match parse_unary_expr parser with
+  | Error e -> Error e
+  | Ok (left, parser) ->
+    let token = get parser in
+    (match match_binary token.kind with
+     | None -> Ok (left, parser)
+     | Some op ->
+       let op_precedence = Precedence.of_bin_op op in
+       Error XXX_Unimplemented_XXX)
 
 (* Prefix and Postfix have highest precedence so they're worth parsing outside of
    the Pratt precedence climbing *)
