@@ -1,3 +1,16 @@
 (tests
  (names test_lexer test_atoi test_lexer_integration test_parser)
  (libraries NanoC))
+
+; bakes the real project root into a module so the harness can write logs
+; outside _build regardless of cwd (plain `dune exec` runs from the project
+; root, `dune test` runs each binary in its own throwaway sandbox dir under
+; _build, and _build itself gets pruned of untracked files between runs) --
+; %{workspace_root} is dune's own answer to "where is the project root",
+; known at build time regardless of how the resulting binary is later invoked
+(rule
+ (target build_root.ml)
+ (action
+  (with-stdout-to
+   %{target}
+   (system "echo 'let root = {|'$(cd %{workspace_root}/../.. && pwd)'|}'"))))

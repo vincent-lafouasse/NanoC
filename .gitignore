@@ -1,6 +1,7 @@
 /target
 local*
 **/_build
+/test-logs
 
 grammar/src
 
