@@ -168,6 +168,7 @@ and parse_postfix (parser, expr) : (expr * t, error) result = failwith "todo"
 
 (* assumes parser is positioned on the opening LParen *)
 and parse_paren_args parser : (expr list * t, error) result =
+  (* assumes parser is on an arg/expression *)
   let rec gather_args parser acc : (expr list * t, error) result =
     match parse_expr parser with
     | Error err -> Error err
