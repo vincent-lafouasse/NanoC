@@ -67,6 +67,9 @@ module Precedence = struct
 
      Assignment is not here: it is a statement, not an expression
      (ADR-0003, ADR-0009).
+
+     Prefix and Postfix were removed since they are taken care of by
+     `parse_expr_atom`, not by precedence climbing
   *)
   type t =
     | None
@@ -80,8 +83,6 @@ module Precedence = struct
     | Shift (* << >> *)
     | Term (* + - *)
     | Factor (* * / % *)
-    | Prefix (* ! ~ - & * *)
-    | Postfix (* -> . [] () *)
   [@@deriving show]
 
   let next = function
@@ -95,9 +96,7 @@ module Precedence = struct
     | Comparison -> Shift
     | Shift -> Term
     | Term -> Factor
-    | Factor -> Prefix
-    | Prefix -> Postfix
-    | Postfix -> Postfix
+    | Factor -> Factor
   ;;
 
   let of_bin_op (op : BinaryOp.t) =
