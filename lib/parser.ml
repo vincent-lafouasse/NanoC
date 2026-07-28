@@ -158,7 +158,9 @@ and pratt_parse parser precedence : (expr * t, error) result =
      | None -> Ok (left, parser)
      | Some op ->
        let op_precedence = Precedence.of_bin_op op in
-       Error XXX_Unimplemented_XXX)
+       if op_precedence < precedence
+       then Ok (left, parser)
+       else Error XXX_Unimplemented_XXX)
 
 (* Prefix and Postfix have highest precedence so they're worth parsing outside of
    the Pratt precedence climbing *)
