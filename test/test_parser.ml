@@ -1,6 +1,13 @@
 open NanoC
 
 let failures = ref 0
+let results : (string * bool) list ref = ref []
+
+let run name f =
+  let before = !failures in
+  f ();
+  results := (name, !failures = before) :: !results
+;;
 
 (* --- whitespace-agnostic S-expression comparison ---
 
@@ -685,108 +692,118 @@ let test_expr_equality_left_associative () =
 
 let () =
   (* comparator self-tests *)
-  test_identical_strings_are_equal ();
-  test_whitespace_runs_collapse_to_a_separator ();
-  test_not_fully_whitespace_agnostic ();
-  test_whitespace_optional_around_parens ();
-  test_multiline_matches_single_line ();
+  run "test_identical_strings_are_equal" test_identical_strings_are_equal;
+  run
+    "test_whitespace_runs_collapse_to_a_separator"
+    test_whitespace_runs_collapse_to_a_separator;
+  run "test_not_fully_whitespace_agnostic" test_not_fully_whitespace_agnostic;
+  run "test_whitespace_optional_around_parens" test_whitespace_optional_around_parens;
+  run "test_multiline_matches_single_line" test_multiline_matches_single_line;
   (* atoms *)
-  test_atom_identifier ();
-  test_atom_int_literal ();
-  test_atom_string_literal ();
-  test_atom_char_literal ();
-  test_atom_char_escapes ();
-  test_atom_char_hex_escape ();
+  run "test_atom_identifier" test_atom_identifier;
+  run "test_atom_int_literal" test_atom_int_literal;
+  run "test_atom_string_literal" test_atom_string_literal;
+  run "test_atom_char_literal" test_atom_char_literal;
+  run "test_atom_char_escapes" test_atom_char_escapes;
+  run "test_atom_char_hex_escape" test_atom_char_hex_escape;
   (* simple binary *)
-  test_expr_simple_binary ();
+  run "test_expr_simple_binary" test_expr_simple_binary;
   (* precedence *)
-  test_expr_precedence ();
-  test_expr_left_associative ();
-  test_expr_with_prefix ();
-  test_expr_bitwise ();
-  test_expr_comparison ();
-  test_expr_logical ();
-  test_expr_shifts ();
-  test_expr_complex ();
+  run "test_expr_precedence" test_expr_precedence;
+  run "test_expr_left_associative" test_expr_left_associative;
+  run "test_expr_with_prefix" test_expr_with_prefix;
+  run "test_expr_bitwise" test_expr_bitwise;
+  run "test_expr_comparison" test_expr_comparison;
+  run "test_expr_logical" test_expr_logical;
+  run "test_expr_shifts" test_expr_shifts;
+  run "test_expr_complex" test_expr_complex;
   (* precedence: each pair of adjacent levels *)
-  test_prec_logical_or_vs_and ();
-  test_prec_logical_and_vs_bitwise_or ();
-  test_prec_bitwise_or_vs_xor ();
-  test_prec_bitwise_xor_vs_and ();
-  test_prec_bitwise_and_vs_equality ();
-  test_prec_equality_vs_comparison ();
-  test_prec_comparison_vs_shift ();
-  test_prec_shift_vs_add ();
-  test_prec_add_vs_factor ();
-  test_prec_unary_binds_tightest ();
-  test_prec_long_chains ();
-  test_prec_full_hierarchy ();
+  run "test_prec_logical_or_vs_and" test_prec_logical_or_vs_and;
+  run "test_prec_logical_and_vs_bitwise_or" test_prec_logical_and_vs_bitwise_or;
+  run "test_prec_bitwise_or_vs_xor" test_prec_bitwise_or_vs_xor;
+  run "test_prec_bitwise_xor_vs_and" test_prec_bitwise_xor_vs_and;
+  run "test_prec_bitwise_and_vs_equality" test_prec_bitwise_and_vs_equality;
+  run "test_prec_equality_vs_comparison" test_prec_equality_vs_comparison;
+  run "test_prec_comparison_vs_shift" test_prec_comparison_vs_shift;
+  run "test_prec_shift_vs_add" test_prec_shift_vs_add;
+  run "test_prec_add_vs_factor" test_prec_add_vs_factor;
+  run "test_prec_unary_binds_tightest" test_prec_unary_binds_tightest;
+  run "test_prec_long_chains" test_prec_long_chains;
+  run "test_prec_full_hierarchy" test_prec_full_hierarchy;
   (* function calls *)
-  test_function_call_no_args ();
-  test_function_call_one_arg ();
-  test_function_call_multiple_args ();
-  test_function_call_expr_args ();
-  test_function_call_nested ();
-  test_function_call_in_expression ();
+  run "test_function_call_no_args" test_function_call_no_args;
+  run "test_function_call_one_arg" test_function_call_one_arg;
+  run "test_function_call_multiple_args" test_function_call_multiple_args;
+  run "test_function_call_expr_args" test_function_call_expr_args;
+  run "test_function_call_nested" test_function_call_nested;
+  run "test_function_call_in_expression" test_function_call_in_expression;
   (* field access *)
-  test_arrow_field_access ();
-  test_arrow_chained ();
-  test_arrow_in_expression ();
-  test_dot_field_access ();
+  run "test_arrow_field_access" test_arrow_field_access;
+  run "test_arrow_chained" test_arrow_chained;
+  run "test_arrow_in_expression" test_arrow_in_expression;
+  run "test_dot_field_access" test_dot_field_access;
   (* indexing *)
-  test_array_index ();
-  test_array_index_chained ();
-  test_array_index_in_expression ();
+  run "test_array_index" test_array_index;
+  run "test_array_index_chained" test_array_index_chained;
+  run "test_array_index_in_expression" test_array_index_in_expression;
   (* postfix *)
-  test_postfix_mixed ();
-  test_unary_on_postfix ();
-  test_postfix_complex ();
+  run "test_postfix_mixed" test_postfix_mixed;
+  run "test_unary_on_postfix" test_unary_on_postfix;
+  run "test_postfix_complex" test_postfix_complex;
   (* grouping *)
-  test_grouping_basic ();
-  test_grouping_overrides_precedence ();
-  test_grouping_nested ();
-  test_grouping_with_postfix ();
+  run "test_grouping_basic" test_grouping_basic;
+  run "test_grouping_overrides_precedence" test_grouping_overrides_precedence;
+  run "test_grouping_nested" test_grouping_nested;
+  run "test_grouping_with_postfix" test_grouping_with_postfix;
   (* integration *)
-  test_integration_linked_list ();
-  test_integration_bit_manipulation ();
-  test_integration_buffer_bounds ();
-  test_integration_hash_table ();
+  run "test_integration_linked_list" test_integration_linked_list;
+  run "test_integration_bit_manipulation" test_integration_bit_manipulation;
+  run "test_integration_buffer_bounds" test_integration_buffer_bounds;
+  run "test_integration_hash_table" test_integration_hash_table;
   (* syscall *)
-  test_syscall_no_args_is_error ();
-  test_syscall_one_arg ();
-  test_syscall_multiple_args ();
-  test_syscall_expr_args ();
-  test_syscall_is_atom ();
-  test_syscall_realistic ();
+  run "test_syscall_no_args_is_error" test_syscall_no_args_is_error;
+  run "test_syscall_one_arg" test_syscall_one_arg;
+  run "test_syscall_multiple_args" test_syscall_multiple_args;
+  run "test_syscall_expr_args" test_syscall_expr_args;
+  run "test_syscall_is_atom" test_syscall_is_atom;
+  run "test_syscall_realistic" test_syscall_realistic;
   (* error cases *)
-  test_expr_error_empty_parens ();
-  test_expr_error_missing_closing_paren ();
-  test_expr_error_missing_closing_bracket ();
-  test_expr_error_dangling_binary_op ();
-  test_expr_error_dangling_prefix_at_end ();
-  test_expr_error_leading_nonprefix_op ();
-  test_expr_error_double_binary_op ();
-  test_expr_error_empty_brackets ();
-  test_expr_error_arrow_missing_field ();
-  test_expr_error_dot_missing_field ();
-  test_call_missing_comma ();
-  test_call_trailing_comma ();
-  test_syscall_missing_comma ();
-  test_syscall_trailing_comma ();
+  run "test_expr_error_empty_parens" test_expr_error_empty_parens;
+  run "test_expr_error_missing_closing_paren" test_expr_error_missing_closing_paren;
+  run "test_expr_error_missing_closing_bracket" test_expr_error_missing_closing_bracket;
+  run "test_expr_error_dangling_binary_op" test_expr_error_dangling_binary_op;
+  run "test_expr_error_dangling_prefix_at_end" test_expr_error_dangling_prefix_at_end;
+  run "test_expr_error_leading_nonprefix_op" test_expr_error_leading_nonprefix_op;
+  run "test_expr_error_double_binary_op" test_expr_error_double_binary_op;
+  run "test_expr_error_empty_brackets" test_expr_error_empty_brackets;
+  run "test_expr_error_arrow_missing_field" test_expr_error_arrow_missing_field;
+  run "test_expr_error_dot_missing_field" test_expr_error_dot_missing_field;
+  run "test_call_missing_comma" test_call_missing_comma;
+  run "test_call_trailing_comma" test_call_trailing_comma;
+  run "test_syscall_missing_comma" test_syscall_missing_comma;
+  run "test_syscall_trailing_comma" test_syscall_trailing_comma;
   (* prefix/binary ambiguity *)
-  test_ampersand_prefix_then_binary ();
-  test_star_prefix_then_binary ();
-  test_minus_prefix_then_binary ();
-  test_double_deref_then_mul ();
-  test_addr_of_deref_then_bitwise_and ();
+  run "test_ampersand_prefix_then_binary" test_ampersand_prefix_then_binary;
+  run "test_star_prefix_then_binary" test_star_prefix_then_binary;
+  run "test_minus_prefix_then_binary" test_minus_prefix_then_binary;
+  run "test_double_deref_then_mul" test_double_deref_then_mul;
+  run "test_addr_of_deref_then_bitwise_and" test_addr_of_deref_then_bitwise_and;
   (* additional operator coverage *)
-  test_expr_div ();
-  test_expr_mod ();
-  test_expr_neq ();
-  test_expr_shift_left_associative ();
-  test_expr_comparison_same_level ();
-  test_expr_equality_left_associative ();
+  run "test_expr_div" test_expr_div;
+  run "test_expr_mod" test_expr_mod;
+  run "test_expr_neq" test_expr_neq;
+  run "test_expr_shift_left_associative" test_expr_shift_left_associative;
+  run "test_expr_comparison_same_level" test_expr_comparison_same_level;
+  run "test_expr_equality_left_associative" test_expr_equality_left_associative;
   (* done *)
+  (* recap *)
+  print_endline "\n--- recap ---";
+  List.iter
+    (fun (name, passed) ->
+       if passed
+       then Printf.printf "\027[32m✓ %s\027[0m\n" name
+       else Printf.printf "\027[31m✗ %s\027[0m\n" name)
+    (List.rev !results);
   if !failures > 0
   then (
     Printf.printf "%d test(s) failed\n" !failures;
