@@ -166,7 +166,10 @@ and pratt_parse parser min_precedence : (expr * t, error) result =
          (
          match pratt_parse (advance parser) (Precedence.next precedence) with
          | Error err -> Error err
-         | Ok (right, parser) -> Error XXX_Unimplemented_XXX))
+         | Ok (right, parser) ->
+           let new_left = Binary { op; lhs = left; rhs = right } in
+           (* i'm suposed to recurse here *)
+           Error XXX_Unimplemented_XXX))
 
 (* Prefix and Postfix have highest precedence so they're worth parsing outside of
    the Pratt precedence climbing *)
