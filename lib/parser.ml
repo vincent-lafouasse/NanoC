@@ -171,10 +171,10 @@ and parse_paren_args parser : (expr list * t, error) result =
       let new_acc = expr :: acc in
       let token = get parser in
       (match token.kind with
-       | Colon -> gather_args (advance parser) new_acc
+       | Comma -> gather_args (advance parser) new_acc
        | RParen -> Ok (List.rev new_acc, advance parser)
        | _ ->
-         let expected = "parse_paren_args: Rparen or Colon" in
+         let expected = "parse_paren_args: Rparen or Comma" in
          let found = token in
          let err = UnexpectedToken { expected; found } in
          Error err)
