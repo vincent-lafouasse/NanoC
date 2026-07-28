@@ -204,7 +204,7 @@ and parse_postfix (expr, parser) : (expr * t, error) result =
     Result.bind maybe_index (fun (index, parser) ->
       let token = get parser in
       match token.kind with
-      | RBracket -> Ok (Index { target = expr; index }, advance parser)
+      | RBracket -> parse_postfix (Index { target = expr; index }, advance parser)
       | _ ->
         let expected = "parse postfix: left bracket at end of index" in
         let found = token in
