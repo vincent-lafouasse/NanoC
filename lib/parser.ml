@@ -149,7 +149,7 @@ let match_unary (token : Token.kind) : UnaryOp.t option =
 
 let rec parse_expr parser : (expr * t, error) result = pratt_parse parser Precedence.None
 
-and pratt_parse parser precedence : (expr * t, error) result =
+and pratt_parse parser min_precedence : (expr * t, error) result =
   match parse_unary_expr parser with
   | Error e -> Error e
   | Ok (left, parser) ->
@@ -157,10 +157,16 @@ and pratt_parse parser precedence : (expr * t, error) result =
     (match match_binary token.kind with
      | None -> Ok (left, parser)
      | Some op ->
-       let op_precedence = Precedence.of_bin_op op in
-       if op_precedence < precedence
-       then Ok (left, parser)
-       else Error XXX_Unimplemented_XXX)
+       let precedence = Precedence.of_bin_op op in
+       if precedence < min_precedence
+       then
+         (* stop binding *)
+         Ok (left, parser)
+       else (* keep binding *)
+         (
+         match pratt_parse (advance parser) (Precedence.next precedence) with
+         | Error err -> Error err
+         | Ok (right, parser) -> Error XXX_Unimplemented_XXX))
 
 (* Prefix and Postfix have highest precedence so they're worth parsing outside of
    the Pratt precedence climbing *)
