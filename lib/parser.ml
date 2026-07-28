@@ -84,6 +84,12 @@ module Precedence = struct
     | Shift (* << >> *)
     | Term (* + - *)
     | Factor (* * / % *)
+    | Ceiling
+      (* not a real precedence level -- no operator maps here via of_bin_op.
+       exists purely so `next Factor` has somewhere strictly tighter to go,
+       which `climb`'s recursive descent relies on to stop the inner frame
+       from also consuming a same-precedence operator, preserving left
+       associativity even at the tightest defined level *)
   [@@deriving show]
 
   let next = function
@@ -97,7 +103,8 @@ module Precedence = struct
     | Comparison -> Shift
     | Shift -> Term
     | Term -> Factor
-    | Factor -> Factor
+    | Factor -> Ceiling
+    | Ceiling -> Ceiling
   ;;
 
   let of_bin_op (op : BinaryOp.t) =
