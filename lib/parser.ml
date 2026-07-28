@@ -262,8 +262,18 @@ and parse_expr_atom parser : (expr * t, error) result =
     parse_paren_args (advance parser)
     |> Result.map (fun (args, parser) -> Syscall args, parser)
   | LParen ->
-    parse_expr (advance parser)
-    |> Result.map (fun (expr, parser) -> Grouping expr, advance parser)
+    let inner =
+      parse_expr (advance parser)
+      |> Result.map (fun (expr, parser) -> Grouping expr, parser)
+    in
+    Result.bind inner (fun (expr, parser) ->
+      let token = get parser in
+      match token.kind with
+      | RParen -> Ok (expr, advance parser)
+      | _ ->
+        let expected = "expression atom: left paren at end of grouping" in
+        let found = token in
+        Error (UnexpectedToken { expected; found }))
   | _ ->
     let err =
       UnexpectedToken
