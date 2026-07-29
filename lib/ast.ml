@@ -126,3 +126,58 @@ let rec s_expr (e : expr) : string =
   | ArrowAccess { target; field } -> "(-> " ^ s_expr target ^ " " ^ field ^ ")"
   | Index { target; index } -> "([] " ^ s_expr target ^ " " ^ s_expr index ^ ")"
 ;;
+
+type primitive_type =
+  | U8
+  | U32
+  | I32
+  | Ptr
+
+type type_ =
+  | PrimitiveType of primitive_type
+  | Pointer of type_
+  | Struct of string
+
+type register_sized_type =
+  | PrimitiveType of primitive_type
+  | Pointer of type_
+
+type field =
+  { ty : type_
+  ; name : string
+  }
+
+type struct_ =
+  { name : string
+  ; fields : field list
+  }
+
+type var_initializer =
+  | Initializer of expr
+  | Undefined
+  | Zeroed
+
+type var_decl =
+  { ty : type_
+  ; name : string
+  ; init : var_initializer
+  }
+
+type function_arg =
+  { ty : register_sized_type
+  ; name : string
+  }
+
+type statement = Idk
+
+type function_ =
+  { name : string
+  ; args : function_arg list
+  ; return_type : register_sized_type
+  ; statements : statement list
+  }
+
+type top_level_item =
+  | GlobalVar of var_decl
+  | StructDecl of struct_
+  | FunctionDef of function_
