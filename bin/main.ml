@@ -21,6 +21,6 @@ let log_tokens tokens source =
 
 let () =
   let source = "fn undefined zeroed struct u8 aaa bbb _420" in
-  let parser = Parser.init source in
+  let cursor = Cursor.init source in
   ()
 ;;

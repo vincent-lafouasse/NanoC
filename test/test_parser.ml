@@ -98,21 +98,21 @@ let test_multiline_matches_single_line () =
     "(+ (/ 1 2) (- 3 4))"
 ;;
 
-(* --- Parser.parse_expr_atom --- *)
+(* --- Expr.parse_atom --- *)
 
 let check_atom_sexp name source expected_sexp =
-  match Parser.init source with
+  match Cursor.init source with
   | Error e ->
-    Harness.fail name "lexer error while initializing parser: %s" (Lexer.format_error e)
-  | Ok parser ->
-    (match Parser.parse_expr_atom parser with
+    Harness.fail name "lexer error while initializing cursor: %s" (Lexer.format_error e)
+  | Ok cursor ->
+    (match Expr.parse_atom cursor with
      | Error e ->
        Harness.fail
          name
-         "\n  source: %S\n  parse_expr_atom returned an error: %s"
+         "\n  source: %S\n  parse_atom returned an error: %s"
          source
-         (Parser.show_error e)
-     | Ok (expr, _parser') -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
+         (Expr.show_error e)
+     | Ok (expr, _cursor') -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
 ;;
 
 let test_atom_identifier () =
@@ -152,29 +152,28 @@ let test_atom_char_hex_escape () =
   check_atom_sexp "char \\x00" {|'\x00'|} "'\\x00'"
 ;;
 
-(* --- Parser.parse_expr ---
+(* --- Expr.parse ---
 
    Ported from aux/rs_old/src/parser.rs's parse_expr tests. Adapted to NanoC's OCaml
    implementation: no 0x/0b literals (ADR-0019), s-expr atoms carry type suffixes
    (42i32, 255u32, etc.), and s-expr operators use their source symbols rather than
-   English names. All tests are expected to fail red today -- parse_expr returns
-   XXX_Unimplemented_XXX. *)
+   English names. *)
 
 let check_expr_sexp name source expected_sexp =
-  match Parser.init source with
+  match Cursor.init source with
   | Error e -> Harness.fail name "lexer error: %s" (Lexer.format_error e)
-  | Ok parser ->
-    (match Parser.parse_expr parser with
+  | Ok cursor ->
+    (match Expr.parse cursor with
      | Error e ->
-       Harness.fail name "\n  source: %S\n  error: %s" source (Parser.show_error e)
+       Harness.fail name "\n  source: %S\n  error: %s" source (Expr.show_error e)
      | Ok (expr, _) -> check_sexp_equal name expected_sexp (Ast.s_expr expr))
 ;;
 
 let check_expr_error name source =
-  match Parser.init source with
+  match Cursor.init source with
   | Error _ -> ()
-  | Ok parser ->
-    (match Parser.parse_expr parser with
+  | Ok cursor ->
+    (match Expr.parse cursor with
      | Error _ -> ()
      | Ok (expr, _) -> Harness.fail name "expected error, got: %s" (Ast.s_expr expr))
 ;;
