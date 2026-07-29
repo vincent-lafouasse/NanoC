@@ -181,3 +181,5 @@ type top_level_item =
   | GlobalVar of var_decl
   | StructDecl of struct_
   | FunctionDef of function_
+
+type program = top_level_item list
