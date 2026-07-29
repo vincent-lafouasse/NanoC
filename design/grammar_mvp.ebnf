@@ -1,0 +1,143 @@
+(* ─── Top-level ─────────────────────────────────────────────────────────── *)
+
+program        = top_level_item* ;
+
+top_level_item = struct_decl
+               | var_decl
+               | function_decl
+               ;
+
+(* ─── Names ─────────────────────────────────────────────────────────────── *)
+
+(* All three are syntactically IDENTIFIER; the distinction is semantic. *)
+struct_name   = IDENTIFIER ;
+variable_name = IDENTIFIER ;
+label_name    = IDENTIFIER ;
+
+(* ─── Types ─────────────────────────────────────────────────────────────── *)
+
+type       = base_type "*"* ;
+base_type  = primitive | struct_name ;
+primitive  = "u8" | "i32" | "u32" | "ptr" ;
+
+(* register-sized: permitted as function parameters and return values *)
+reg_type   = primitive | base_type "*"+ ;
+
+(* ─── Struct declarations ────────────────────────────────────────────────── *)
+
+struct_decl  = "struct" struct_name "{" struct_field* "}" ;
+struct_field = variable_name ":" type "," ;   (* trailing comma mandatory on every field *)
+
+(* ─── Function declarations ─────────────────────────────────────────────── *)
+
+function_decl = "fn" variable_name
+                "(" fn_params? ")"
+                ("->" reg_type)?
+                block ;
+
+fn_params   = fn_param ("," fn_param)* ;
+fn_param    = variable_name ":" reg_type ;
+
+(* ─── Variable declarations ─────────────────────────────────────────────── *)
+
+(* var: the only runtime variable. mutable, stored, addressable.
+ * Must appear at the top of its enclosing block, before any statements.      *)
+var_decl   = "var" variable_name ":" type "=" var_init ";" ;
+var_init   = expression | "zeroed" | "undefined" ;
+
+(* ─── Statements ─────────────────────────────────────────────────────────── *)
+
+(* Statements follow all declarations in a block. var/constexpr are NOT valid
+ * mid-block — they belong in the declaration section at the top.              *)
+statement = lvalue "=" expression ";"        (* assignment *)
+          | call_expr ";"                    (* calls and syscalls only *)
+          | "return" expression? ";"
+          | if_stmt
+          | "while" "(" expression ")" block
+          | "goto" label_name ";"
+          | "unreachable" ";"
+          | label_name ":" statement
+          ;
+
+(* ─── Blocks ─────────────────────────────────────────────────────────────── *)
+
+(* A block is a scoped sequence of declarations followed by statements.
+ * All var/constexpr declarations MUST precede all statements within a block.
+ * This rule ensures goto can never jump past an initialisation.               *)
+block = "{" (var_decl | constexpr_decl)* statement* "}" ;
+
+(* ─── if statement ───────────────────────────────────────────────────────── *)
+
+(* if/else is a statement, not an expression. Bodies MUST be blocks.
+ * "else if" is naturally "else" followed by a new if_stmt: no special syntax. *)
+
+if_stmt = "if" "(" expression ")" block ("else" (if_stmt | block))? ;
+
+(* ─── Lvalues ────────────────────────────────────────────────────────────── *)
+
+(* Lvalue-ness is checked by sema, not enforced syntactically.
+ * The parser accepts any expression on the LHS of "="; sema rejects non-lvalues.
+ * Valid lvalues: variable_name, *expr, expr->field, expr[index].
+ * Invalid lvalues: literals, arithmetic results, call results.               *)
+lvalue = expression ;
+
+(* ─── Expressions ────────────────────────────────────────────────────────── *)
+
+(* Expressions compute values. Blocks and if/else are statements, not expressions. *)
+expression = pratt_expr ;
+
+(* Pratt-parsed sub-expressions.
+ * Precedence table, low to high (expression operators only;
+ * assignment is a statement -- ADR-0003 -- so it has no slot here):
+ *    1  ||
+ *    2  &&
+ *    3  |
+ *    4  ^
+ *    5  &
+ *    6  == !=
+ *    7  < <= > >=
+ *    8  << >>
+ *    9  + -
+ *   10  * / %
+ *   11  unary prefix:  ! ~ - (negate)  & (address-of)  * (deref)
+ *   12  postfix:       -> .  []  ()                                          *)
+pratt_expr = atom
+           | pratt_expr bin_op pratt_expr
+           | prefix_op pratt_expr
+           | pratt_expr postfix
+           ;
+
+atom = INTEGER_LITERAL
+     | STRING_LITERAL
+     | "true"
+     | "false"
+     | variable_name
+     | "(" expression ")"
+     | call_expr
+     | syscall_expr
+     ;
+
+(* NanoC is statement-oriented. Blocks and if/else are statements, not expressions.
+ * return, goto, and unreachable are statements. There is no "never" type in expression
+ * context. Expressions compute values; control flow is handled by statements.           *)
+
+call_expr   = expression "(" (expression ("," expression)*)? ")" ;
+syscall_expr = "syscall" "(" expression ("," expression)* ")" ;
+
+bin_op = "||" | "&&"
+       | "|" | "^" | "&"
+       | "==" | "!=" | "<" | "<=" | ">" | ">="
+       | "<<" | ">>"
+       | "+" | "-"
+       | "*" | "/" | "%"
+       ;
+
+prefix_op = "!" | "~" | "-" | "&" | "*" ;
+
+(* Note: expr[expr] — left operand must be pointer/array (sema check).
+ * i[arr] is rejected by sema even though the grammar accepts it.            *)
+postfix = "->" variable_name
+        | "." variable_name
+        | "[" expression "]"
+        | "(" (expression ("," expression)*)? ")"
+        ;
