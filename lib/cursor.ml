@@ -49,6 +49,8 @@ let advance cursor =
   { cursor with index }
 ;;
 
+let peek = Fun.compose get advance
+
 let expect cursor (expected : Token.kind) : (t, error) result =
   let found = get cursor in
   if found.kind = expected
