@@ -134,11 +134,10 @@ type primitive_type =
   | Ptr
 
 type type_ =
-  | PrimitiveType of primitive_type
-  | Pointer of type_
+  | RegisterSized of register_sized_type
   | Struct of string
 
-type register_sized_type =
+and register_sized_type =
   | PrimitiveType of primitive_type
   | Pointer of type_
 
