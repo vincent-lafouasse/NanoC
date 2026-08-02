@@ -132,6 +132,7 @@ type primitive_type =
   | U32
   | I32
   | Ptr
+[@@deriving show]
 
 type type_ =
   | RegisterSized of register_sized_type
@@ -140,32 +141,38 @@ type type_ =
 and register_sized_type =
   | PrimitiveType of primitive_type
   | Pointer of type_
+[@@deriving show]
 
 type field =
   { ty : type_
   ; name : string
   }
+[@@deriving show]
 
 type struct_ =
   { name : string
   ; fields : field list
   }
+[@@deriving show]
 
 type var_initializer =
   | Initializer of expr
   | Undefined
   | Zeroed
+[@@deriving show]
 
 type var_decl =
   { ty : type_
   ; name : string
   ; init : var_initializer
   }
+[@@deriving show]
 
 type function_arg =
   { ty : register_sized_type
   ; name : string
   }
+[@@deriving show]
 
 type statement =
   | Expr of expr
@@ -189,6 +196,7 @@ type statement =
       }
   | Return of expr option
   | Goto of string
+[@@deriving show]
 
 type function_ =
   { name : string
@@ -196,10 +204,12 @@ type function_ =
   ; return_type : register_sized_type
   ; statements : statement list
   }
+[@@deriving show]
 
 type top_level_item =
   | GlobalVar of var_decl
   | StructDecl of struct_
   | FunctionDef of function_
+[@@deriving show]
 
-type program = top_level_item list
+type program = top_level_item list [@@deriving show]
