@@ -184,8 +184,8 @@ type statement =
   | Block of statement list
   | If of
       { cond : expr
-      ; then_clause : statement
-      ; else_clause : statement option
+      ; then_branch : statement list
+      ; else_branch : statement list
       }
   | While of
       { cond : expr
