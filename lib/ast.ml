@@ -176,8 +176,8 @@ type statement =
   | Block of statement list
   | If of
       { cond : expr
-      ; if_clause : statement
-      ; then_clause : statement option
+      ; then_clause : statement
+      ; else_clause : statement option
       }
   | While of
       { cond : expr
