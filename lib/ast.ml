@@ -167,7 +167,26 @@ type function_arg =
   ; name : string
   }
 
-type statement = Idk
+type statement =
+  | Expr of expr
+  | Assign of
+      { lvalue : expr
+      ; rvalue : expr
+      }
+  | Block of statement list
+  | If of
+      { if_clause : statement
+      ; then_clause : statement
+      }
+  | While of
+      { cond : expr
+      ; body : statement list
+      }
+  | Labeled of
+      { label : string
+      ; stmt : statement
+      }
+  | Return of expr option
 
 type function_ =
   { name : string
