@@ -187,6 +187,7 @@ type statement =
       ; stmt : statement
       }
   | Return of expr option
+  | Goto of string
 
 type function_ =
   { name : string
