@@ -16,6 +16,12 @@ let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) 
   let token = Cursor.get cursor in
   let lookahead = cursor |> Cursor.advance |> Cursor.get in
   match token.kind with
+  | Identifier label when lookahead.kind = Colon ->
+    cursor
+    |> Cursor.advance
+    |> Cursor.advance
+    |> parse_statement
+    |> Result.map (fun (stmt, cursor) -> Ast.Labeled { label; stmt }, cursor)
   | RBrace -> parse_block cursor
   | _ -> Error XXX_Unimplemented_XXX
 
