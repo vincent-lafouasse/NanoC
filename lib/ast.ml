@@ -180,6 +180,7 @@ type statement =
       { lvalue : expr
       ; rvalue : expr
       }
+  | VarDecl of var_decl
   | Block of statement list
   | If of
       { cond : expr
