@@ -12,6 +12,14 @@ type error =
 let of_cursor_error (e : Cursor.error) : error = CursorError e
 let of_expr_error (e : Expr.error) : error = ExprError e
 
+let assert_cursor_on (cursor : Cursor.t) (kind : Token.kind) : unit =
+  if (Cursor.get cursor).kind = kind
+  then ()
+  else (
+    let message = Printf.sprintf "parser not on %s" (Token.show_kind kind) in
+    failwith message)
+;;
+
 let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
   let token = Cursor.get cursor in
   let lookahead = cursor |> Cursor.advance |> Cursor.get in
