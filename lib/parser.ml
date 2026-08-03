@@ -40,20 +40,26 @@ let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) 
   | _ -> Error XXX_Unimplemented_XXX
 
 and parse_block (cursor : Cursor.t) : (Ast.statement list * Cursor.t, error) result =
+  assert_cursor_on cursor LBrace;
   Error XXX_Unimplemented_XXX
 
 and parse_if (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  assert_cursor_on cursor If;
   Error XXX_Unimplemented_XXX
 
 and parse_while (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  assert_cursor_on cursor While;
   Error XXX_Unimplemented_XXX
 
 and parse_var_decl (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  assert_cursor_on cursor Var;
   Error XXX_Unimplemented_XXX
 
 and parse_return (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  assert_cursor_on cursor Return;
   Error XXX_Unimplemented_XXX
 
 and parse_goto (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  assert_cursor_on cursor Goto;
   Error XXX_Unimplemented_XXX
 ;;
