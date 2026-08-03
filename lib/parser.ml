@@ -16,6 +16,11 @@ let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) 
   let token = Cursor.get cursor in
   let lookahead = cursor |> Cursor.advance |> Cursor.get in
   match token.kind with
+  | If -> parse_if cursor
+  | Var -> parse_var_decl cursor
+  | While -> parse_while cursor
+  | Return -> parse_return cursor
+  | Goto -> parse_goto cursor
   | Identifier label when lookahead.kind = Colon ->
     cursor
     |> Cursor.advance
@@ -27,5 +32,20 @@ let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) 
   | _ -> Error XXX_Unimplemented_XXX
 
 and parse_block (cursor : Cursor.t) : (Ast.statement list * Cursor.t, error) result =
+  Error XXX_Unimplemented_XXX
+
+and parse_if (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  Error XXX_Unimplemented_XXX
+
+and parse_while (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  Error XXX_Unimplemented_XXX
+
+and parse_var_decl (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  Error XXX_Unimplemented_XXX
+
+and parse_return (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+  Error XXX_Unimplemented_XXX
+
+and parse_goto (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
   Error XXX_Unimplemented_XXX
 ;;
