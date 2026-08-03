@@ -35,7 +35,7 @@ let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) 
     |> Cursor.advance
     |> parse_statement
     |> Result.map (fun (stmt, cursor) -> Ast.Labeled { label; stmt }, cursor)
-  | RBrace ->
+  | LBrace ->
     parse_block cursor |> Result.map (fun (body, cursor) -> Ast.Block body, cursor)
   | _ -> Error XXX_Unimplemented_XXX
 
