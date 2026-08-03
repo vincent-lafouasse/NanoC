@@ -22,9 +22,10 @@ let rec parse_statement (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) 
     |> Cursor.advance
     |> parse_statement
     |> Result.map (fun (stmt, cursor) -> Ast.Labeled { label; stmt }, cursor)
-  | RBrace -> parse_block cursor
+  | RBrace ->
+    parse_block cursor |> Result.map (fun (body, cursor) -> Ast.Block body, cursor)
   | _ -> Error XXX_Unimplemented_XXX
 
-and parse_block (cursor : Cursor.t) : (Ast.statement * Cursor.t, error) result =
+and parse_block (cursor : Cursor.t) : (Ast.statement list * Cursor.t, error) result =
   Error XXX_Unimplemented_XXX
 ;;
